@@ -25,17 +25,17 @@ park <- readOGR(dsn = "./data/GEO", layer = "park", encoding = "UTF-8", use_icon
 # forest
 forest <- readOGR(dsn = "./data/GEO", layer = "BD_Foret_V2_PNRfilled_Foret_2014", encoding = "UTF-8", use_iconv = TRUE)
 
-# elevation
+# elevation (m a.s.l.)
 elevation <- raster("./data/GEO/MNT_all_5m.tif")
 # set projection
 crs(elevation) <- crs(park)
 # set resolution
 elevation <- aggregate(elevation, fact = 5)
 
-# slope
+# slope (degree)
 slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
 
-# aspect
+# aspect (degree)
 aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
 
 # convert park into raster and set extent + resolution
@@ -58,9 +58,36 @@ isBecomes <- cbind(c(1:nrow(forest), NA),
                    c(rep(1, nrow(forest)), 0))
 forestRaster <- reclassify(forestRaster, rcl = isBecomes)
 
-# swhc
-soil <- raster("./data/GEO/rum_500_v2009.tif")
-soil <- resample(soil, elevation)
+# swhc (cm)
+swhc <- raster("./data/GEO/rum_500_v2009.tif")
+swhc <- resample(swhc, elevation)
+swhc <- swhc/10 # convert into cm
+
+# Quadratic diameter (cm)
+dg <- raster('./data/GEO/rastDg75error.clean.tif')
+crs(dg) <- crs(park)
+dg <- resample(dg, elevation)
+
+# basal area (m2)
+BA <- raster('./data/GEO/rastG75error.clean.tif')
+crs(BA) <- crs(park)
+BA <- resample(BA, elevation)
+
+# N
+N <- raster('./data/GEO/N_pred.tif')
+crs(N) <- crs(park)
+N <- resample(N, elevation)
+
+# large tree (BA or proportion of total BA?)
+# LTBA <- raster('./data/GEO/GGB_pred.tif')
+# crs(LTBA) <- crs(park)
+# LTBA <- resample(LTBA, elevation)
+
+# Deciduous proportion (% of total BA)
+Dprop <- raster('./data/GEO/propGR_ONF_25filled.tif')
+Dprop <- 100 - Dprop
+crs(Dprop) <- crs(park)
+Dprop <- resample(Dprop, elevation)
 
 ###############################################################
 # save ascii
@@ -74,4 +101,9 @@ writeRaster(forestRaster, filename = "./Init/forest.asc", format = "ascii", data
 writeRaster(elevation, filename = "./Init/elev.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
 writeRaster(slope, filename = "./Init/slope.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
 writeRaster(aspect, filename = "./Init/aspect.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(soil, filename = "./Init/soil.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(swhc, filename = "./Init/swhc.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(dg, filename = "./Init/dg.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(BA, filename = "./Init/BA.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(N, filename = "./Init/N.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+# writeRaster(LTBA, filename = "./Init/LTBA.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(Dprop, filename = "./Init/Dprop.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
