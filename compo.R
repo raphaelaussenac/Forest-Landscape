@@ -16,6 +16,8 @@ setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
 # load forest cover data
 forest <- raster("./Init/forest.asc")
+# load proportion of deciduous BA
+Dprop <- raster("./Init/Dprop.asc")
 
 # load TFV spatial data
 bd <- readOGR(dsn = "./data/GEO", layer = "BD_Foret_V2_PNRfilled_Foret_2014", encoding = "UTF-8", use_iconv = TRUE)
@@ -134,32 +136,43 @@ pl1 <- TFVcountAndSurface(bd, tree)
 pl1 + ggtitle('TFV surface and number of NFI plots (after grouping TFV types together)')
 
 
+###############################################################
+# assign composition to each forest cell
+###############################################################
 
-
-
-
-
-
-
-
-
-# convert forest into raster and set extent + resolution
-ext <- floor(extent(forest))
-r <- raster(ext, res=res(forest))
+# first assign TFV code to each forest cell
 bd$CODE_TFV <- as.factor(bd$CODE_TFV)
-tfvRaster <- rasterize(bd, r, field = "CODE_TFV")
-# set projection
-crs(tfvRaster) <- crs(forest)
+TFVraster <- rasterize(bd, forest, field = "CODE_TFV")
+# merge with deciduous proportion of BA
+compoRaster <- stack(TFVraster, Dprop)
+
+plot(compoRaster$layer == 2 & compoRaster$Dprop == 100)
 
 
-###############################################################
-# assign new simplified TFV to all NFI plots
-###############################################################
+I) on affecte a chaque cellule la composition du peuplement IFN
+qui a les valeurs de Dg, BA et Dprop les plus proches
+
+1 - récupèrer Dg, BA et Dprop pour toutes les placettes LIDAR
+2 - calculer Dg, BA et Dprop pour toutes les placettes IFN
+3 - définir metrique de distance (travailler avec valeurs min/max des Dg, BA et Dprop?)
+4 - mesurer les distances
+5 - affecter la composition
+
+II) on affecte a chaque espèce un Dg et un BA qui colle avec Dg_LIDAR
+et BA_LIDAR (en utilisant les ratios de Dg et BA entre espèces observées
+sur la placette IFN)
 
 
 
-###############################################################
-# assign a composition to each cell
-###############################################################
 
-# define coniferous and/or deciduous dominant species at each site
+# utiliser la fonction:
+setValues()
+
+
+
+
+
+
+
+# create list of NFI plot IF for each TFV type
+PlotsInTFV <- tree %>% group_by(id_plot) %>% summarize(CODE_TFV = unique(CODE_TFV)) %>% arrange(CODE_TFV)
