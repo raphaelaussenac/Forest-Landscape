@@ -96,8 +96,8 @@ Dprop <- resample(Dprop, elevation)
 # create directory to save plots
 if (!(dir.exists('Init'))) {dir.create('Init', recursive = TRUE)}
 
-writeRaster(parkRaster, filename = "./Init/park.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(forestRaster, filename = "./Init/forest.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(parkRaster, filename = "./Init/parkMask.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(forestRaster, filename = "./Init/forestMask.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
 writeRaster(elevation, filename = "./Init/elev.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
 writeRaster(slope, filename = "./Init/slope.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
 writeRaster(aspect, filename = "./Init/aspect.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)

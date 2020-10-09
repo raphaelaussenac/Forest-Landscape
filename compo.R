@@ -10,13 +10,14 @@ library(rgdal)
 library(raster)
 library(dplyr)
 library(ggplot2)
+library(plotly)
 
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
-# load forest cover data
-forest <- raster("./Init/forest.asc")
-# load proportion of deciduous BA
+# load LIDAR rasters
+Dg <- raster("./Init/Dg.asc")
+BA <- raster("./Init/BA.asc")
 Dprop <- raster("./Init/Dprop.asc")
 
 # load TFV spatial data
@@ -137,16 +138,65 @@ pl1 + ggtitle('TFV surface and number of NFI plots (after grouping TFV types tog
 
 
 ###############################################################
-# assign composition to each forest cell
+# Retrieve Dg, BA, Dprop and TFV for all forest cells
 ###############################################################
 
 # first assign TFV code to each forest cell
 bd$CODE_TFV <- as.factor(bd$CODE_TFV)
-TFVraster <- rasterize(bd, forest, field = "CODE_TFV")
+TFVraster <- rasterize(bd, Dg, field = "CODE_TFV")
 # merge with deciduous proportion of BA
-compoRaster <- stack(TFVraster, Dprop)
+compoRaster <- stack(TFVraster, Dprop, Dg, BA)
 
-plot(compoRaster$layer == 2 & compoRaster$Dprop == 100)
+plot(compoRaster$layer == 1 & compoRaster$Dprop >= 50 & compoRaster$dg > 20)
+
+###############################################################
+# Retrieve Dg, BA, Dprop and TFV for all NFI plots
+###############################################################
+
+# correct species name
+tree$species_name <- as.character(tree$species_name)
+tree[substr(tree$species_name, 1, 4) == "Ilex", 'species_name'] <- 'Ilex aquifolium'
+
+# first define deciduous and coniferous species
+deciduousSp <- c('Fagus sylvatica', 'Sorbus aria', 'Quercus robur',
+                 'Quercus petraea', 'Acer opalus', 'Tilia platyphyllos',
+                 'Carpinus betulus', 'Castanea sativa', 'Populus nigra',
+                 'Fraxinus excelsior', 'Corylus avellana', 'Acer campestre',
+                 'Betula pendula', 'Populus tremula', 'Prunus avium',
+                 'Acer pseudoplatanus', 'Tilia cordata', 'Salix caprea',
+                 'Ulmus glabra', 'Sorbus aucuparia', 'Robinia pseudacacia',
+                 'Malus sylvestris', 'Acer platanoides', 'Salix alba',
+                 'Crataegus monogyna', 'Sorbus mougeoti', 'Laburnum anagyroides',
+                 'Quercus pubescens', 'Alnus glutinosa', 'Salix cinerea',
+                 'Alnus incana', 'Ilex aquifolium', 'Buxus sempervirens',
+                 'Prunus padus')
+#
+coniferousSp <- c('Picea abies', 'Abies alba', 'Pinus sylvestris',
+                  'Taxus baccata', 'Larix decidua', 'Larix kaempferi')
+#
+tree[tree$species_name %in% deciduousSp, 'spType'] <- 'D'
+tree[tree$species_name %in% coniferousSp, 'spType'] <- 'C'
+
+# calculate proportion of deciduous BA
+tree$DBH <- tree$c130_final / pi
+NFIDprop <- tree %>% group_by(id_plot, spType) %>%
+                          summarise(BAdc = sum((pi * (DBH/200)^2) * weight)) %>%
+                          group_by(id_plot) %>% mutate(BA = sum(BAdc), Dprop = BAdc/BA) %>%
+                          filter(spType == 'D') %>% select(-spType, -BAdc, -BA)
+# calculate Dg and BA
+NFI <- tree %>% group_by(id_plot) %>%
+                    summarise(Dg = sqrt(sum(DBH^2 * weight)/sum(weight)),
+                              BA = sum((pi * (DBH/200)^2) * weight))
+NFI <- merge(NFIDprop, NFI, by = 'id_plot', all = TRUE)
+NFI[is.na(NFI$Dprop), 'Dprop'] <- 0
+
+# plot 3d
+fig <- plot_ly(x = NFI$Dg, y = NFI$Dprop, z = NFI$BA, type="scatter3d", mode = "markers", color = NFI$id_plot)
+axx <- list(title = "quadratic diameter (cm)")
+axy <- list(title = "proportion of Deciduous basal area")
+axz <- list(title = "basal area (m^2/ha)")
+fig <- fig %>% layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz))
+fig
 
 
 I) on affecte a chaque cellule la composition du peuplement IFN
