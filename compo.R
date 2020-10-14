@@ -12,6 +12,8 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(doParallel)
+# library(envirem)
+# library(stringr)
 
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
@@ -147,10 +149,7 @@ pl1 + ggtitle('TFV surface and number of NFI plots (after grouping TFV types tog
 bd$CODE_TFV <- factor(bd$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
 bd$CODE_TFV <- as.numeric(bd$CODE_TFV)
 TFVraster <- rasterize(bd, Dg, field = "CODE_TFV")
-# merge with deciduous proportion of BA
-compoRaster <- stack(TFVraster, Dprop, Dg, BA)
-
-plot(compoRaster$layer == 1 & compoRaster$Dprop >= 50 & compoRaster$dg > 20)
+names(TFVraster) <- 'CODE_TFV'
 
 ###############################################################
 # Retrieve Dg, BA, Dprop and TFV for all NFI plots
@@ -203,6 +202,11 @@ NFI[is.na(NFI$Dprop), 'Dprop'] <- 0
 NFI$Dg01 <- ( NFI$Dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
 NFI$BA01 <- ( NFI$BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
 
+# convert NFI TFV CODE in numeric values
+NFI$CODE_TFV <- factor(NFI$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
+NFI$CODE_TFV <- as.numeric(NFI$CODE_TFV)
+NFI <- NFI %>% select(id_plot, Dprop, Dg01, BA01, CODE_TFV)
+
 # plot 3d
 fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01, type="scatter3d", mode = "markers", color = NFI$CODE_TFV)
 axx <- list(title = "quadratic diameter (cm)")
@@ -212,94 +216,58 @@ fig <- fig %>% layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz))
 fig
 
 # forest cells
-compoRaster$Dg01 <- ( compoRaster$dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
-compoRaster$BA01 <- ( compoRaster$BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
+Dg01 <- ( Dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
+names(Dg01) <- 'Dg01'
+BA01 <- ( BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
+names(BA01) <- 'BA01'
+
+###############################################################
+# create empty raster of composition
+###############################################################
+
+compo <- BA
+compo[!is.na(compo)] <- NA
+names(compo) <- "compo"
 
 ###############################################################
 # claculate distance between forest cells values and NFI values
 # and assign composition of nearest NFI plot
 ###############################################################
 
-# first create list of NFI plot for each TFV type
-plotsInTFV <- tree %>% group_by(id_plot) %>% summarize(CODE_TFV = unique(CODE_TFV)) %>% arrange(CODE_TFV)
-plotsInTFV$CODE_TFV <- factor(plotsInTFV$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
-plotsInTFV$CODE_TFV <- as.numeric(plotsInTFV$CODE_TFV)
+# Split data into two separate stack rasters
+compoRaster <- stack(TFVraster, Dprop, Dg01, BA01, compo)
 
-# convert NFI TFC CODE in numeric values
-NFI$CODE_TFV <- factor(NFI$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
-NFI$CODE_TFV <- as.numeric(NFI$CODE_TFV)
-NFI <- NFI %>% select(id_plot, Dprop, Dg01, BA01, CODE_TFV)
+# rast1 <- crop(compoRaster, extent(compoRaster)/10)
+# rast2 <- crop(compoRaster, extent(compoRaster)/20)
 
-# add extra layer to compoRaster to recieve compo values (= ref stand id)
-compo <- BA
-compo[!is.na(compo)] <- NA
-names(compo) <- "compo"
-compoRaster <- stack(compoRaster, compo)
-
-################################################################################
-# # simple for loop
-# test <- crop(compoRaster, extent(compoRaster)/20)
+rast1 <- crop(compoRaster, c(extent(compoRaster)[1],
+                                  extent(compoRaster)[1] + round( (extent(compoRaster)[2] - extent(compoRaster)[1]) / 2),
+                                  extent(compoRaster)[3],
+                                  extent(compoRaster)[4]))
 #
-# start <- Sys.time()
+rast2 <- crop(compoRaster, c(extent(compoRaster)[1] + round( (extent(compoRaster)[2] - extent(compoRaster)[1]) / 2),
+                                  extent(compoRaster)[2],
+                                  extent(compoRaster)[3],
+                                  extent(compoRaster)[4]))
 #
-# for (i in 1:nrow(test[])){
-#   # print(i)
-#   # some cells do not have any TFV value
-#   if(!is.na(test[i][1])){
-#     # retrieve list of plots (and their Dg, BA, Dprop values) in the TFV
-#     # type associated to the cell
-#     plotlist <- NFI %>% filter(CODE_TFV == test[i][1]) %>% select(-CODE_TFV)
-#     rownames(plotlist) <- plotlist$id_plot
-#     plotlist <- plotlist %>% select(-id_plot)
-#     # calculate distance
-#     plotlist$DpropCell <- test[i][2]
-#     plotlist$Dg01Cell <- test[i][5]
-#     plotlist$BA01Cell <- test[i][6]
-#     plotlist$distance <- apply(plotlist, 1, function(x) dist(matrix(x, nrow = 2, byrow = TRUE)))
-#     NearestPlot <- as.numeric(rownames(plotlist[plotlist$distance == min(plotlist$distance),]))
-#     # assign nearest plot value to cell
-#     test[i][7] <- NearestPlot
-#   }
-# }
-#
-# end <- Sys.time()
-# end - start
-################################################################################
-############################## parallel
 
-
-
-miniBauges <- crop(compoRaster, extent(compoRaster)/1.5)
-
-miniBauges <- compoRaster
-
-library(SpaDES)
-essai <- splitRaster(compoRaster, nx = 2, ny = 2, buffer = 0)#, path, cl)
-SplitRas(raster=compoRaster, ppside=3,save=FALSE,plot=TRUE)
-
-split_raster(
-  "./Init/Dg.asc",
-  s = 2,
-  "./Init/",
-  gdalinfoPath = NULL,
-  gdal_translatePath = NULL
-)
-
-
-blabla <- function(cell, i){
+# function to assign composition
+assignCompo <- function(cell, i, NFI){
   # print(i)
   # some cells do not have any TFV value
-  if(!is.na(cell[1])){
+  if(!is.na(cell[, 'CODE_TFV'])){
     # retrieve list of plots (and their Dg, BA, Dprop values) in the TFV
     # type associated to the cell
-    plotlist <- NFI[NFI$CODE_TFV == cell[1], ]
+    plotlist <- NFI[NFI$CODE_TFV == cell[, 'CODE_TFV'], ]
     rownames(plotlist) <- plotlist$id_plot
     plotlist[, c('id_plot', 'CODE_TFV')] <- NULL
+    # retrieve cell values = coordinates
+    plotlist$DpropCell <- cell[, 'Dprop']
+    plotlist$Dg01Cell <- cell[, 'Dg01']
+    plotlist$BA01Cell <- cell[, 'BA01']
     # calculate distance
-    plotlist$DpropCell <- cell[2]
-    plotlist$Dg01Cell <- cell[5]
-    plotlist$BA01Cell <- cell[6]
     plotlist$distance <- apply(plotlist, 1, function(x) dist(matrix(x, nrow = 2, byrow = TRUE)))
+    # determine nearest NFI plot
     NearestPlot <- as.numeric(rownames(plotlist[plotlist$distance == min(plotlist$distance),]))
     NearestPlot <- NearestPlot[1]
   } else {
@@ -309,27 +277,81 @@ blabla <- function(cell, i){
   return(c(i,NearestPlot))
 }
 
-# i <- 1
-# for (i in 1:5){
-#   print(blabla(cell = miniBauges[i], i = i))
-# }
+# launch calculation on both rasters
+clustCalc <- function(rast, assignCompo, NFI){
+  # set cluster
+  cl <- makeCluster(6)
+  registerDoParallel(cl)
+  # start <- Sys.time()
+  results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignCompo(cell = rast[i], i = i, NFI)}
+  # end <- Sys.time()
+  # end - start
+  stopCluster(cl)
+  # transfer results into raster stack
+  results <- data.frame(results)
+  colnames(results) <- c('i', 'id')
+  results <- results %>% arrange(i)
+  rast$compo <- results[,2]
+  plot(rast)
+  return(rast)
+}
+rasts <- lapply(c(rast1, rast2), clustCalc, assignCompo,NFI)
 
-cl <- makeCluster(6)
-registerDoParallel(cl)
-n <- nrow(miniBauges[])
-start <- Sys.time()
-results <- foreach(i = 1:n, .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {blabla(cell = miniBauges[i], i = i)}
-end <- Sys.time()
-end - start
-stopCluster(cl)
+# merge back rasters
+rast1 <- rasts[[1]]
+rast2 <- rasts[[2]]
+rast3 <- raster::merge(rast1, rast2, overlap = FALSE)
+names(rast3) <- names(compoRaster)
+# save
+writeRaster(rast3$compo, "./temp/compo.asc", overwrite = TRUE)
 
 
-results <- data.frame(results)
-colnames(results) <- c('i', 'id')
-results <- results %>% arrange(i)
-miniBauges$compo <- results[,2]
-plot(miniBauges)
 
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+############################## notes
+
+
+rast1 <- crop(compoRaster, c(extent(compoRaster)[1],
+                                  extent(compoRaster)[1] + round( (extent(compoRaster)[2] - extent(compoRaster)[1]) / 2),
+                                  extent(compoRaster)[3],
+                                  extent(compoRaster)[4]))
+#
+rast2 <- crop(compoRaster, c(947056,
+                                  extent(compoRaster)[2],
+                                  extent(compoRaster)[3],
+                                  extent(compoRaster)[4]))
+#
+rast3 <- raster::merge(rast1, rast2, overlap = FALSE)
+
+
+
+
+'merge' dans raster
+'mosaic' dans raster
+'gdalmerge.py' --> python
+
+
+hello <- raster('./temp/compo.asc')
+plot(hello)
+hello
 
 #               extent             10      5       4      2
 temps <- data.frame('nCells' = c(32760, 132158, 206358, 826276, 1469430),
@@ -362,10 +384,59 @@ points(temps$nCells, temps$temps, pch = 16)
 !!!!!!! pourquoi certaines cellule TFV = NA mais valeurs de Dg?
 
 
-
-
-
 arrondir(100)
 boucle tfv
 créer raster ifn plot
 which.min
+
+
+
+# create raster stack
+# TFV <- raster("./temp/TFV.asc")
+# Dprop <- raster("./temp/Dprop.asc")
+# Dg01 <- raster("./temp/Dg01.asc")
+# BA01 <- raster("./temp/BA01.asc")
+# compo <- raster("./temp/compo.asc")
+# compoRaster <- stack(TFV, Dprop, Dg01, BA01, compo)
+# stackSave(compoRaster, './temp/compoRaster.stk')
+
+
+
+
+# hello <- raster('./temp/Dg01.asc')
+# plot(hello)
+# hello
+
+
+
+# # split rasters in 4 tiles
+# splitNumber <-
+# splitRasters <- function(rasterNames){
+#   # Split Raster into several tiles
+#   split_raster(
+#     rasterNames,
+#     s = splitNumber,
+#     "./temp/",
+#     gdalinfoPath = NULL,
+#     gdal_translatePath = NULL
+#   )
+# }
+# rasterNames <- Sys.glob('./temp/*.asc')
+# lapply(rasterNames, splitRasters)
+#
+# # create stack (TFV + Dprop + Dg01 + BA01 + compo) for each tile
+# # count tiles
+# tilesNo <- splitNumber^2
+#
+# for (i in 1:tilesNo){
+#   BA01t <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('BA01_tile', i))])
+#   Dg01t <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('Dg01_tile', i))])
+#   Dpropt <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('Dprop_tile', i))])
+#   TFVt <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('TFV_tile', i))])
+#   compot <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('compo_tile', i))])
+#
+#   compoRaster <- stack(TFVt, Dpropt, Dg01t, BA01t, compot)
+#   names(compoRaster) <- c('CODE_TFV', 'Dprop', 'Dg01', 'BA01', 'compo')
+#
+# }
+#
