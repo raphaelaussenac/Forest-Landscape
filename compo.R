@@ -12,8 +12,6 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 library(doParallel)
-# library(envirem)
-# library(stringr)
 
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
@@ -306,137 +304,55 @@ names(rast3) <- names(compoRaster)
 writeRaster(rast3$compo, "./temp/compo.asc", overwrite = TRUE)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 ################################################################################
+# check composition
 ################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-############################## notes
 
+# free memory
+rm(list=setdiff(ls(), "tree"))
+# set work directory
+setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
-rast1 <- crop(compoRaster, c(extent(compoRaster)[1],
-                                  extent(compoRaster)[1] + round( (extent(compoRaster)[2] - extent(compoRaster)[1]) / 2),
-                                  extent(compoRaster)[3],
-                                  extent(compoRaster)[4]))
+# load composition raster
+compo <- raster('./temp/compo.asc')
+pdf(file="./temp/compo.pdf")
+plot(compo, legend = FALSE)
+dev.off()
+# compo <- crop(compo, extent(compo)/5)
+
+# set threshold to identify mainSp
+# thresh = 0.8 means you will get the species making up for > 80% of the stand BA
+# the stand BA
+thresh = 0.70
+# retrieve main species
+mainSp <- tree %>% group_by(id_plot, species_name) %>%
+                          summarise(BA = sum((pi * (DBH/200)^2) * weight)) %>%
+                          group_by(id_plot) %>% arrange(id_plot, -BA) %>%
+                          mutate(BAtot = sum(BA), BAprop = BA/BAtot, cumulProp = cumsum(BAprop), HigherThanthresh = case_when(
+                            cumulProp >= thresh ~ cumulProp), minCompo = min(HigherThanthresh, na.rm = TRUE)) %>%
+                          filter(cumulProp <= minCompo) %>% summarise(sp = paste(species_name, collapse=' - '))
 #
-rast2 <- crop(compoRaster, c(947056,
-                                  extent(compoRaster)[2],
-                                  extent(compoRaster)[3],
-                                  extent(compoRaster)[4]))
-#
-rast3 <- raster::merge(rast1, rast2, overlap = FALSE)
+# convert raster into polygon
+compoPoly <- rasterToPolygons(compo, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
+# transfer main species values into the polygon
+compoPoly <- merge(compoPoly, mainSp, by.x = 'compo', by.y = 'id_plot')
 
+plot(compoPoly, col = as.factor(compoPoly$species_name))
+object.size(compoPoly) / 1000000
+writeOGR(compoPoly, "./temp", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
 
-
-
-'merge' dans raster
-'mosaic' dans raster
-'gdalmerge.py' --> python
-
-
-hello <- raster('./temp/compo.asc')
-plot(hello)
-hello
-
-#               extent             10      5       4      2
-temps <- data.frame('nCells' = c(32760, 132158, 206358, 826276, 1469430),
-                    'temps' = c(15.96, 65.4, 100.6, 569.4, 1344.6))
-
-plot(temps$nCells, temps$temps, type = 'l')
-points(temps$nCells, temps$temps, pch = 16)
-
-
-1469430 --> 1344.6
-3307330 --> 50 mn ?
-
-
-
-# I) on affecte a chaque cellule la composition du peuplement IFN
-# qui a les valeurs de Dg, BA et Dprop les plus proches
-#
-# 1 - récupèrer Dg, BA et Dprop pour toutes les placettes LIDAR
-# 2 - calculer Dg, BA et Dprop pour toutes les placettes IFN
-# 3 - définir metrique de distance (travailler avec valeurs min/max des Dg, BA et Dprop?)
-# 4 - mesurer les distances
-# 5 - affecter la composition
-#
-# II) on affecte a chaque espèce un Dg et un BA qui colle avec Dg_LIDAR
-# et BA_LIDAR (en utilisant les ratios de Dg et BA entre espèces observées
-# sur la placette IFN)
-
-
-!!!!!!! vérifier correspondance des codes TFV (factor level)
-!!!!!!! pourquoi certaines cellule TFV = NA mais valeurs de Dg?
-
-
-arrondir(100)
-boucle tfv
-créer raster ifn plot
-which.min
-
-
-
-# create raster stack
-# TFV <- raster("./temp/TFV.asc")
-# Dprop <- raster("./temp/Dprop.asc")
-# Dg01 <- raster("./temp/Dg01.asc")
-# BA01 <- raster("./temp/BA01.asc")
-# compo <- raster("./temp/compo.asc")
-# compoRaster <- stack(TFV, Dprop, Dg01, BA01, compo)
-# stackSave(compoRaster, './temp/compoRaster.stk')
-
-
-
-
-# hello <- raster('./temp/Dg01.asc')
-# plot(hello)
-# hello
-
-
-
-# # split rasters in 4 tiles
-# splitNumber <-
-# splitRasters <- function(rasterNames){
-#   # Split Raster into several tiles
-#   split_raster(
-#     rasterNames,
-#     s = splitNumber,
-#     "./temp/",
-#     gdalinfoPath = NULL,
-#     gdal_translatePath = NULL
-#   )
-# }
-# rasterNames <- Sys.glob('./temp/*.asc')
-# lapply(rasterNames, splitRasters)
-#
-# # create stack (TFV + Dprop + Dg01 + BA01 + compo) for each tile
-# # count tiles
-# tilesNo <- splitNumber^2
-#
-# for (i in 1:tilesNo){
-#   BA01t <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('BA01_tile', i))])
-#   Dg01t <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('Dg01_tile', i))])
-#   Dpropt <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('Dprop_tile', i))])
-#   TFVt <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('TFV_tile', i))])
-#   compot <- raster(Sys.glob('./temp/*.tif')[str_detect(Sys.glob('./temp/*.tif'), paste0('compo_tile', i))])
-#
-#   compoRaster <- stack(TFVt, Dpropt, Dg01t, BA01t, compot)
-#   names(compoRaster) <- c('CODE_TFV', 'Dprop', 'Dg01', 'BA01', 'compo')
-#
-# }
-#
+# calculate surface for each stand type (based on their main sp)
+compoPoly$area <- area(compoPoly)
+surf <- as.data.frame(compoPoly) %>% group_by(sp) %>% summarise(Area = sum(area)/10000) %>% arrange(-Area)
+surf$sp <- factor(surf$sp, levels = as.character(surf$sp))
+# plot results
+pl1 <- ggplot(data = surf[1:9,]) +
+geom_bar(aes(x = sp, y = Area), stat = 'identity') +
+theme_light() +
+xlab('main species') +
+ylab('surface (ha)') +
+# scale_y_continuous("surface (ha)", sec.axis = sec_axis(~ . * 1.20, name = "number of NFI plots")) +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      plot.title = element_text(hjust = 0.5))
+pl1
+ggsave(file = './temp/compoSurf.pdf', plot = pl1, width = 10, height = 10)
