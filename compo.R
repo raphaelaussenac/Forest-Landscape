@@ -11,6 +11,7 @@ library(raster)
 library(dplyr)
 library(ggplot2)
 library(plotly)
+library(doParallel)
 
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
@@ -19,6 +20,7 @@ setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 Dg <- raster("./Init/Dg.asc")
 BA <- raster("./Init/BA.asc")
 Dprop <- raster("./Init/Dprop.asc")
+Dprop <- Dprop / 100
 
 # load TFV spatial data
 bd <- readOGR(dsn = "./data/GEO", layer = "BD_Foret_V2_PNRfilled_Foret_2014", encoding = "UTF-8", use_iconv = TRUE)
@@ -142,7 +144,8 @@ pl1 + ggtitle('TFV surface and number of NFI plots (after grouping TFV types tog
 ###############################################################
 
 # first assign TFV code to each forest cell
-bd$CODE_TFV <- as.factor(bd$CODE_TFV)
+bd$CODE_TFV <- factor(bd$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
+bd$CODE_TFV <- as.numeric(bd$CODE_TFV)
 TFVraster <- rasterize(bd, Dg, field = "CODE_TFV")
 # merge with deciduous proportion of BA
 compoRaster <- stack(TFVraster, Dprop, Dg, BA)
@@ -186,43 +189,183 @@ NFIDprop <- tree %>% group_by(id_plot, spType) %>%
 # calculate Dg and BA
 NFI <- tree %>% group_by(id_plot) %>%
                     summarise(Dg = sqrt(sum(DBH^2 * weight)/sum(weight)),
-                              BA = sum((pi * (DBH/200)^2) * weight))
+                              BA = sum((pi * (DBH/200)^2) * weight),
+                              CODE_TFV = unique(CODE_TFV))
 NFI <- merge(NFIDprop, NFI, by = 'id_plot', all = TRUE)
 NFI[is.na(NFI$Dprop), 'Dprop'] <- 0
 
+###############################################################
+# normalise Dg and BA values to 0-1 range
+# range defined on NFI values
+###############################################################
+
+# NFI plots
+NFI$Dg01 <- ( NFI$Dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
+NFI$BA01 <- ( NFI$BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
+
 # plot 3d
-fig <- plot_ly(x = NFI$Dg, y = NFI$Dprop, z = NFI$BA, type="scatter3d", mode = "markers", color = NFI$id_plot)
+fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01, type="scatter3d", mode = "markers", color = NFI$CODE_TFV)
 axx <- list(title = "quadratic diameter (cm)")
 axy <- list(title = "proportion of Deciduous basal area")
 axz <- list(title = "basal area (m^2/ha)")
 fig <- fig %>% layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz))
 fig
 
+# forest cells
+compoRaster$Dg01 <- ( compoRaster$dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
+compoRaster$BA01 <- ( compoRaster$BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
 
-I) on affecte a chaque cellule la composition du peuplement IFN
-qui a les valeurs de Dg, BA et Dprop les plus proches
+###############################################################
+# claculate distance between forest cells values and NFI values
+# and assign composition of nearest NFI plot
+###############################################################
 
-1 - récupèrer Dg, BA et Dprop pour toutes les placettes LIDAR
-2 - calculer Dg, BA et Dprop pour toutes les placettes IFN
-3 - définir metrique de distance (travailler avec valeurs min/max des Dg, BA et Dprop?)
-4 - mesurer les distances
-5 - affecter la composition
+# first create list of NFI plot for each TFV type
+plotsInTFV <- tree %>% group_by(id_plot) %>% summarize(CODE_TFV = unique(CODE_TFV)) %>% arrange(CODE_TFV)
+plotsInTFV$CODE_TFV <- factor(plotsInTFV$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
+plotsInTFV$CODE_TFV <- as.numeric(plotsInTFV$CODE_TFV)
 
-II) on affecte a chaque espèce un Dg et un BA qui colle avec Dg_LIDAR
-et BA_LIDAR (en utilisant les ratios de Dg et BA entre espèces observées
-sur la placette IFN)
+# convert NFI TFC CODE in numeric values
+NFI$CODE_TFV <- factor(NFI$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
+NFI$CODE_TFV <- as.numeric(NFI$CODE_TFV)
+NFI <- NFI %>% select(id_plot, Dprop, Dg01, BA01, CODE_TFV)
+
+# add extra layer to compoRaster to recieve compo values (= ref stand id)
+compo <- BA
+compo[!is.na(compo)] <- NA
+names(compo) <- "compo"
+compoRaster <- stack(compoRaster, compo)
+
+################################################################################
+# # simple for loop
+# test <- crop(compoRaster, extent(compoRaster)/20)
+#
+# start <- Sys.time()
+#
+# for (i in 1:nrow(test[])){
+#   # print(i)
+#   # some cells do not have any TFV value
+#   if(!is.na(test[i][1])){
+#     # retrieve list of plots (and their Dg, BA, Dprop values) in the TFV
+#     # type associated to the cell
+#     plotlist <- NFI %>% filter(CODE_TFV == test[i][1]) %>% select(-CODE_TFV)
+#     rownames(plotlist) <- plotlist$id_plot
+#     plotlist <- plotlist %>% select(-id_plot)
+#     # calculate distance
+#     plotlist$DpropCell <- test[i][2]
+#     plotlist$Dg01Cell <- test[i][5]
+#     plotlist$BA01Cell <- test[i][6]
+#     plotlist$distance <- apply(plotlist, 1, function(x) dist(matrix(x, nrow = 2, byrow = TRUE)))
+#     NearestPlot <- as.numeric(rownames(plotlist[plotlist$distance == min(plotlist$distance),]))
+#     # assign nearest plot value to cell
+#     test[i][7] <- NearestPlot
+#   }
+# }
+#
+# end <- Sys.time()
+# end - start
+################################################################################
+############################## parallel
+
+
+
+miniBauges <- crop(compoRaster, extent(compoRaster)/1.5)
+
+miniBauges <- compoRaster
+
+library(SpaDES)
+essai <- splitRaster(compoRaster, nx = 2, ny = 2, buffer = 0)#, path, cl)
+SplitRas(raster=compoRaster, ppside=3,save=FALSE,plot=TRUE)
+
+split_raster(
+  "./Init/Dg.asc",
+  s = 2,
+  "./Init/",
+  gdalinfoPath = NULL,
+  gdal_translatePath = NULL
+)
+
+
+blabla <- function(cell, i){
+  # print(i)
+  # some cells do not have any TFV value
+  if(!is.na(cell[1])){
+    # retrieve list of plots (and their Dg, BA, Dprop values) in the TFV
+    # type associated to the cell
+    plotlist <- NFI[NFI$CODE_TFV == cell[1], ]
+    rownames(plotlist) <- plotlist$id_plot
+    plotlist[, c('id_plot', 'CODE_TFV')] <- NULL
+    # calculate distance
+    plotlist$DpropCell <- cell[2]
+    plotlist$Dg01Cell <- cell[5]
+    plotlist$BA01Cell <- cell[6]
+    plotlist$distance <- apply(plotlist, 1, function(x) dist(matrix(x, nrow = 2, byrow = TRUE)))
+    NearestPlot <- as.numeric(rownames(plotlist[plotlist$distance == min(plotlist$distance),]))
+    NearestPlot <- NearestPlot[1]
+  } else {
+    NearestPlot <- NA
+  }
+  # assign nearest plot value (or NA) to cells
+  return(c(i,NearestPlot))
+}
+
+# i <- 1
+# for (i in 1:5){
+#   print(blabla(cell = miniBauges[i], i = i))
+# }
+
+cl <- makeCluster(6)
+registerDoParallel(cl)
+n <- nrow(miniBauges[])
+start <- Sys.time()
+results <- foreach(i = 1:n, .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {blabla(cell = miniBauges[i], i = i)}
+end <- Sys.time()
+end - start
+stopCluster(cl)
+
+
+results <- data.frame(results)
+colnames(results) <- c('i', 'id')
+results <- results %>% arrange(i)
+miniBauges$compo <- results[,2]
+plot(miniBauges)
+
+
+#               extent             10      5       4      2
+temps <- data.frame('nCells' = c(32760, 132158, 206358, 826276, 1469430),
+                    'temps' = c(15.96, 65.4, 100.6, 569.4, 1344.6))
+
+plot(temps$nCells, temps$temps, type = 'l')
+points(temps$nCells, temps$temps, pch = 16)
+
+
+1469430 --> 1344.6
+3307330 --> 50 mn ?
+
+
+
+# I) on affecte a chaque cellule la composition du peuplement IFN
+# qui a les valeurs de Dg, BA et Dprop les plus proches
+#
+# 1 - récupèrer Dg, BA et Dprop pour toutes les placettes LIDAR
+# 2 - calculer Dg, BA et Dprop pour toutes les placettes IFN
+# 3 - définir metrique de distance (travailler avec valeurs min/max des Dg, BA et Dprop?)
+# 4 - mesurer les distances
+# 5 - affecter la composition
+#
+# II) on affecte a chaque espèce un Dg et un BA qui colle avec Dg_LIDAR
+# et BA_LIDAR (en utilisant les ratios de Dg et BA entre espèces observées
+# sur la placette IFN)
+
+
+!!!!!!! vérifier correspondance des codes TFV (factor level)
+!!!!!!! pourquoi certaines cellule TFV = NA mais valeurs de Dg?
 
 
 
 
-# utiliser la fonction:
-setValues()
 
-
-
-
-
-
-
-# create list of NFI plot IF for each TFV type
-PlotsInTFV <- tree %>% group_by(id_plot) %>% summarize(CODE_TFV = unique(CODE_TFV)) %>% arrange(CODE_TFV)
+arrondir(100)
+boucle tfv
+créer raster ifn plot
+which.min
