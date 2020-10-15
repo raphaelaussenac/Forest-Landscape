@@ -26,19 +26,22 @@ Dprop <- Dprop / 100
 bd <- readOGR(dsn = "./data/GEO", layer = "BD_Foret_V2_PNRfilled_Foret_2014", encoding = "UTF-8", use_iconv = TRUE)
 
 # load NFI tree data
-tree <- read.csv('./data/NFI/BaugesTrees.csv', sep = ';')
+tree <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
 
 # load correspondence between NFI plots and TFV types
-crpdTFV <- read.csv('./data/NFI/croisementIfn.csv', sep = ';')
+crpdTFV <- read.csv('./data/NFI/codeTFV_Bauges_2020_10_15.csv', sep = ';')
+
+# load correspondence between NFI species code and latin Names
+spCor <- read.csv('./data/NFI/spCorrespond.csv', sep = ',')
 
 ###############################################################
 # group TFV types together
 ###############################################################
 
 # first assign TFV to each NFI plot using crpdTFV
-tree <- merge(tree, crpdTFV[, c('idp', 'TFV')], by.x = 'id_plot', by.y = 'idp')
-tree$TFV <- droplevels(tree$TFV)
-colnames(tree)[colnames(tree) == 'TFV'] <- 'CODE_TFV'
+tree <- merge(tree, crpdTFV[, c('idp', 'tfv')], by = 'idp', all.x = TRUE)
+tree$tfv <- droplevels(tree$tfv)
+colnames(tree)[colnames(tree) == 'tfv'] <- 'CODE_TFV'
 
 # Surface area of each TFV type and number of associated NFI plots
 TFVcountAndSurface <- function(bd, tree){
@@ -48,7 +51,7 @@ TFVcountAndSurface <- function(bd, tree){
                                 summarize(surface = sum(area)/10000) %>%
                                 arrange(-surface)
   # count number of NFI in each TFV type
-  TFVplotCount <- tree %>% group_by(CODE_TFV) %>% summarise(N = length(unique(id_plot)))
+  TFVplotCount <- tree %>% group_by(CODE_TFV) %>% summarise(N = length(unique(idp)))
   # merge with TFV surface
   surfArea <- merge(surfArea, TFVplotCount, by = 'CODE_TFV', all = TRUE)
   surfArea <- surfArea %>% arrange(-surface)
@@ -109,7 +112,7 @@ E <- 'FF1-09-09' #: Forêt fermée de hêtre pur
 # not specified --------------------------------------------> A
 
 groupTfv <- function(df){
-  df <- df[!(df$CODE_TFV %in% c('FO0', 'FF0', 'LA4', 'LA6')),]
+  df <- df[!(df$CODE_TFV %in% c('FO0', 'FF0', 'LA4', 'LA6')) & !is.na(df$CODE_TFV),]
   df[df$CODE_TFV == "FO1", "CODE_TFV"] <- A
   df[df$CODE_TFV == "FF1-00", "CODE_TFV"] <- A
   df[df$CODE_TFV == "FO2", "CODE_TFV"] <- B
@@ -153,9 +156,12 @@ names(TFVraster) <- 'CODE_TFV'
 # Retrieve Dg, BA, Dprop and TFV for all NFI plots
 ###############################################################
 
+# import species latin names
+tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'espar', by.y = 'franceCode')
+colnames(tree)[colnames(tree) == 'latinName'] <- 'species_name'
+
 # correct species name
 tree$species_name <- as.character(tree$species_name)
-tree[substr(tree$species_name, 1, 4) == "Ilex", 'species_name'] <- 'Ilex aquifolium'
 
 # first define deciduous and coniferous species
 deciduousSp <- c('Fagus sylvatica', 'Sorbus aria', 'Quercus robur',
@@ -169,7 +175,7 @@ deciduousSp <- c('Fagus sylvatica', 'Sorbus aria', 'Quercus robur',
                  'Crataegus monogyna', 'Sorbus mougeoti', 'Laburnum anagyroides',
                  'Quercus pubescens', 'Alnus glutinosa', 'Salix cinerea',
                  'Alnus incana', 'Ilex aquifolium', 'Buxus sempervirens',
-                 'Prunus padus')
+                 'Prunus padus', 'Robinia pseudoacacia')
 #
 coniferousSp <- c('Picea abies', 'Abies alba', 'Pinus sylvestris',
                   'Taxus baccata', 'Larix decidua', 'Larix kaempferi')
@@ -178,17 +184,17 @@ tree[tree$species_name %in% deciduousSp, 'spType'] <- 'D'
 tree[tree$species_name %in% coniferousSp, 'spType'] <- 'C'
 
 # calculate proportion of deciduous BA
-tree$DBH <- tree$c130_final / pi
-NFIDprop <- tree %>% group_by(id_plot, spType) %>%
-                          summarise(BAdc = sum((pi * (DBH/200)^2) * weight)) %>%
-                          group_by(id_plot) %>% mutate(BA = sum(BAdc), Dprop = BAdc/BA) %>%
+tree$DBH <- tree$c13 / pi
+NFIDprop <- tree %>% group_by(idp, spType) %>%
+                          summarise(BAdc = sum((pi * (DBH/200)^2) * w)) %>%
+                          group_by(idp) %>% mutate(BA = sum(BAdc), Dprop = BAdc/BA) %>%
                           filter(spType == 'D') %>% select(-spType, -BAdc, -BA)
 # calculate Dg and BA
-NFI <- tree %>% group_by(id_plot) %>%
-                    summarise(Dg = sqrt(sum(DBH^2 * weight)/sum(weight)),
-                              BA = sum((pi * (DBH/200)^2) * weight),
+NFI <- tree %>% group_by(idp) %>%
+                    summarise(Dg = sqrt(sum(DBH^2 * w)/sum(w)),
+                              BA = sum((pi * (DBH/200)^2) * w),
                               CODE_TFV = unique(CODE_TFV))
-NFI <- merge(NFIDprop, NFI, by = 'id_plot', all = TRUE)
+NFI <- merge(NFIDprop, NFI, by = 'idp', all = TRUE)
 NFI[is.na(NFI$Dprop), 'Dprop'] <- 0
 
 ###############################################################
@@ -200,11 +206,6 @@ NFI[is.na(NFI$Dprop), 'Dprop'] <- 0
 NFI$Dg01 <- ( NFI$Dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
 NFI$BA01 <- ( NFI$BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
 
-# convert NFI TFV CODE in numeric values
-NFI$CODE_TFV <- factor(NFI$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
-NFI$CODE_TFV <- as.numeric(NFI$CODE_TFV)
-NFI <- NFI %>% select(id_plot, Dprop, Dg01, BA01, CODE_TFV)
-
 # plot 3d
 fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01, type="scatter3d", mode = "markers", color = NFI$CODE_TFV)
 axx <- list(title = "quadratic diameter (cm)")
@@ -212,6 +213,11 @@ axy <- list(title = "proportion of Deciduous basal area")
 axz <- list(title = "basal area (m^2/ha)")
 fig <- fig %>% layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz))
 fig
+
+# convert NFI TFV CODE in numeric values
+NFI$CODE_TFV <- factor(NFI$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
+NFI$CODE_TFV <- as.numeric(NFI$CODE_TFV)
+NFI <- NFI %>% select(idp, Dprop, Dg01, BA01, CODE_TFV)
 
 # forest cells
 Dg01 <- ( Dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
@@ -257,8 +263,8 @@ assignCompo <- function(cell, i, NFI){
     # retrieve list of plots (and their Dg, BA, Dprop values) in the TFV
     # type associated to the cell
     plotlist <- NFI[NFI$CODE_TFV == cell[, 'CODE_TFV'], ]
-    rownames(plotlist) <- plotlist$id_plot
-    plotlist[, c('id_plot', 'CODE_TFV')] <- NULL
+    rownames(plotlist) <- plotlist$idp
+    plotlist[, c('idp', 'CODE_TFV')] <- NULL
     # retrieve cell values = coordinates
     plotlist$DpropCell <- cell[, 'Dprop']
     plotlist$Dg01Cell <- cell[, 'Dg01']
@@ -275,15 +281,12 @@ assignCompo <- function(cell, i, NFI){
   return(c(i,NearestPlot))
 }
 
-# launch calculation on both rasters
+# parallel calculation on raster cells (one raster after the other)
 clustCalc <- function(rast, assignCompo, NFI){
   # set cluster
-  cl <- makeCluster(6)
+  cl <- makeCluster(8)
   registerDoParallel(cl)
-  # start <- Sys.time()
   results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignCompo(cell = rast[i], i = i, NFI)}
-  # end <- Sys.time()
-  # end - start
   stopCluster(cl)
   # transfer results into raster stack
   results <- data.frame(results)
@@ -293,7 +296,12 @@ clustCalc <- function(rast, assignCompo, NFI){
   plot(rast)
   return(rast)
 }
+
+# run calculation
+start <- Sys.time()
 rasts <- lapply(c(rast1, rast2), clustCalc, assignCompo,NFI)
+end <- Sys.time()
+end - start
 
 # merge back rasters
 rast1 <- rasts[[1]]
@@ -325,9 +333,9 @@ dev.off()
 # the stand BA
 thresh = 0.70
 # retrieve main species
-mainSp <- tree %>% group_by(id_plot, species_name) %>%
-                          summarise(BA = sum((pi * (DBH/200)^2) * weight)) %>%
-                          group_by(id_plot) %>% arrange(id_plot, -BA) %>%
+mainSp <- tree %>% group_by(idp, species_name) %>%
+                          summarise(BA = sum((pi * (DBH/200)^2) * w)) %>%
+                          group_by(idp) %>% arrange(idp, -BA) %>%
                           mutate(BAtot = sum(BA), BAprop = BA/BAtot, cumulProp = cumsum(BAprop), HigherThanthresh = case_when(
                             cumulProp >= thresh ~ cumulProp), minCompo = min(HigherThanthresh, na.rm = TRUE)) %>%
                           filter(cumulProp <= minCompo) %>% summarise(sp = paste(species_name, collapse=' - '))
@@ -335,7 +343,7 @@ mainSp <- tree %>% group_by(id_plot, species_name) %>%
 # convert raster into polygon
 compoPoly <- rasterToPolygons(compo, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
 # transfer main species values into the polygon
-compoPoly <- merge(compoPoly, mainSp, by.x = 'compo', by.y = 'id_plot')
+compoPoly <- merge(compoPoly, mainSp, by.x = 'compo', by.y = 'idp')
 
 plot(compoPoly, col = as.factor(compoPoly$species_name))
 object.size(compoPoly) / 1000000
@@ -346,13 +354,13 @@ compoPoly$area <- area(compoPoly)
 surf <- as.data.frame(compoPoly) %>% group_by(sp) %>% summarise(Area = sum(area)/10000) %>% arrange(-Area)
 surf$sp <- factor(surf$sp, levels = as.character(surf$sp))
 # plot results
-pl1 <- ggplot(data = surf[1:9,]) +
+pl1 <- ggplot(data = surf) +
 geom_bar(aes(x = sp, y = Area), stat = 'identity') +
 theme_light() +
 xlab('main species') +
 ylab('surface (ha)') +
 # scale_y_continuous("surface (ha)", sec.axis = sec_axis(~ . * 1.20, name = "number of NFI plots")) +
-theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       plot.title = element_text(hjust = 0.5))
 pl1
 ggsave(file = './temp/compoSurf.pdf', plot = pl1, width = 10, height = 10)
