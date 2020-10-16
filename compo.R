@@ -18,7 +18,9 @@ setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
 # load LIDAR rasters
 Dg <- raster("./Init/Dg.asc")
+Dg[Dg > 1000] <- 1000 # correct the wrong min max values
 BA <- raster("./Init/BA.asc")
+BA[BA > 1000] <- 1000 # correct the wrong min max values
 Dprop <- raster("./Init/Dprop.asc")
 Dprop <- Dprop / 100
 
@@ -203,8 +205,14 @@ NFI[is.na(NFI$Dprop), 'Dprop'] <- 0
 ###############################################################
 
 # NFI plots
-NFI$Dg01 <- ( NFI$Dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
-NFI$BA01 <- ( NFI$BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
+minDg <- min(min(NFI$Dg), minValue(Dg))
+maxDg <- max(max(NFI$Dg), maxValue(Dg))
+NFI$Dg01 <- ( NFI$Dg - minDg ) / ( maxDg - minDg )
+minBA <- min(min(NFI$BA), minValue(BA))
+maxBA <- max(max(NFI$BA), maxValue(BA))
+NFI$BA01 <- ( NFI$BA - minBA ) / ( maxBA - minBA )
+
+# NFI[NFI$idp == '469390', 'CODE_TFV'] <- 'CASTA'
 
 # plot 3d
 fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01, type="scatter3d", mode = "markers", color = NFI$CODE_TFV)
@@ -220,9 +228,9 @@ NFI$CODE_TFV <- as.numeric(NFI$CODE_TFV)
 NFI <- NFI %>% select(idp, Dprop, Dg01, BA01, CODE_TFV)
 
 # forest cells
-Dg01 <- ( Dg - min(NFI$Dg) ) / ( max(NFI$Dg) - min(NFI$Dg) )
+Dg01 <- ( Dg - minDg ) / ( maxDg - minDg )
 names(Dg01) <- 'Dg01'
-BA01 <- ( BA - min(NFI$BA) ) / ( max(NFI$BA) - min(NFI$BA) )
+BA01 <- ( BA - minBA ) / ( maxBA - minBA )
 names(BA01) <- 'BA01'
 
 ###############################################################
@@ -310,23 +318,13 @@ rast3 <- raster::merge(rast1, rast2, overlap = FALSE)
 names(rast3) <- names(compoRaster)
 # save
 writeRaster(rast3$compo, "./temp/compo.asc", overwrite = TRUE)
-
-
-################################################################################
-# check composition
-################################################################################
-
-# free memory
-rm(list=setdiff(ls(), "tree"))
-# set work directory
-setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
-
-# load composition raster
-compo <- raster('./temp/compo.asc')
 pdf(file="./temp/compo.pdf")
-plot(compo, legend = FALSE)
+plot(rast3$compo, legend = FALSE)
 dev.off()
-# compo <- crop(compo, extent(compo)/5)
+
+################################################################################
+# check composition - convert plot id map into species composition map
+################################################################################
 
 # set threshold to identify mainSp
 # thresh = 0.8 means you will get the species making up for > 80% of the stand BA
@@ -341,12 +339,9 @@ mainSp <- tree %>% group_by(idp, species_name) %>%
                           filter(cumulProp <= minCompo) %>% summarise(sp = paste(species_name, collapse=' - '))
 #
 # convert raster into polygon
-compoPoly <- rasterToPolygons(compo, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
+compoPoly <- rasterToPolygons(rast3$compo, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
 # transfer main species values into the polygon
 compoPoly <- merge(compoPoly, mainSp, by.x = 'compo', by.y = 'idp')
-
-plot(compoPoly, col = as.factor(compoPoly$species_name))
-object.size(compoPoly) / 1000000
 writeOGR(compoPoly, "./temp", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
 
 # calculate surface for each stand type (based on their main sp)
@@ -363,4 +358,30 @@ ylab('surface (ha)') +
 theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       plot.title = element_text(hjust = 0.5))
 pl1
-ggsave(file = './temp/compoSurf.pdf', plot = pl1, width = 10, height = 10)
+ggsave(file = './temp/compoSurf.pdf', plot = pl1, width = 20, height = 10)
+
+
+
+# ################################################################################# lab
+#
+# # identify plots with main species = castanea sativa - picea abies idp
+# id <- as.factor(mainSp %>% filter(sp == 'Castanea sativa - Picea abies') %>% select(idp))
+# treeInit <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
+# crpdTFV <- read.csv('./data/NFI/codeTFV_Bauges_2020_10_15.csv', sep = ';')
+# treeInit <- merge(treeInit, crpdTFV[, c('idp', 'tfv')], by = 'idp', all.x = TRUE)
+# treeInit$tfv <- droplevels(treeInit$tfv)
+# colnames(treeInit)[colnames(treeInit) == 'tfv'] <- 'CODE_TFV'
+# treeInit[treeInit$idp %in% c(52225, 469390),]
+# tree[tree$idp %in% c(52225, 469390),]
+# test <- tree %>% group_by(idp, species_name) %>% summarise(BA = sum((pi * (DBH/200)^2) * w)) %>% filter(idp %in% c(52225, 469390)) %>% arrange(idp, BA)
+#
+#
+# ----> changer calcul distance min max (NFI et LIDAR)
+#
+# # vérifier plot assigné aux nousvelles zones TFV correspondent
+# test <- stack(compo, TFVraster)
+# unique(test[test$CODE_TFV == 5])
+# a <- c(53063,469390, 845163, 323332, 1119387, 34513, 275200, 455115, 220779)
+# b <- c(768661, 644746, 974588, 654278, 429664, 279047, 700808, 254174, 154373)
+# c <- c(957790, 1312779, 442449)
+# unique(tree[tree$idp %in% c(c), 'CODE_TFV'])
