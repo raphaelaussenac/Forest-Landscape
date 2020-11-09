@@ -63,15 +63,25 @@ swhc <- raster("./data/GEO/rum_500_v2009.tif")
 swhc <- resample(swhc, elevation)
 swhc <- swhc/10 # convert into cm
 
-# Quadratic diameter (cm)
+# Quadratic diameter (cm) [0, 80]
 dg <- raster('./data/GEO/rastDg75error.clean.tif')
 crs(dg) <- crs(park)
 dg <- resample(dg, elevation)
 
-# basal area (m2)
+# basal area (m2) [0, 120]
 BA <- raster('./data/GEO/rastG75error.clean.tif')
 crs(BA) <- crs(park)
 BA <- resample(BA, elevation)
+
+# # Quadratic diameter (cm) with all extreme values
+# dgExtrem <- raster('./data/GEO/rastDg75error.forest.tif')
+# crs(dgExtrem) <- crs(park)
+# dgExtrem <- resample(dgExtrem, elevation)
+#
+# # basal area (m2) with all extreme values
+# BAExtrem <- raster('./data/GEO/rastG75error.forest.tif')
+# crs(BAExtrem) <- crs(park)
+# BAExtrem <- resample(BAExtrem, elevation)
 
 # N
 N <- raster('./data/GEO/N_pred.tif')
@@ -94,16 +104,16 @@ Dprop <- resample(Dprop, elevation)
 ###############################################################
 
 # create directory to save plots
-if (!(dir.exists('Init'))) {dir.create('Init', recursive = TRUE)}
+if (!(dir.exists('./data/Init'))) {dir.create('./data/Init', recursive = TRUE)}
 
-writeRaster(parkRaster, filename = "./Init/parkMask.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(forestRaster, filename = "./Init/forestMask.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(elevation, filename = "./Init/elev.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(slope, filename = "./Init/slope.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(aspect, filename = "./Init/aspect.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(swhc, filename = "./Init/swhc.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(dg, filename = "./Init/dg.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(BA, filename = "./Init/BA.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(N, filename = "./Init/N.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-# writeRaster(LTBA, filename = "./Init/LTBA.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
-writeRaster(Dprop, filename = "./Init/Dprop.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(parkRaster, filename = "./data/Init/parkMask.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(forestRaster, filename = "./data/Init/forestMask.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(elevation, filename = "./data/Init/elev.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(slope, filename = "./data/Init/slope.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(aspect, filename = "./data/Init/aspect.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(swhc, filename = "./data/Init/swhc.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(dg, filename = "./data/Init/dg.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(BA, filename = "./data/Init/BA.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(N, filename = "./data/Init/N.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+# writeRaster(LTBA, filename = "./data/Init/LTBA.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)
+writeRaster(Dprop, filename = "./data/Init/Dprop.asc", format = "ascii", datatype = 'INT4S', overwrite = TRUE)

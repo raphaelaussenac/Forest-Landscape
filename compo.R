@@ -17,11 +17,11 @@ library(doParallel)
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
 # load LIDAR rasters
-Dg <- raster("./Init/Dg.asc")
+Dg <- raster("./data/Init/Dg.asc")
 Dg[Dg > 1000] <- 1000 # correct the wrong min max values
-BA <- raster("./Init/BA.asc")
+BA <- raster("./data/Init/BA.asc")
 BA[BA > 1000] <- 1000 # correct the wrong min max values
-Dprop <- raster("./Init/Dprop.asc")
+Dprop <- raster("./data/Init/Dprop.asc")
 Dprop <- Dprop / 100
 
 # load TFV spatial data
@@ -317,8 +317,8 @@ rast2 <- rasts[[2]]
 rast3 <- raster::merge(rast1, rast2, overlap = FALSE)
 names(rast3) <- names(compoRaster)
 # save
-writeRaster(rast3$compo, "./temp/compo.asc", overwrite = TRUE)
-pdf(file="./temp/compo.pdf")
+writeRaster(rast3$compo, "./data/Init/compoID.asc", overwrite = TRUE)
+pdf(file="./data/Init/compoID.pdf")
 plot(rast3$compo, legend = FALSE)
 dev.off()
 
@@ -342,7 +342,7 @@ mainSp <- tree %>% group_by(idp, species_name) %>%
 compoPoly <- rasterToPolygons(rast3$compo, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
 # transfer main species values into the polygon
 compoPoly <- merge(compoPoly, mainSp, by.x = 'compo', by.y = 'idp')
-writeOGR(compoPoly, "./temp", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
+writeOGR(compoPoly, "./data/Init", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
 
 # calculate surface for each stand type (based on their main sp)
 compoPoly$area <- area(compoPoly)
@@ -358,30 +358,4 @@ ylab('surface (ha)') +
 theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       plot.title = element_text(hjust = 0.5))
 pl1
-ggsave(file = './temp/compoSurf.pdf', plot = pl1, width = 20, height = 10)
-
-
-
-# ################################################################################# lab
-#
-# # identify plots with main species = castanea sativa - picea abies idp
-# id <- as.factor(mainSp %>% filter(sp == 'Castanea sativa - Picea abies') %>% select(idp))
-# treeInit <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
-# crpdTFV <- read.csv('./data/NFI/codeTFV_Bauges_2020_10_15.csv', sep = ';')
-# treeInit <- merge(treeInit, crpdTFV[, c('idp', 'tfv')], by = 'idp', all.x = TRUE)
-# treeInit$tfv <- droplevels(treeInit$tfv)
-# colnames(treeInit)[colnames(treeInit) == 'tfv'] <- 'CODE_TFV'
-# treeInit[treeInit$idp %in% c(52225, 469390),]
-# tree[tree$idp %in% c(52225, 469390),]
-# test <- tree %>% group_by(idp, species_name) %>% summarise(BA = sum((pi * (DBH/200)^2) * w)) %>% filter(idp %in% c(52225, 469390)) %>% arrange(idp, BA)
-#
-#
-# ----> changer calcul distance min max (NFI et LIDAR)
-#
-# # vérifier plot assigné aux nousvelles zones TFV correspondent
-# test <- stack(compo, TFVraster)
-# unique(test[test$CODE_TFV == 5])
-# a <- c(53063,469390, 845163, 323332, 1119387, 34513, 275200, 455115, 220779)
-# b <- c(768661, 644746, 974588, 654278, 429664, 279047, 700808, 254174, 154373)
-# c <- c(957790, 1312779, 442449)
-# unique(tree[tree$idp %in% c(c), 'CODE_TFV'])
+ggsave(file = './data/Init/compoSurf.pdf', plot = pl1, width = 20, height = 10)
