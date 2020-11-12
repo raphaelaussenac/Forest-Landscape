@@ -16,6 +16,9 @@ library(doParallel)
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
+# load sources
+source('R/spTransform.R')
+
 # load LIDAR rasters
 Dg <- raster("./data/Init/Dg.asc")
 Dg[Dg > 1000] <- 1000 # correct the wrong min max values
@@ -32,9 +35,6 @@ tree <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
 
 # load correspondence between NFI plots and TFV types
 crpdTFV <- read.csv('./data/NFI/codeTFV_Bauges_2020_10_15.csv', sep = ';')
-
-# load correspondence between NFI species code and latin Names
-spCor <- read.csv('./data/NFI/spCorrespond.csv', sep = ',')
 
 ###############################################################
 # group TFV types together
@@ -158,32 +158,8 @@ names(TFVraster) <- 'CODE_TFV'
 # Retrieve Dg, BA, Dprop and TFV for all NFI plots
 ###############################################################
 
-# import species latin names
-tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'espar', by.y = 'franceCode')
-colnames(tree)[colnames(tree) == 'latinName'] <- 'species_name'
-
-# correct species name
-tree$species_name <- as.character(tree$species_name)
-
-# first define deciduous and coniferous species
-deciduousSp <- c('Fagus sylvatica', 'Sorbus aria', 'Quercus robur',
-                 'Quercus petraea', 'Acer opalus', 'Tilia platyphyllos',
-                 'Carpinus betulus', 'Castanea sativa', 'Populus nigra',
-                 'Fraxinus excelsior', 'Corylus avellana', 'Acer campestre',
-                 'Betula pendula', 'Populus tremula', 'Prunus avium',
-                 'Acer pseudoplatanus', 'Tilia cordata', 'Salix caprea',
-                 'Ulmus glabra', 'Sorbus aucuparia', 'Robinia pseudacacia',
-                 'Malus sylvestris', 'Acer platanoides', 'Salix alba',
-                 'Crataegus monogyna', 'Sorbus mougeoti', 'Laburnum anagyroides',
-                 'Quercus pubescens', 'Alnus glutinosa', 'Salix cinerea',
-                 'Alnus incana', 'Ilex aquifolium', 'Buxus sempervirens',
-                 'Prunus padus', 'Robinia pseudoacacia')
-#
-coniferousSp <- c('Picea abies', 'Abies alba', 'Pinus sylvestris',
-                  'Taxus baccata', 'Larix decidua', 'Larix kaempferi')
-#
-tree[tree$species_name %in% deciduousSp, 'spType'] <- 'D'
-tree[tree$species_name %in% coniferousSp, 'spType'] <- 'C'
+# import latin names and create deciduous / coniferous categories
+tree <- spTransform(tree)
 
 # calculate proportion of deciduous BA
 tree$DBH <- tree$c13 / pi
@@ -307,7 +283,7 @@ clustCalc <- function(rast, assignCompo, NFI){
 
 # run calculation
 start <- Sys.time()
-rasts <- lapply(c(rast1, rast2), clustCalc, assignCompo,NFI)
+rasts <- lapply(c(rast1, rast2), clustCalc, assignCompo, NFI)
 end <- Sys.time()
 end - start
 
