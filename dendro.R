@@ -37,28 +37,27 @@ tree <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
 tree <- spTransform(tree)
 
 ###############################################################
-# calculate Dg, BA, Dprop... for NFI plots
+# calculate N, Dg, BA, Dprop in NFI plots
 ###############################################################
 
 # calculate tree DBH
 tree$DBH <- tree$c13 / pi
+# Calculate N, Dg and BA for the whole plote, for deciduous and coniferous and
+# for ech species
+tree <- tree %>% mutate(BAtree =  (pi * (DBH/200)^2) * w) %>%
+                 group_by(idp) %>% mutate(BAtot = sum((pi * (DBH/200)^2) * w),
+                                          Dgtot = sqrt(sum(DBH^2 * w)/sum(w)),
+                                          Ntot = sum(w)) %>%
+                 group_by(idp, spType) %>% mutate(BAdc = sum((pi * (DBH/200)^2) * w),
+                                                  Dgdc = sqrt(sum(DBH^2 * w)/sum(w)),
+                                                  Ndc = sum(w)) %>%
+                 group_by(idp, spType, species_name) %>% mutate(BAsp = sum((pi * (DBH/200)^2) * w),
+                                                                Dgsp = sqrt(sum(DBH^2 * w)/sum(w))) %>%
+                 group_by(idp, spType) %>% mutate(spPropdc = BAsp/BAdc) %>% ungroup() %>%
+                 mutate(treePropsp = BAtree / BAsp)
 #
-# calculate total Dg and BA
-NFItot <- tree %>% group_by(idp) %>% summarise(BAtot = sum((pi * (DBH/200)^2) * w),
-                                               Dgtot = sqrt(sum(DBH^2 * w)/sum(w)),
-                                               N = sum(w))
-#
-# calculate Dg and BA for deciduous and coniferous
-NFIdc <- tree %>% group_by(idp, spType) %>% summarise(BAdc = sum((pi * (DBH/200)^2) * w),
-                                                      Dgdc = sqrt(sum(DBH^2 * w)/sum(w)),
-                                                      N = sum(w))
-#
-# calculate Dg and BA for all species
-NFIsp <- tree %>% group_by(idp, spType, species_name) %>% summarise(BAsp = sum((pi * (DBH/200)^2) * w),
-                                                      Dgsp = sqrt(sum(DBH^2 * w)/sum(w))) %>%
-                  group_by(idp, spType) %>% mutate(BAdc = sum(BAsp)) %>%
-                  mutate(spPropdc = BAsp/BAdc)
-#
+# summarise at sp level
+NFIsp <- tree %>% group_by(idp, species_name, BAsp, Dgsp, spType, spPropdc) %>% summarise()
 
 ###############################################################
 #
@@ -78,8 +77,8 @@ bad <- batot * dprop
 bac <- batot * (1 - dprop)
 
 # retrieve dg deciduous and coniferous (NFI)
-dgd <- as.numeric(NFIdc[NFIdc$idp == id & NFIdc$spType == 'D', 'Dgdc'])
-dgc <- as.numeric(NFIdc[NFIdc$idp == id & NFIdc$spType == 'C', 'Dgdc'])
+dgd <- as.numeric(unique(tree[tree$idp == id & tree$spType == 'D', 'Dgdc']))
+dgc <- as.numeric(unique(tree[tree$idp == id & tree$spType == 'C', 'Dgdc']))
 
 # calculate alpha correction coef for deciduous and coniferous
 alphadc <- dgtot * sqrt( sum(bad/dgd^2, bac/dgc^2) / batot)
@@ -88,7 +87,6 @@ alphadc <- dgtot * sqrt( sum(bad/dgd^2, bac/dgc^2) / batot)
 dgdcorrec <- dgd * alphadc
 dgccorrec <- dgc * alphadc
 
-
 # sp level ---------------------------------------------------------------------
 
 # calculate species ba (LIDAR) from NFI sp proportion
@@ -96,18 +94,73 @@ NFIplot <- NFIsp[NFIsp$idp == id,]
 NFIplot[NFIplot$spType == 'D', 'BAdclid'] <- bad
 NFIplot[NFIplot$spType == 'C', 'BAdclid'] <- bac
 NFIplot$BAsplid <- NFIplot$BAdclid * NFIplot$spPropdc
-NFIplot$sumRatio <- NFIplot$BAsplid / NFIplot$Dgsp^2
 
-# calculate alpha correction coef for deciduous sp
+# calculate alpha correction coef
+NFIplot$sumRatio <- NFIplot$BAsplid / NFIplot$Dgsp^2
+# for deciduous sp
 alphad <- dgdcorrec * sqrt( sum(NFIplot[NFIplot$spType == 'D', 'sumRatio']) / bad)
-# calculate alpha correction coef for coniferous sp
+# for coniferous sp
 alphac <- dgccorrec * sqrt( sum(NFIplot[NFIplot$spType == 'C', 'sumRatio']) / bac)
 
-# assign a dglid to all species
+# assign a dg (LIDAR) to all species
 NFIplot$Dgsplid <- NFIplot$Dgsp * alphad
 
+# calculate Nsp (LIDAR)
+NFIplot$Nsplid <- 40000/pi * ( NFIplot$BAsplid / NFIplot$Dgsplid^2 )
 
-# verif lab !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# tree level -------------------------------------------------------------------
+
+# calculate tree ba (LIDAR) from NFI tree ba proportion
+dbh <- tree[tree$idp == id, ]
+dbh <- merge(dbh, NFIplot[, c('species_name', 'Nsplid', 'Dgsplid', 'BAsplid')], by = 'species_name')
+# dbh <- dbh %>% group_by(species_name) %>% mutate(wlid = w * Nsplid / sum(w)) %>% ungroup()
+dbh$BAtreelid <- dbh$BAsplid * dbh$treePropsp
+
+# calculate alpha correction coef for all trees
+dbh$sumRatio <- dbh$BAtreelid / dbh$DBH^2
+dbh <- dbh %>% group_by(species_name) %>%
+               mutate(alphatree = Dgsplid * sqrt( sum(sumRatio) / BAsplid))
+#
+# assign a DBH (LIDAR) to all trees
+dbh$DBHlid <- dbh$DBH * dbh$alphatree
+
+# assign weight to each tree
+dbh$wlid <- 40000 / pi * dbh$BAtreelid / dbh$DBHlid^2
+
+# calculate round(weight) for a 25*25m pixel
+dbh$w25m <-round(dbh$wlid/16)
+
+# assign new dbh to trees while keeping BAtreelid
+dbh$dbhlid25m <-sqrt(40000/pi * (dbh$BAtreelid/16) / dbh$w25m)
+
+
+
+
+# !!!!!!!!!!!!! difference entre arrondi et non arrondi doit etre centrée sur 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!!!!!!!! regarder en fonction du diametre aussi !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+# # verif lab !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# # verifier si les BA calculer a partir des dbh lidar finaux correspondent bien
+# # au BAsplid, BAdclid et BAtotlid
+# verifBA <- dbh %>% group_by(species_name) %>%
+#                    mutate(VerifBasp = sum( (pi * (dbhlid25m/200)^2) * w25m * 16 )) %>%
+#                    group_by(spType) %>%
+#                    mutate(VerifBadc = sum( (pi * (dbhlid25m/200)^2) * w25m * 16 )) %>%
+#                    ungroup() %>%
+#                    mutate(VerifBatot = sum( (pi * (dbhlid25m/200)^2) * w25m * 16 ))
+# #
+# batot
+# unique(verifBA$VerifBatot)
+# bad
+# as.numeric(unique(verifBA[verifBA$spType == 'D', 'VerifBadc']))
+# bac
+# as.numeric(unique(verifBA[verifBA$spType == 'C', 'VerifBadc']))
+# sort(unique(verifBA$BAsplid))
+# sort(unique(verifBA$VerifBasp))
+#
 # # calcul de Nsp a partir de Basplid et Dgsplid
 # NFIplot$Nlid <- 40000/pi * ( NFIplot$BAsplid / NFIplot$Dgsplid^2 )
 # # calcul de N feuillu a partir de valeurs sp
@@ -130,23 +183,14 @@ NFIplot$Dgsplid <- NFIplot$Dgsp * alphad
 # # valeurs IFN:
 # NFItot[NFItot$idp == 4740,]
 # verif lab !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-# III) alpha pour les diamètres ------------------------------------------------
-
-
-
-
-###################################################### lab
-
-nbsp <- tree %>% group_by(idp, spType) %>% summarise(n = length(unique(species_name)))
-# 5sp = 2C + 3D:
-# id 4740
-rasterTemp <- compo %in% 4740
-rasterTemp <- as.data.frame(rasterTemp)
-rasterTemp$cell <- 1:nrow(rasterTemp)
-rasterTemp <- rasterTemp[rasterTemp$layer == TRUE,]
-# e.g. 205157
-NFIplot$Dgcorrec <- NFIplot$Dgsp * alphad
-
-
-as.data.frame(NFIdc[NFIdc$idp == 4740, ])
+##################################################### other lab
+# select plot with 5sp = 2C + 3D:
+# nbsp <- tree %>% group_by(idp, spType) %>% summarise(n = length(unique(species_name)))
+# # id 4740
+# rasterTemp <- compo %in% 4740
+# rasterTemp <- as.data.frame(rasterTemp)
+# rasterTemp$cell <- 1:nrow(rasterTemp)
+# rasterTemp <- rasterTemp[rasterTemp$layer == TRUE,]
+# # e.g. 205157
+# NFIplot$Dgcorrec <- NFIplot$Dgsp * alphad
+# as.data.frame(NFIsp[NFIsp$idp == 4740, ])
