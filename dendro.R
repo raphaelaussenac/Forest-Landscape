@@ -30,6 +30,7 @@ Dprop <- Dprop / 100
 
 # create raster stack
 rasterStack <- stack(compo, Dg, BA, Dprop)
+rasterStack$cellID <- c(1:nrow(rasterStack[]))
 
 # load NFI tree data
 tree <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
@@ -64,33 +65,34 @@ NFIsp <- tree %>% group_by(idp, species_name, BAsp, Dgsp, spType, spPropdc) %>% 
 #
 ###############################################################
 
-# rasterStack <- crop(rasterStack, extent(rasterStack)/20)
-# cell <- rasterStack[389]
+rasterStack <- crop(rasterStack, extent(rasterStack)/20)
+# cell <- rast1[166]
 
 # Split data into two separate stack rasters
 rast1 <- crop(rasterStack, c(extent(rasterStack)[1],
-                                  extent(rasterStack)[1] + round( (extent(rasterStack)[2] - extent(rasterStack)[1]) / 2),
-                                  extent(rasterStack)[3],
-                                  extent(rasterStack)[4]))
+                             extent(rasterStack)[2],
+                             extent(rasterStack)[3],
+                             extent(rasterStack)[3] + round( (extent(rasterStack)[4] - extent(rasterStack)[3]) / 2)))
 #
-rast2 <- crop(rasterStack, c(extent(rasterStack)[1] + round( (extent(rasterStack)[2] - extent(rasterStack)[1]) / 2),
-                                  extent(rasterStack)[2],
-                                  extent(rasterStack)[3],
-                                  extent(rasterStack)[4]))
+rast2 <- crop(rasterStack, c(extent(rasterStack)[1],
+                             extent(rasterStack)[2],
+                             extent(rasterStack)[3] + round( (extent(rasterStack)[4] - extent(rasterStack)[3]) / 2),
+                             extent(rasterStack)[4]))
 #
 
 # function to assign n trees and their dbh to each cell
 assignDendro <- function(cell, i, tree, NFIsp){
+
+  # retrieve id composition dg and ba (LIDAR)
+  id <- cell[1]
+  dgtot <- cell[2]
+  batot <- cell[3]
+  dprop <- cell[4]
+  cellID <- cell[5]
+
   if(sum(is.na(cell)) == 0){
     # i <- 205157 # i = 205157 = plotid 4740 with 5sp = 2C + 3D:
     # deciduous - coniferous level -------------------------------------------------
-
-    # retrieve id composition dg and ba (LIDAR)
-    id <- cell[1]
-    dgtot <- cell[2]
-    batot <- cell[3]
-    dprop <- cell[4]
-
     # calculate deciduous and coniferous ba (LIDAR)
     bad <- batot * dprop
     bac <- batot * (1 - dprop)
@@ -106,9 +108,23 @@ assignDendro <- function(cell, i, tree, NFIsp){
       bac <- batot * (1 - 1)
     }
 
+    # if dprop = 0 or 1, transform deciduous into coniferous and vice versa
+    # in NFI plot
+    deciConi <- tree[tree$idp == id, ]
+    # if(dprop == 1){
+    #   deciConi[deciConi$spType == 'C', 'species_name'] <- unique(deciConi[deciConi$spType == 'D', 'species_name'])[1,1]
+    #   deciConi[deciConi$spType == 'C', 'spType'] <- 'D'
+    #   deciConi$Dgdc <- deciConi$Dgtot
+    # }
+    # if(dprop == 0){
+    #   deciConi[deciConi$spType == 'D', 'species_name'] <- unique(deciConi[deciConi$spType == 'C', 'species_name'])[1,1]
+    #   deciConi[deciConi$spType == 'D', 'spType'] <- 'C'
+    #   deciConi$Dgdc <- deciConi$Dgtot
+    # }
+
     # retrieve dg deciduous and coniferous (NFI)
-    dgd <- as.numeric(unique(tree[tree$idp == id & tree$spType == 'D', 'Dgdc']))
-    dgc <- as.numeric(unique(tree[tree$idp == id & tree$spType == 'C', 'Dgdc']))
+    dgd <- as.numeric(unique(deciConi[deciConi$spType == 'D', 'Dgdc']))
+    dgc <- as.numeric(unique(deciConi[deciConi$spType == 'C', 'Dgdc']))
 
     # calculate alpha correction coef for deciduous and coniferous
     alphadc <- dgtot * sqrt( sum(bad/dgd^2, bac/dgc^2, na.rm = TRUE) / batot)
@@ -121,6 +137,17 @@ assignDendro <- function(cell, i, tree, NFIsp){
 
     # calculate species ba (LIDAR) from NFI sp proportion
     NFIplot <- NFIsp[NFIsp$idp == id,]
+    # if dprop = 0 or 1, transform deciduous into coniferous and vice versa
+    # if(dprop == 1){
+    #   NFIplot[NFIplot$spType == 'C', 'species_name'] <- unique(NFIplot[NFIplot$spType == 'D', 'species_name'])[1,1]
+    #   NFIplot[NFIplot$spType == 'C', 'spType'] <- 'D'
+    #   NFIplot[, 'spPropdc'] <- NFIplot$BAsp / sum(NFIplot$BAsp)
+    # }
+    # if(dprop == 0){
+    #   NFIplot[NFIplot$spType == 'D', 'species_name'] <- unique(NFIplot[NFIplot$spType == 'C', 'species_name'])[1,1]
+    #   NFIplot[NFIplot$spType == 'D', 'spType'] <- 'C'
+    #   NFIplot[, 'spPropdc'] <- NFIplot$BAsp / sum(NFIplot$BAsp)
+    # }
     NFIplot[NFIplot$spType == 'D', 'BAdclid'] <- bad
     NFIplot[NFIplot$spType == 'C', 'BAdclid'] <- bac
     NFIplot$BAsplid <- NFIplot$BAdclid * NFIplot$spPropdc
@@ -146,9 +173,14 @@ assignDendro <- function(cell, i, tree, NFIsp){
     # tree level -------------------------------------------------------------------
 
     # calculate tree ba (LIDAR) from NFI tree ba proportion
-    dbh <- tree[tree$idp == id, ]
+    dbh <- deciConi
     dbh <- merge(dbh, NFIplot[, c('species_name', 'Nsplid', 'Dgsplid', 'BAsplid')], by = 'species_name')
-    # dbh <- dbh %>% group_by(species_name) %>% mutate(wlid = w * Nsplid / sum(w)) %>% ungroup()
+    # recalculate treePropsp if species transformed due to dprop = 1 or 0
+    # if(dprop == 0 | dprop == 1){
+    #   for (s in unique(dbh$species_name)){
+    #     dbh[dbh$species_name == s, 'treePropsp'] <- dbh[dbh$species_name == s, 'BAtree'] / sum(dbh[dbh$species_name == s, 'BAtree'])
+    #   }
+    # }
     dbh$BAtreelid <- dbh$BAsplid * dbh$treePropsp
 
     # calculate alpha correction coef for all trees
@@ -168,18 +200,27 @@ assignDendro <- function(cell, i, tree, NFIsp){
     dbh$wlid <- 40000 / pi * dbh$BAtreelid / dbh$DBHlid^2
 
     # calculate round(weight) for a 25*25m pixel
-    dbh$w25m <- max(1, round(dbh$wlid/16))
+    dbh$w25m <- round(dbh$wlid/16)
+    # remove trees with weight = 0 except if w = 0 is the max on the cell
+    # then set w = 1 for first tree
+    # if(max(dbh$w25m) == 0){
+    #   dbh$w25m <- c(1, rep(0, nrow(dbh)-1))
+    # }
+    # dbh <- dbh[dbh$w25m > 0 ,]
+    dbh$w25m <- apply(as.data.frame(dbh[, 'wlid']), 1, function(x) max(1, round(x/16)))
 
     # assign new dbh to trees while keeping BAtreelid
     dbh$dbhlid25m <-sqrt(40000/pi * (dbh$BAtreelid/16) / dbh$w25m)
 
     # return
-    df <- dbh[, c('species_name', 'w25m', 'dbhlid25m')]
+    df <- dbh[, c('species_name', 'wlid', 'w25m', 'dbhlid25m')]
+    df$wlid <- df$wlid/16
     df$i <- i
-    colnames(df) <- c('sp', 'n', 'dbh', 'i')
+    df$cellID <- cellID
+    colnames(df) <- c('sp', 'wlid', 'n', 'dbh', 'i', 'cellID')
 
   } else{
-    df <- data.frame(sp = NA, n = NA, dbh = NA, i = i)
+    df <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = i, cellID = cellID)
   }
 
   return(df)
@@ -193,7 +234,6 @@ clustCalc <- function(rast, assignDendro, tree, NFIsp){
   registerDoParallel(cl)
   results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
   stopCluster(cl)
-  results <- results %>% arrange(i)
   return(results)
 }
 
@@ -203,44 +243,50 @@ results <- lapply(c(rast1, rast2), clustCalc, assignDendro, tree, NFIsp)
 end <- Sys.time()
 end - start
 
+# results <- data.frame()
+# for (i in 1:nrow(rast2[])){
+#   results <- rbind(results, assignDendro(rast2[i], i, tree, NFIsp))
+# }
+# cl <- makeCluster(8)
+# registerDoParallel(cl)
+# results <- foreach(i = 1:nrow(rast1[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast1[i], i = i, tree, NFIsp)}
+# stopCluster(cl)
 
+# assemble results into one dataframe
+results1 <- as.data.frame(results[2])
+results2 <- as.data.frame(results[1])
+results2$i <- results2$i + max(results1$i)
+results <- rbind(results1, results2)
 
+# save
+write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './data/Init/trees.csv', row.names = FALSE)
 
+################################################################################
+# measure the effect of rounding on number of trees
+################################################################################
 
+results$roundDiff <- results$wlid - results$n
+# difference should centered on 0
+hist(results$roundDiff, breaks = 50, xlab = 'BA difference', main = '')
+# link with tree size
+plot(results$roundDiff ~ results$dbh, xlab = 'dbh', ylab = 'BA difference', main = '')
+# over/underestimation in nb of trees
+sum(results$roundDiff, na.rm = TRUE)
 
+################################################################################
+# check whether BAlidar = sum of BA of trees at each cell
+################################################################################
 
-
-# treesInit <- clustCalc(rasterStack, assignDendro, tree, NFIsp)
-cl <- makeCluster(8)
-registerDoParallel(cl)
-results <- foreach(i = 1:nrow(rasterStack[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rasterStack[i], i = i, tree, NFIsp)}
-stopCluster(cl)
-
-
-
-
-# verif parallel
+#
 BAinit <- results %>% group_by(i) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n * 16)) %>% arrange(i)
 rasterStack$BAinit <- BAinit$BAtot
-rasterStack$diff <- rasterStack$BAinit - rasterStack$BA
-plot(rasterStack$diff)
+rasterStack$diff <- rasterStack$BA - rasterStack$BAinit
+plot(rasterStack)
 
-
-
-plot(rasterStack$dg)
-plot(rasterStack$BA)
-plot(rasterStack$Dprop)
-plot(rasterStack$compoID)
-plot(rasterStack$BAinit)
-
-
-
-
-# !!!!!!!!!!!!! difference entre arrondi et non arrondi doit etre centrée sur 0 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# !!!!!!!!!!!!! regarder en fonction du diametre aussi !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
+# save results
+pdf(file="./data/Init/BAobsPredDiff.pdf")
+plot(rasterStack$diff, legend = TRUE)
+dev.off()
 
 # verif lab !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # verifier si les BA calculer a partir des dbh lidar finaux correspondent bien
