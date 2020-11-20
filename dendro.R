@@ -65,7 +65,7 @@ NFIsp <- tree %>% group_by(idp, species_name, BAsp, Dgsp, spType, spPropdc) %>% 
 #
 ###############################################################
 
-rasterStack <- crop(rasterStack, extent(rasterStack)/20)
+# rasterStack <- crop(rasterStack, extent(rasterStack)/20)
 # cell <- rast1[166]
 
 # Split data into two separate stack rasters
@@ -186,8 +186,6 @@ assignDendro <- function(cell, i, tree, NFIsp){
     # calculate alpha correction coef for all trees
     dbh$sumRatio <- dbh$BAtreelid / dbh$DBH^2
     dbh$alphatree <- 999
-    # dbh <- dbh %>% group_by(species_name) %>%
-    #                mutate(alphatree = Dgsplid * sqrt( sum(sumRatio) / BAsplid))
     for (s in unique(dbh$species_name)){
       dbhsp <- dbh[dbh$species_name == s,]
       dbh[dbh$species_name == s, 'alphatree'] <- dbhsp$Dgsplid * sqrt( sum(dbhsp$sumRatio) / dbhsp$BAsplid)
@@ -211,6 +209,7 @@ assignDendro <- function(cell, i, tree, NFIsp){
 
     # assign new dbh to trees while keeping BAtreelid
     dbh$dbhlid25m <-sqrt(40000/pi * (dbh$BAtreelid/16) / dbh$w25m)
+    dbh <- dbh[!is.na(dbh$w25m),]
 
     # return
     df <- dbh[, c('species_name', 'wlid', 'w25m', 'dbhlid25m')]
@@ -265,13 +264,30 @@ write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './data/Init/trees.cs
 # measure the effect of rounding on number of trees
 ################################################################################
 
-results$roundDiff <- results$wlid - results$n
-# difference should centered on 0
-hist(results$roundDiff, breaks = 50, xlab = 'BA difference', main = '')
-# link with tree size
-plot(results$roundDiff ~ results$dbh, xlab = 'dbh', ylab = 'BA difference', main = '')
-# over/underestimation in nb of trees
-sum(results$roundDiff, na.rm = TRUE)
+# distribution of differences at the cell level
+Ncell <- results %>% group_by(cellID) %>% summarise(wlid = sum(wlid), n = sum(n)) %>%
+                     mutate(Ndiff = wlid - n)
+pdf(file="./data/Init/NdiffCell.pdf")
+hist(Ncell$Ndiff, xlab = 'N diff at the cell level (positive values = underestimation)', breaks = 100, main = '')
+dev.off()
+
+# distribution of differences at the tree level
+Nresults <- results
+Nresults$diff <- Nresults$wlid - Nresults$n
+pdf(file="./data/Init/NdiffTree.pdf")
+hist(Nresults$diff, xlab = 'N diff at the tree level (positive values = underestimation)', breaks = 100, main = '')
+dev.off()
+
+# difference and dbh
+pdf(file="./data/Init/NdiffDBH.pdf")
+plot(Nresults$diff ~ Nresults$dbh, xlab = 'dbh', ylab = 'N diff (positive values = underestimation)', main = '')
+dev.off()
+
+# total over/under estimation of trees at the landscape scale
+# positive values = underestimation
+sum(Ncell$Ndiff, na.rm = TRUE)
+# relative to the total number of trees
+sum(Ncell$Ndiff, na.rm = TRUE) /sum(results$n, na.rm = TRUE)
 
 ################################################################################
 # check whether BAlidar = sum of BA of trees at each cell
