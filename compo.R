@@ -335,3 +335,9 @@ theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       plot.title = element_text(hjust = 0.5))
 pl1
 ggsave(file = './data/Init/compoSurf.pdf', plot = pl1, width = 20, height = 10)
+
+# surface loss due to rasterize(bd) in ha
+lossha <- sum(area(bd)) / 10000 - sum(area(compoPoly)) / 10000
+lossha
+# surface loss due to rasterize(bd) in %
+lossha * 100 / (sum(area(bd)) / 10000)
