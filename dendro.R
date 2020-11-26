@@ -19,14 +19,14 @@ setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 source('R/spTransform.R')
 
 # load composition ID
-compo <- raster("./data/Init/compoID.asc")
+compo <- raster("./data/init/compoID.asc")
 
 # load lidar data
-Dg <- raster("./data/Init/Dg.asc")
+Dg <- raster("./data/init/Dg.asc")
 Dg[Dg > 1000] <- 1000 # correct the wrong min max values
-BA <- raster("./data/Init/BA.asc")
+BA <- raster("./data/init/BA.asc")
 BA[BA > 1000] <- 1000 # correct the wrong min max values
-Dprop <- raster("./data/Init/Dprop.asc")
+Dprop <- raster("./data/init/Dprop.asc")
 Dprop <- Dprop / 100
 
 # create raster stack
