@@ -104,16 +104,16 @@ Dprop <- resample(Dprop, elevation)
 ###############################################################
 
 # create directory to save plots
-if (!(dir.exists('./data/Init'))) {dir.create('./data/Init', recursive = TRUE)}
+if (!(dir.exists('./data/init'))) {dir.create('./data/init', recursive = TRUE)}
+if (!(dir.exists('./initialLandscape'))) {dir.create('./initialLandscape', recursive = TRUE)}
 
-writeRaster(parkRaster, filename = "./data/Init/parkMask.asc", format = "ascii", overwrite = TRUE)
-writeRaster(forestRaster, filename = "./data/Init/forestMask.asc", format = "ascii", overwrite = TRUE)
-writeRaster(elevation, filename = "./data/Init/elev.asc", format = "ascii", overwrite = TRUE)
-writeRaster(slope, filename = "./data/Init/slope.asc", format = "ascii", overwrite = TRUE)
-writeRaster(aspect, filename = "./data/Init/aspect.asc", format = "ascii", overwrite = TRUE)
-writeRaster(swhc, filename = "./data/Init/swhc.asc", format = "ascii", overwrite = TRUE)
-writeRaster(dg, filename = "./data/Init/dg.asc", format = "ascii", overwrite = TRUE)
-writeRaster(BA, filename = "./data/Init/BA.asc", format = "ascii", overwrite = TRUE)
-writeRaster(N, filename = "./data/Init/N.asc", format = "ascii", overwrite = TRUE)
-# writeRaster(LTBA, filename = "./data/Init/LTBA.asc", format = "ascii", overwrite = TRUE)
-writeRaster(Dprop, filename = "./data/Init/Dprop.asc", format = "ascii", overwrite = TRUE)
+writeRaster(parkRaster, filename = "./initialLandscape/parkMask.asc", format = "ascii", overwrite = TRUE)
+writeRaster(forestRaster, filename = "./initialLandscape/forestMask.asc", format = "ascii", overwrite = TRUE)
+writeRaster(elevation, filename = "./initialLandscape/elev.asc", format = "ascii", overwrite = TRUE)
+writeRaster(slope, filename = "./initialLandscape/slope.asc", format = "ascii", overwrite = TRUE)
+writeRaster(aspect, filename = "./initialLandscape/aspect.asc", format = "ascii", overwrite = TRUE)
+writeRaster(swhc, filename = "./initialLandscape/swhc.asc", format = "ascii", overwrite = TRUE)
+writeRaster(dg, filename = "./data/init/dg.asc", format = "ascii", overwrite = TRUE)
+writeRaster(BA, filename = "./data/init/BA.asc", format = "ascii", overwrite = TRUE)
+writeRaster(N, filename = "./data/init/N.asc", format = "ascii", overwrite = TRUE)
+writeRaster(Dprop, filename = "./data/init/Dprop.asc", format = "ascii", overwrite = TRUE)

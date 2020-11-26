@@ -20,11 +20,11 @@ setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 source('R/spTransform.R')
 
 # load LIDAR rasters
-Dg <- raster("./data/Init/Dg.asc")
+Dg <- raster("./data/init/Dg.asc")
 Dg[Dg > 1000] <- 1000 # correct the wrong min max values
-BA <- raster("./data/Init/BA.asc")
+BA <- raster("./data/init/BA.asc")
 BA[BA > 1000] <- 1000 # correct the wrong min max values
-Dprop <- raster("./data/Init/Dprop.asc")
+Dprop <- raster("./data/init/Dprop.asc")
 Dprop <- Dprop / 100
 
 # load TFV spatial data
@@ -293,10 +293,7 @@ rast2 <- rasts[[2]]
 rast3 <- raster::merge(rast1, rast2, overlap = FALSE)
 names(rast3) <- names(compoRaster)
 # save
-writeRaster(rast3$compo, "./data/Init/compoID.asc", overwrite = TRUE)
-pdf(file="./data/Init/compoID.pdf")
-plot(rast3$compo, legend = FALSE)
-dev.off()
+writeRaster(rast3$compo, "./data/init/compoID.asc", overwrite = TRUE)
 
 ################################################################################
 # check composition - convert plot id map into species composition map
@@ -318,7 +315,7 @@ mainSp <- tree %>% group_by(idp, species_name) %>%
 compoPoly <- rasterToPolygons(rast3$compo, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
 # transfer main species values into the polygon
 compoPoly <- merge(compoPoly, mainSp, by.x = 'compo', by.y = 'idp')
-writeOGR(compoPoly, "./data/Init", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
+writeOGR(compoPoly, "./initialLandscape", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
 
 # calculate surface for each stand type (based on their main sp)
 compoPoly$area <- area(compoPoly)
@@ -334,7 +331,7 @@ ylab('surface (ha)') +
 theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       plot.title = element_text(hjust = 0.5))
 pl1
-ggsave(file = './data/Init/compoSurf.pdf', plot = pl1, width = 20, height = 10)
+ggsave(file = './initialLandscape/compoSurface.pdf', plot = pl1, width = 20, height = 10)
 
 # surface loss due to rasterize(bd) in ha
 lossha <- sum(area(bd)) / 10000 - sum(area(compoPoly)) / 10000

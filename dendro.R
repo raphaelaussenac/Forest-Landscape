@@ -32,7 +32,7 @@ Dprop <- Dprop / 100
 # create raster stack
 rasterStack <- stack(compo, Dg, BA, Dprop)
 rasterStack$cellID <- c(1:nrow(rasterStack[]))
-writeRaster(rasterStack$cellID, filename = "./data/Init/cellID.asc", format = "ascii", overwrite = TRUE)
+writeRaster(rasterStack$cellID, filename = "./initialLandscape/cellID.asc", format = "ascii", overwrite = TRUE)
 
 # load NFI tree data
 tree <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
@@ -228,120 +228,20 @@ results3$i <- results3$i + max(results2$i)
 results4$i <- results4$i + max(results3$i)
 results <- rbind(results1, results2, results3, results4)
 
-# remove trees with sp = XXX and n = dbh = NA
+# remove trees with sp = XXXX and n = dbh = NA
 # but only if it does not remove the cell
 # these 'strange' trees are created because they are deci or coni on cells
 # with dprop = 0 or 1
-# first count number of cells with composition = XXX and with all trees dbh = NA
+# first count number of cells with composition = XXXX and with all trees dbh = NA
 df2 <- results %>% filter(!is.na(sp)) %>% group_by(cellID) %>% summarise(N = sum(n, na.rm = TRUE))
-nrow(df2[df2$N == 0,]) # if equal 0, then no cell are removed only deci or coni trees in cells where dprop = 1 or 0
+nrow(df2[df2$N == 0,]) # if equal 0, then no cells are removed only deci or coni trees in cells where dprop = 1 or 0
 # second delete trees with dbh = n = NA if it does not remove the cell
 if (nrow(df2[df2$N == 0,]) == 0){
   results[is.na(results$dbh), 'sp'] <- NA
 }
 
 # save
-write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './data/Init/trees.csv', row.names = FALSE)
-
-################################################################################
-# evaluate the effect of rounding on the number of trees
-################################################################################
-
-# distribution of differences between rounded and non-rounded number of trees
-# at the cell level
-Ncell <- results %>% group_by(cellID) %>% summarise(wlid = sum(wlid), n = sum(n)) %>%
-                     mutate(Ndiff = wlid - n)
-pl1 <- ggplot()+
-geom_histogram(data = Ncell, aes(x = Ndiff), bins = 50, col = 'black', fill = 'white', alpha = 0.5) +
-theme_bw() +
-xlab('N diff at the cell level (negative values = overestimation)')
-pl1
-ggsave(file = './data/Init/NdiffCell.pdf', plot = pl1, width = 10, height = 10)
-
-# distribution of differences between rounded and non-rounded number of trees per species
-# at the cell level depending on dbh classes
-sp <- results %>% group_by(cellID, sp) %>% summarise(SpMeanDBH = sum(n * dbh) / sum(n), SpNDiff = sum(wlid) - sum(n))
-sp$meanDBHclass <- cut(sp$SpMeanDBH, 0:120)
-pl2 <- ggplot() +
-geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
-theme_bw() +
-theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-xlab('species mean dbh in cells') +
-ylab('species N diff at the cell level (negative values = overestimation)')
-pl2
-ggsave(file = './data/Init/NdiffDBH.pdf', plot = pl2, width = 30, height = 20)
-
-# distribution of differences between rounded and non-rounded number of trees per species
-# at the cell level depending on dbh classes separately for each species
-pl3 <- ggplot() +
-geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
-facet_wrap(~ sp) +
-theme_bw() +
-theme(panel.grid.minor = element_blank(),
-      strip.background = element_blank(),
-      strip.text = element_text(colour = 'black'),
-      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-      axis.text=element_text(size = 3)) +
-xlab('species mean dbh in cells') +
-ylab('species N diff at the cell level (negative values = overestimation)')
-pl3
-ggsave(file = './data/Init/NdiffDBHSp.pdf', plot = pl3, width = 30, height = 20)
-
-# total over/under estimation of trees at the landscape scale
-# positive values = underestimation
-sum(Ncell$Ndiff, na.rm = TRUE)
-# relative to the total number of trees (in %)
-sum(Ncell$Ndiff, na.rm = TRUE) * 100 /sum(results$n, na.rm = TRUE)
-
-################################################################################
-# check whether BAlidar = sum of BA of trees at each cell
-################################################################################
-
-BAinit <- results %>% group_by(cellID) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n * 16)) %>% arrange(cellID)
-rasterStack$BAinit <- BAinit$BAtot
-rasterStack$BAdiff25m <- (rasterStack$BA / 16)  - (rasterStack$BAinit /16)
-rasterStack$BAreldiff25m <- 100 - ( (rasterStack$BAinit /16) * 100 / (rasterStack$BA / 16) )
-
-# difference should be as close to zero as possible
-pdf(file="./data/Init/BAdiff25m.pdf")
-hist(rasterStack$BAdiff25m, breaks = 100)
-dev.off()
-plot(rasterStack$BAdiff25m)
-pdf(file="./data/Init/BAreldiff.pdf")
-hist(rasterStack$BAreldiff25m, breaks = 100)
-dev.off()
-plot(rasterStack$BAreldiff25m)
-
-################################################################################
-# check whether Dglidar = mean Dg of trees at each cell
-################################################################################
-
-Dginit <- results %>% group_by(cellID) %>% summarise(Dgtot = sqrt(sum(dbh^2 * n)/sum(n))) %>% arrange(cellID)
-rasterStack$Dginit <- Dginit$Dgtot
-rasterStack$Dgdiff <- rasterStack$dg - rasterStack$Dginit
-rasterStack$Dgreldiff <- 100 - (rasterStack$Dginit * 100 /rasterStack$dg)
-
-# difference should be as close to zero as possible but it necessarily
-# fluctuates because we had to change the trees dbh to reach the BA
-# prescribed by the LIDAR
-pdf(file="./data/Init/Dgdiff.pdf")
-hist(rasterStack$Dgdiff, breaks = 100)
-dev.off()
-plot(rasterStack$Dgdiff)
-pdf(file="./data/Init/Dgreldiff.pdf")
-hist(rasterStack$Dgreldiff, breaks = 100)
-dev.off()
-plot(rasterStack$Dgreldiff)
-# writeRaster(rasterStack$Dgreldiff, filename = "./data/Init/rasterVerif.asc", format = "ascii", overwrite = TRUE)
-# rasterStack[802041]
-# results[results$cellID == 802041,]
-# saveResults[saveResults$cellID == 802041,]
-
-# check forest surface
-sum(!is.na(rasterStack$dg[])) * 625 / 10000
-sum(!is.na(rasterStack$compoID[])) * 625 /10000
-sum(!is.na(rasterStack$BAinit[])) * 625 / 10000
-sum(!is.na(rasterStack$Dginit[])) * 625 / 10000
+# write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './initialLandscape/trees.csv', row.names = FALSE)
 
 ################################################################################
 # remove trees <7.5 cm
@@ -353,7 +253,7 @@ saveResults <- results
 # otherwise, if all trees are <7.5 then replace by a line of NA
 
 # first count total number of lines per cell, number of line with dbh <7.5
-# and number with dbh >= 7.5
+# and number of lines with dbh >= 7.5
 treeCnt <- results %>% filter(!is.na(sp)) %>% mutate(n = 1, size = ifelse(dbh >= 7.5, 'big', 'small')) %>%
                    group_by(cellID) %>% count(size, wt = n) %>% pivot_wider(id_cols = cellID, names_from = size, values_from = n) %>%
                    mutate(nbtot = sum(big, small, na.rm = TRUE))
@@ -377,7 +277,106 @@ results <- rbind(results, NAdf)
 results <- results %>% arrange(cellID)
 
 # results[results$dbh < 7.5 & !is.na(results$dbh), c('sp', 'wlid', 'n', 'dbh')] <- NA
-write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './data/Init/trees75.csv', row.names = FALSE)
+write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './initialLandscape/trees75.csv', row.names = FALSE)
+
+################################################################################
+# evaluate the effect of rounding on the number of trees
+################################################################################
+
+if (!(dir.exists('./initialLandscape/evaluation'))) {dir.create('./initialLandscape/evaluation', recursive = TRUE)}
+
+# distribution of differences between rounded and non-rounded number of trees
+# at the cell level
+Ncell <- results %>% group_by(cellID) %>% summarise(wlid = sum(wlid), n = sum(n)) %>%
+                     mutate(Ndiff = wlid - n)
+pl1 <- ggplot()+
+geom_histogram(data = Ncell, aes(x = Ndiff), bins = 50, col = 'black', fill = 'white', alpha = 0.5) +
+theme_bw() +
+xlab('N diff at the cell level (negative values = overestimation)')
+# pl1
+ggsave(file = './initialLandscape/evaluation/NdiffCell.pdf', plot = pl1, width = 10, height = 10)
+
+# distribution of differences between rounded and non-rounded number of trees per species
+# at the cell level depending on dbh classes
+sp <- results %>% group_by(cellID, sp) %>% summarise(SpMeanDBH = sum(n * dbh) / sum(n), SpNDiff = sum(wlid) - sum(n))
+sp$meanDBHclass <- cut(sp$SpMeanDBH, 0:120)
+pl2 <- ggplot() +
+geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
+theme_bw() +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+xlab('species mean dbh in cells') +
+ylab('species N diff at the cell level (negative values = overestimation)')
+# pl2
+ggsave(file = './initialLandscape/evaluation/NdiffDBH.pdf', plot = pl2, width = 30, height = 20)
+
+# distribution of differences between rounded and non-rounded number of trees per species
+# at the cell level depending on dbh classes separately for each species
+pl3 <- ggplot() +
+geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
+facet_wrap(~ sp) +
+theme_bw() +
+theme(panel.grid.minor = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(colour = 'black'),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+      axis.text=element_text(size = 3)) +
+xlab('species mean dbh in cells') +
+ylab('species N diff at the cell level (negative values = overestimation)')
+# pl3
+ggsave(file = './initialLandscape/evaluation/NdiffDBHSp.pdf', plot = pl3, width = 30, height = 20)
+
+# total over/under estimation of trees at the landscape scale
+# positive values = underestimation
+sum(Ncell$Ndiff, na.rm = TRUE)
+# relative to the total number of trees (in %)
+sum(Ncell$Ndiff, na.rm = TRUE) * 100 /sum(results$n, na.rm = TRUE)
+
+################################################################################
+# check whether BAlidar = sum of BA of trees at each cell
+################################################################################
+
+BAinit <- results %>% group_by(cellID) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n * 16)) %>% arrange(cellID)
+rasterStack$BAinit <- BAinit$BAtot
+rasterStack$BAdiff25m <- (rasterStack$BA / 16)  - (rasterStack$BAinit /16)
+rasterStack$BAreldiff25m <- 100 - ( (rasterStack$BAinit /16) * 100 / (rasterStack$BA / 16) )
+
+# difference should be as close to zero as possible
+pdf(file="./initialLandscape/evaluation/BAdiff25m.pdf")
+hist(rasterStack$BAdiff25m, breaks = 100)
+dev.off()
+plot(rasterStack$BAdiff25m)
+hist(rasterStack$BAreldiff25m, breaks = 100)
+plot(rasterStack$BAreldiff25m)
+
+################################################################################
+# check whether Dglidar = mean Dg of trees at each cell
+################################################################################
+
+Dginit <- results %>% group_by(cellID) %>% summarise(Dgtot = sqrt(sum(dbh^2 * n)/sum(n))) %>% arrange(cellID)
+rasterStack$Dginit <- Dginit$Dgtot
+rasterStack$Dgdiff <- rasterStack$dg - rasterStack$Dginit
+rasterStack$Dgreldiff <- 100 - (rasterStack$Dginit * 100 /rasterStack$dg)
+
+# difference should be as close to zero as possible but it necessarily
+# fluctuates because we had to change the trees dbh to reach the BA
+# prescribed by the LIDAR
+pdf(file="./initialLandscape/evaluation/Dgdiff.pdf")
+hist(rasterStack$Dgdiff, breaks = 100)
+dev.off()
+plot(rasterStack$Dgdiff)
+hist(rasterStack$Dgreldiff, breaks = 100)
+plot(rasterStack$Dgreldiff)
+# writeRaster(rasterStack$Dgreldiff, filename = "./data/Init/rasterVerif.asc", format = "ascii", overwrite = TRUE)
+# rasterStack[802041]
+# results[results$cellID == 802041,]
+# saveResults[saveResults$cellID == 802041,]
+
+# check forest surface
+sum(!is.na(rasterStack$dg[])) * 625 / 10000
+sum(!is.na(rasterStack$compoID[])) * 625 /10000
+sum(!is.na(rasterStack$BAinit[])) * 625 / 10000
+sum(!is.na(rasterStack$Dginit[])) * 625 / 10000
+
 
 
 # verif lab !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
