@@ -129,20 +129,29 @@ assignDendro <- function(cell, i, tree, NFIsp){
     NFIplot[NFIplot$spType == 'C', 'BAdclid'] <- bac
     NFIplot$BAsplid <- NFIplot$BAdclid * NFIplot$spPropdc
 
-    # calculate alpha correction coef
-    NFIplot$sumRatio <- NFIplot$BAsplid / NFIplot$Dgsp^2
-    # for deciduous sp
+    # assign a dg (LIDAR) to all deciduous species
     if(nrow(NFIplot[NFIplot$spType == 'D',]) > 0){
-      alphad <- dgdcorrec * sqrt( sum(NFIplot[NFIplot$spType == 'D', 'sumRatio']) / bad)
-      # assign a dg (LIDAR) to all deciduous species
-      NFIplot[NFIplot$spType == 'D', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'D', 'Dgsp'] * alphad
+      NFIplot[NFIplot$spType == 'D', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'D', 'Dgsp'] * alphadc
     }
-    # for coniferous sp
+    # assign a dg (LIDAR) to all coniferous species
     if(nrow(NFIplot[NFIplot$spType == 'C',]) > 0){
-      alphac <- dgccorrec * sqrt( sum(NFIplot[NFIplot$spType == 'C', 'sumRatio']) / bac)
-      # assign a dg (LIDAR) to all coniferous species
-      NFIplot[NFIplot$spType == 'C', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'C', 'Dgsp'] * alphac
+      NFIplot[NFIplot$spType == 'C', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'C', 'Dgsp'] * alphadc
     }
+
+    # # calculate alpha correction coef
+    # NFIplot$sumRatio <- NFIplot$BAsplid / NFIplot$Dgsp^2
+    # # for deciduous sp
+    # if(nrow(NFIplot[NFIplot$spType == 'D',]) > 0){
+    #   alphad <- dgdcorrec * sqrt( sum(NFIplot[NFIplot$spType == 'D', 'sumRatio']) / bad)
+    #   # assign a dg (LIDAR) to all deciduous species
+    #   NFIplot[NFIplot$spType == 'D', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'D', 'Dgsp'] * alphad
+    # }
+    # # for coniferous sp
+    # if(nrow(NFIplot[NFIplot$spType == 'C',]) > 0){
+    #   alphac <- dgccorrec * sqrt( sum(NFIplot[NFIplot$spType == 'C', 'sumRatio']) / bac)
+    #   # assign a dg (LIDAR) to all coniferous species
+    #   NFIplot[NFIplot$spType == 'C', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'C', 'Dgsp'] * alphac
+    # }
 
     # calculate Nsp (LIDAR)
     NFIplot$Nsplid <- 40000/pi * ( NFIplot$BAsplid / NFIplot$Dgsplid^2 )
@@ -153,15 +162,16 @@ assignDendro <- function(cell, i, tree, NFIsp){
     dbh <- tree[tree$idp == id,]
     dbh <- merge(dbh, NFIplot[, c('species_name', 'Nsplid', 'Dgsplid', 'BAsplid')], by = 'species_name')
     dbh$BAtreelid <- dbh$BAsplid * dbh$treePropsp
+    dbh[dbh$Nsplid > 0, 'alphatree'] <- alphadc
 
-    # calculate alpha correction coef for all trees
-    dbh$sumRatio <- dbh$BAtreelid / dbh$DBH^2
-    dbh$alphatree <- 999
-    for (s in unique(dbh$species_name)){
-      dbhsp <- dbh[dbh$species_name == s,]
-      dbh[dbh$species_name == s, 'alphatree'] <- dbhsp$Dgsplid * sqrt( sum(dbhsp$sumRatio) / dbhsp$BAsplid)
-    }
-    #
+    # # calculate alpha correction coef for all trees
+    # dbh$sumRatio <- dbh$BAtreelid / dbh$DBH^2
+    # dbh$alphatree <- 999
+    # for (s in unique(dbh$species_name)){
+    #   dbhsp <- dbh[dbh$species_name == s,]
+    #   dbh[dbh$species_name == s, 'alphatree'] <- dbhsp$Dgsplid * sqrt( sum(dbhsp$sumRatio) / dbhsp$BAsplid)
+    # }
+
     # assign a DBH (LIDAR) to all trees
     dbh$DBHlid <- dbh$DBH * dbh$alphatree
 
