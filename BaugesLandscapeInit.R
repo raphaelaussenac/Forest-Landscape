@@ -31,6 +31,7 @@ elevation <- raster("./data/GEO/MNT_all_5m.tif")
 crs(elevation) <- crs(park)
 # set resolution
 elevation <- aggregate(elevation, fact = 5)
+names(elevation) <- 'elev'
 
 # slope (degree)
 slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
@@ -48,6 +49,7 @@ crs(parkRaster) <- crs(park)
 isBecomes <- cbind(c(1, NA),
                    c(1, 0))
 parkRaster <- reclassify(parkRaster, rcl = isBecomes)
+names(parkRaster) <- 'park'
 
 # convert forest into raster and set extent + resolution
 forestRaster <- rasterize(forest, r, field = "ID")
@@ -57,11 +59,13 @@ crs(forestRaster) <- crs(forest)
 isBecomes <- cbind(c(1:nrow(forest), NA),
                    c(rep(1, nrow(forest)), 0))
 forestRaster <- reclassify(forestRaster, rcl = isBecomes)
+names(forestRaster) <- 'forest'
 
 # swhc (cm)
 swhc <- raster("./data/GEO/rum_500_v2009.tif")
 swhc <- resample(swhc, elevation)
 swhc <- swhc/10 # convert into cm
+names(swhc) <- 'swhc'
 
 # Quadratic diameter (cm) [0, 80]
 dg <- raster('./data/GEO/rastDg75error.clean.tif')
@@ -111,6 +115,7 @@ greco <- spTransform(greco, crs(park)) # change projection
 # convert into a raster
 grecoRaster <- rasterize(greco, cellID, field="CODEGRECO")
 crs(grecoRaster) <- crs(park)
+names(grecoRaster) <- 'GRECO'
 
 # geol
 geol <- readOGR(dsn = "./data/GEO", layer = "geol", encoding = "UTF-8", use_iconv = TRUE)
@@ -122,8 +127,10 @@ geol <- merge(geol, classGeol, by = 'NOTATION')
 # convert into a raster
 Cd_crbn <- rasterize(geol, cellID, field = "Cd_crbn")
 crs(Cd_crbn) <- crs(park)
+names(Cd_crbn) <- 'Cd_crbn'
 Cd_hydr <- rasterize(geol, cellID, field = "Cd_hydr")
 crs(Cd_hydr) <- crs(park)
+names(Cd_hydr) <- 'Cd_hydr'
 
 ###############################################################
 # save ascii
@@ -147,3 +154,23 @@ writeRaster(cellID, filename = "./data/init/cellID.asc", format = "ascii", overw
 writeRaster(grecoRaster, filename = "./data/init/greco.asc", format = "ascii", overwrite = TRUE)
 writeRaster(Cd_crbn, filename = "./data/init/Cd_crbn.asc", format = "ascii", overwrite = TRUE)
 writeRaster(Cd_hydr, filename = "./data/init/Cd_hydr.asc", format = "ascii", overwrite = TRUE)
+
+###############################################################
+# save data frame
+###############################################################
+
+# create raster stack
+rasterStack <- stack(cellID, parkRaster, forestRaster, elevation, slope,
+                     aspect, swhc, grecoRaster, Cd_crbn, Cd_hydr)
+# plot(rasterStack)
+
+# convert into data frame
+envdf <- as.data.frame(rasterStack)
+
+# rename back GRECO regions
+envdf[envdf$GRECO == 4, 'GRECO'] <- 'C'
+envdf[envdf$GRECO == 6, 'GRECO'] <- 'E'
+envdf[envdf$GRECO == 9, 'GRECO'] <- 'H'
+
+# save
+write.csv(envdf, file = './initialLandscape/envVariables.csv', row.names = FALSE)
