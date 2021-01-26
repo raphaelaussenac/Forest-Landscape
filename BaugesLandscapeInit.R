@@ -99,6 +99,32 @@ Dprop <- 100 - Dprop
 crs(Dprop) <- crs(park)
 Dprop <- resample(Dprop, elevation)
 
+# create cell ID raster
+ext <- floor(extent(elevation))
+cellID <- raster(ext, res=res(elevation))
+cellID$cellID <- c(1:(nrow(cellID) * ncol(cellID)))
+cellID <- cellID$cellID
+
+# greco
+greco <- readOGR(dsn = "./data/GEO", layer = "greco_l93", encoding = "UTF-8", use_iconv = TRUE)
+greco <- spTransform(greco, crs(park)) # change projection
+# convert into a raster
+grecoRaster <- rasterize(greco, cellID, field="CODEGRECO")
+crs(grecoRaster) <- crs(park)
+
+# geol
+geol <- readOGR(dsn = "./data/GEO", layer = "geol", encoding = "UTF-8", use_iconv = TRUE)
+geol <- geol[, 'NOTATION']
+classGeol <- read.csv("./data/geol/classificationGeol.csv", header = TRUE, sep = ";")
+classGeol <- classGeol[, c('NOTATION', 'Code_carbonate', 'Code_hydro')]
+colnames(classGeol) <- c('NOTATION', 'Cd_crbn', 'Cd_hydr')
+geol <- merge(geol, classGeol, by = 'NOTATION')
+# convert into a raster
+Cd_crbn <- rasterize(geol, cellID, field = "Cd_crbn")
+crs(Cd_crbn) <- crs(park)
+Cd_hydr <- rasterize(geol, cellID, field = "Cd_hydr")
+crs(Cd_hydr) <- crs(park)
+
 ###############################################################
 # save ascii
 ###############################################################
@@ -117,3 +143,7 @@ writeRaster(dg, filename = "./data/init/dg.asc", format = "ascii", overwrite = T
 writeRaster(BA, filename = "./data/init/BA.asc", format = "ascii", overwrite = TRUE)
 writeRaster(N, filename = "./data/init/N.asc", format = "ascii", overwrite = TRUE)
 writeRaster(Dprop, filename = "./data/init/Dprop.asc", format = "ascii", overwrite = TRUE)
+writeRaster(cellID, filename = "./data/init/cellID.asc", format = "ascii", overwrite = TRUE)
+writeRaster(grecoRaster, filename = "./data/init/greco.asc", format = "ascii", overwrite = TRUE)
+writeRaster(Cd_crbn, filename = "./data/init/Cd_crbn.asc", format = "ascii", overwrite = TRUE)
+writeRaster(Cd_hydr, filename = "./data/init/Cd_hydr.asc", format = "ascii", overwrite = TRUE)

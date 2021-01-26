@@ -28,10 +28,10 @@ BA <- raster("./data/init/BA.asc")
 BA[BA > 1000] <- 1000 # correct the wrong min max values
 Dprop <- raster("./data/init/Dprop.asc")
 Dprop <- Dprop / 100
+cellID <- raster("./data/init/cellID.asc")
 
 # create raster stack
-rasterStack <- stack(compo, Dg, BA, Dprop)
-rasterStack$cellID <- c(1:nrow(rasterStack[]))
+rasterStack <- stack(compo, Dg, BA, Dprop, cellID)
 writeRaster(rasterStack$cellID, filename = "./initialLandscape/cellID.asc", format = "ascii", overwrite = TRUE)
 
 # load NFI tree data
