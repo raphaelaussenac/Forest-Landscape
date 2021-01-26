@@ -32,7 +32,6 @@ cellID <- raster("./data/init/cellID.asc")
 
 # create raster stack
 rasterStack <- stack(compo, Dg, BA, Dprop, cellID)
-writeRaster(rasterStack$cellID, filename = "./initialLandscape/cellID.asc", format = "ascii", overwrite = TRUE)
 
 # load NFI tree data
 tree <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')

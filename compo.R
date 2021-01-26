@@ -299,6 +299,8 @@ writeRaster(rast3$compo, "./data/init/compoID.asc", overwrite = TRUE)
 # check composition - convert plot id map into species composition map
 ################################################################################
 
+if (!(dir.exists('./initialLandscape/evaluation'))) {dir.create('./initialLandscape/evaluation', recursive = TRUE)}
+
 # set threshold to identify mainSp
 # thresh = 0.8 means you will get the species making up for > 80% of the stand BA
 # the stand BA
@@ -315,7 +317,7 @@ mainSp <- tree %>% group_by(idp, species_name) %>%
 compoPoly <- rasterToPolygons(rast3$compo, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
 # transfer main species values into the polygon
 compoPoly <- merge(compoPoly, mainSp, by.x = 'compo', by.y = 'idp')
-writeOGR(compoPoly, "./initialLandscape", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
+writeOGR(compoPoly, "./initialLandscape/evaluation", "compoPoly", driver = "ESRI Shapefile", overwrite = TRUE)
 
 # calculate surface for each stand type (based on their main sp)
 compoPoly$area <- area(compoPoly)
@@ -331,7 +333,7 @@ ylab('surface (ha)') +
 theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       plot.title = element_text(hjust = 0.5))
 pl1
-ggsave(file = './initialLandscape/compoSurface.pdf', plot = pl1, width = 20, height = 10)
+ggsave(file = './initialLandscape/evaluation/compoSurface.pdf', plot = pl1, width = 20, height = 10)
 
 # surface loss due to rasterize(bd) in ha
 lossha <- sum(area(bd)) / 10000 - sum(area(compoPoly)) / 10000
