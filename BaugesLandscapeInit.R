@@ -15,6 +15,9 @@ library(sf)
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
+# source salem site index
+source('./R/salemSI.R')
+
 ###############################################################
 # load/create data and set extent and resolution
 ###############################################################
@@ -171,6 +174,9 @@ envdf <- as.data.frame(rasterStack)
 envdf[envdf$GRECO == 4, 'GRECO'] <- 'C'
 envdf[envdf$GRECO == 6, 'GRECO'] <- 'E'
 envdf[envdf$GRECO == 9, 'GRECO'] <- 'H'
+
+# predict salem SI (site index) from PROTEST models
+envdf <- salemSI(envdf)
 
 # save
 write.csv(envdf, file = './initialLandscape/envVariables.csv', row.names = FALSE)

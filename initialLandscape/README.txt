@@ -44,4 +44,7 @@ Cd_hydr:     permeability potential of the bedrock according to its mineralogica
              1 = Permeable
              2 = Low permeability
              3 = Impermeable or nearly impermeable
-#
+SIQpet:      salem SI (site index) prediction for Q. petraea
+SIFsyl:      salem SI (site index) prediction for F. sylvatica
+SIAalb:      salem SI (site index) prediction for A. alba
+SIPabi:      salem SI (site index) prediction for P. abies
