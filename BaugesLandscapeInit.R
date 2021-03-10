@@ -8,7 +8,9 @@ rm(list = ls())
 # load packages
 library(rgdal)
 library(raster)
-library(velox)
+# rasterize is faster with velox but package is
+# not yet compatible with R 4.0.4
+# library(velox)
 library(gdalUtils)
 library(sf)
 
@@ -16,7 +18,7 @@ library(sf)
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
 # source salem site index
-source('./R/salemSI.R')
+source('./R/salemSIpred.R')
 
 ###############################################################
 # load/create data and set extent and resolution
@@ -45,6 +47,7 @@ aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
 # convert park into raster and set extent + resolution
 ext <- floor(extent(elevation))
 r <- raster(ext, res=res(elevation))
+park$ID <- as.factor(park$ID)
 parkRaster <- rasterize(park, r, field = "ID")
 # set projection
 crs(parkRaster) <- crs(park)
@@ -55,6 +58,7 @@ parkRaster <- reclassify(parkRaster, rcl = isBecomes)
 names(parkRaster) <- 'park'
 
 # convert forest into raster and set extent + resolution
+forest$ID <- as.factor(forest$ID)
 forestRaster <- rasterize(forest, r, field = "ID")
 # set projection
 crs(forestRaster) <- crs(forest)
@@ -69,6 +73,11 @@ swhc <- raster("./data/GEO/rum_500_v2009.tif")
 swhc <- resample(swhc, elevation)
 swhc <- swhc/10 # convert into cm
 names(swhc) <- 'swhc'
+
+# pH
+pH <- raster("./data/GEO/ph_2008.tif")
+pH <- resample(pH, elevation)
+names(pH) <- 'pH'
 
 # Quadratic diameter (cm) [0, 80]
 dg <- raster('./data/GEO/rastDg75error.clean.tif')
@@ -116,6 +125,7 @@ cellID <- cellID$cellID
 greco <- readOGR(dsn = "./data/GEO", layer = "greco_l93", encoding = "UTF-8", use_iconv = TRUE)
 greco <- spTransform(greco, crs(park)) # change projection
 # convert into a raster
+greco$CODEGRECO <- as.factor(greco$CODEGRECO)
 grecoRaster <- rasterize(greco, cellID, field="CODEGRECO")
 crs(grecoRaster) <- crs(park)
 names(grecoRaster) <- 'GRECO'
@@ -149,6 +159,7 @@ writeRaster(elevation, filename = "./initialLandscape/elev.asc", format = "ascii
 writeRaster(slope, filename = "./initialLandscape/slope.asc", format = "ascii", overwrite = TRUE)
 writeRaster(aspect, filename = "./initialLandscape/aspect.asc", format = "ascii", overwrite = TRUE)
 writeRaster(swhc, filename = "./initialLandscape/swhc.asc", format = "ascii", overwrite = TRUE)
+writeRaster(pH, filename = "./initialLandscape/pH.asc", format = "ascii", overwrite = TRUE)
 writeRaster(dg, filename = "./data/init/dg.asc", format = "ascii", overwrite = TRUE)
 writeRaster(BA, filename = "./data/init/BA.asc", format = "ascii", overwrite = TRUE)
 writeRaster(N, filename = "./data/init/N.asc", format = "ascii", overwrite = TRUE)
@@ -164,8 +175,8 @@ writeRaster(Cd_hydr, filename = "./data/init/Cd_hydr.asc", format = "ascii", ove
 
 # create raster stack
 rasterStack <- stack(cellID, parkRaster, forestRaster, elevation, slope,
-                     aspect, swhc, grecoRaster, Cd_crbn, Cd_hydr)
-# plot(rasterStack)
+                     aspect, swhc, pH, grecoRaster, Cd_crbn, Cd_hydr)
+plot(rasterStack)
 
 # convert into data frame
 envdf <- as.data.frame(rasterStack)
@@ -175,7 +186,7 @@ envdf[envdf$GRECO == 4, 'GRECO'] <- 'C'
 envdf[envdf$GRECO == 6, 'GRECO'] <- 'E'
 envdf[envdf$GRECO == 9, 'GRECO'] <- 'H'
 
-# predict salem SI (site index) from PROTEST models
+# predict salem SI (site index)
 envdf <- salemSI(envdf)
 
 # save

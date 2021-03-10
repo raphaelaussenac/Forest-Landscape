@@ -6,6 +6,7 @@
 *.shx
 *.asc
 *.csv
+*.txt
 *.pdf
 *.xml
 *.sbn
