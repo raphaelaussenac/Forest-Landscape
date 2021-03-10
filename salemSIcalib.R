@@ -11,6 +11,7 @@ library(raster)
 library(sf)
 library(dplyr)
 library(glmulti)
+library(ggplot2)
 
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
@@ -103,7 +104,7 @@ salemSI03 <- spForm(df = salemSI, spCode = '03')
 # start <- Sys.time()
 allMod03 <- glmulti(potentiel_03 ~ ., data = salemSI03, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "identity"))
+               family = Gamma(link = "log"))
 # end <- Sys.time()
 # end - start
 
@@ -134,7 +135,7 @@ salemSI09 <- spForm(df = salemSI, spCode = '09')
 # run all possible models
 allMod09 <- glmulti(potentiel_09 ~ ., data = salemSI09, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "identity"))
+               family = Gamma(link = "log"))
 #
 # check best model
 summary(allMod09@objects[[1]])
@@ -156,7 +157,7 @@ salemSI61 <- spForm(df = salemSI, spCode = '61')
 # run all possible models
 allMod61 <- glmulti(potentiel_61 ~ ., data = salemSI61, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "identity"))
+               family = Gamma(link = "log"))
 #
 # check best model
 summary(allMod61@objects[[1]])
@@ -178,7 +179,7 @@ salemSI62 <- spForm(df = salemSI, spCode = '62')
 # run all possible models
 allMod62 <- glmulti(potentiel_62 ~ ., data = salemSI62, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "identity"))
+               family = Gamma(link = "log"))
 #
 # check best model
 summary(allMod62@objects[[1]])
@@ -190,11 +191,55 @@ summary(allMod62@objects[[df62[1, 'rank']]])
 modPabies <- allMod62@objects[[df62[1, 'rank']]]
 saveRDS(modPabies , './data/salemSI/modPabies.rds')
 
+###############################################################
+# evaluation
+###############################################################
 
+# prediction
+salemSI03$pred <- predict(modQpetraea, newdata = salemSI03, type = 'response')
+salemSI09$pred <- predict(modFsylvatica, newdata = salemSI09, type = 'response')
+salemSI61$pred <- predict(modAalba, newdata = salemSI61, type = 'response')
+salemSI62$pred <- predict(modPabies, newdata = salemSI62, type = 'response')
 
-----> ajouter predict vs obs
+# stack sp df
+salemSI03 <- salemSI03 %>% rename(potentiel = potentiel_03) %>% mutate(sp = as.factor('03'))
+salemSI09 <- salemSI09 %>% rename(potentiel = potentiel_09) %>% mutate(sp = as.factor('09'))
+salemSI61 <- salemSI61 %>% rename(potentiel = potentiel_61) %>% mutate(sp = as.factor('61'))
+salemSI62 <- salemSI62 %>% rename(potentiel = potentiel_62) %>% mutate(sp = as.factor('62'))
+df <- rbind(salemSI03, salemSI09, salemSI61, salemSI62)
 
------> vérifier que la chaine des csript compo - dendro donne toujours le meme résultat
-avec le package velox en moins
+# define min and max limits for plot extent
+df <- df %>% group_by(sp) %>%
+             mutate(maxLim = max(potentiel, pred), minLim = min(potentiel, pred)) %>%
+             ungroup()
+#
 
-----> changer les deux README (notamment ph en plus)
+# obs vs pred models
+r03 <- summary(lm(potentiel ~ pred, data = df[df$sp == '03',]))$r.squared
+r09 <- summary(lm(potentiel ~ pred, data = df[df$sp == '09',]))$r.squared
+r61 <- summary(lm(potentiel ~ pred, data = df[df$sp == '61',]))$r.squared
+r62 <- summary(lm(potentiel ~ pred, data = df[df$sp == '62',]))$r.squared
+rdf <- data.frame(sp = c('03', '09', '61', '62'), r = c(r03, r09, r61, r62))
+
+# plot
+pl1 <- ggplot(data = df,aes(x = pred, y = potentiel)) +
+    geom_point( ) +
+    geom_abline(slope = 1, intercept = 0, lwd = 1) +
+    geom_smooth(method = 'lm', formula = y ~ x) +
+    geom_point(aes(x = maxLim, y = minLim), alpha = 0) +
+    geom_point(aes(x = minLim, y = maxLim), alpha = 0) +
+    geom_text(data = rdf, aes(x = -Inf, y = Inf, label = paste('r2=',round(r, 3))),
+              hjust = -1, vjust = 3, show.legend = FALSE, col = 'red') +
+    facet_wrap(. ~ sp, scale = "free") +
+    ylab('observations') +
+    xlab('predictions') +
+    theme_light() +
+    theme(aspect.ratio = 1, panel.grid.minor = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(colour = 'black'),
+                  legend.position = "bottom",
+                  legend.title = element_blank(),
+                  panel.spacing = unit(20, 'pt'))
+#
+# save plot
+ggsave(file = './initialLandscape/evaluation/salemSI.pdf', plot = pl1, width = 10, height = 10)
