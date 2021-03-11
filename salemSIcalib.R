@@ -17,27 +17,7 @@ library(ggplot2)
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
 # load species-specific SI and env variables at NFI plots
-salemSI <- read.csv('./data/salemSI/bdBauges_for_SI_calibration_2021_03_09.txt', sep = '\t')
-
-# load park limits
-park <- readOGR(dsn = "./data/GEO", layer = "park", encoding = "UTF-8", use_iconv = TRUE)
-
-# load geological and pH data
-Cd_crbn <- raster("./data/init/Cd_crbn.asc")
-Cd_hydr <- raster("./data/init/Cd_hydr.asc")
-pH <- raster("./initialLandscape/pH.asc")
-
-###############################################################
-# assign geol and pH values to all NFI plots
-###############################################################
-
-# convert NFI into spatial points
-NFIplots <- SpatialPointsDataFrame(salemSI[,c("xl93", "yl93")], data = data.frame(salemSI[,'idp']), proj4string = CRS(proj4string(park)))
-
-# extract geol and pH values at NFI plots
-salemSI$Cd_crbn <- extract(Cd_crbn, NFIplots)
-salemSI$Cd_hydr <- extract(Cd_hydr, NFIplots)
-salemSI$pH <- extract(pH, NFIplots)
+salemSI <- read.csv('./data/salemSI/bdBauges_for_SI_calibration_2021_03_11.txt', sep = '\t')
 
 ###############################################################
 # manage data format, variable class, unit, model selection...
@@ -48,8 +28,9 @@ salemSI <- salemSI %>% select(-idp, -xl93, -yl93, -aspect)
 
 # define variable class
 salemSI$GRECO <- as.factor(salemSI$GRECO)
-salemSI$Cd_crbn <- as.factor(salemSI$Cd_crbn)
-salemSI$Cd_hydr <- as.factor(salemSI$Cd_hydr)
+
+# rename variable
+salemSI <- salemSI %>% rename(pH = pH_decor)
 
 # convert slope from degrees to % because SI where built with % and
 # the relationship between degrees and percent is not linear
@@ -64,7 +45,7 @@ salemSI <- salemSI %>% mutate(elev2 = elev^2, slope2 = slope^2, swhc2 = swhc^2,
 # keep only the relevant SI and remove all NA
 spForm <- function(df, spCode){
   temp <- df %>% select(paste0('potentiel_', spCode), elev, slope, swhc, pH,
-                                         expoNS, expoEW, GRECO, Cd_crbn, Cd_hydr,
+                                         expoNS, expoEW, GRECO,
                                          elev2, slope2, swhc2, pH2, expoNS2, expoEW2) %>%
                         mutate(miss = rowSums(is.na(df))) %>%
                         filter(miss == 0) %>% select(-miss)
@@ -243,3 +224,94 @@ pl1 <- ggplot(data = df,aes(x = pred, y = potentiel)) +
 #
 # save plot
 ggsave(file = './initialLandscape/evaluation/salemSI.pdf', plot = pl1, width = 10, height = 10)
+
+
+# plot residuals against variables and prediction ranges
+# define prediction range of variables
+predRange <- data.frame(var = c('elev', 'slope', 'swhc', 'pH', 'expoNS', 'expoEW'),
+                        min = c(237, 0, 1, 4.3, -1, -1),
+                        max = c(2794, 567, 14, 7, 1, 1))
+#
+
+# function to retrieve names of continuous simple effects
+simpleF <- function(mod){
+  simple <- names(coef(mod)[!(substr(names(coef(mod)), 1, 2) %in% c('(I', 'GR')) &
+    substr(names(coef(mod)), nchar(names(coef(mod))),
+    nchar(names(coef(mod)))) != '2'])
+  return(simple)
+}
+# function to retrieve names of continuous quadratic effects
+quadraF <- function(mod){
+  quadra <- names(coef(mod)[substr(names(coef(mod)), nchar(names(coef(mod))),
+    nchar(names(coef(mod)))) == '2'])
+  return(quadra)
+}
+# function to retrieve names of effect present as simple AND quadratic
+bothF <- function(simple, quadra){
+  quadra <- substr(quadra, 1, nchar(quadra)-1)
+  all <- c(simple, quadra)
+  both <- all[duplicated(all)]
+  return(both)
+}
+# function to retrieve names of effect present as simple OR quadratic
+onlyF <- function(both, simple, quadra){
+  quadra <- substr(quadra, 1, nchar(quadra)-1)
+  all <- c(simple, quadra)
+  only <- all[!(all %in% both)]
+  return(only)
+}
+
+# function to plot residuals against variables and to evaluate the effetc of
+# predicting out of range of calibration
+plotMod <- function(name, mod, predRange, df, type = c('s', 'q', 'sq')){
+  # coef(mod)[name]
+  if(type == 's'){
+    curve(coef(mod)[name] * x, min(df[, name], predRange[predRange$var == name, 'min']), max(df[, name], predRange[predRange$var == name, 'max']), main = name)
+  } else if(type == 'q'){
+    curve(coef(mod)[name] * x*x, min(df[, name], predRange[predRange$var == substr(name, 1, nchar(name)-1), 'min']), max(df[, name], predRange[predRange$var == substr(name, 1, nchar(name)-1), 'max']), main = name)
+  } else if(type == 'sq'){
+    curve(coef(mod)[name] * x + coef(mod)[paste0(name, 2)] *x*x, min(df[, name], predRange[predRange$var == name, 'min']), max(df[, name], predRange[predRange$var == name, 'max']), main = name)
+  }
+  abline(v = range(df[, name]), lty = 2)
+  plot(resid(mod) ~ df[, name], main = name)
+  panel.smooth(df[, name], resid(mod))
+  abline(h = 0, lty = 2)
+  return()
+}
+
+
+
+# function to run all at once
+plotSp <- function(mod, plotMod, predRange, df){
+  simple <- simpleF(mod)
+  quadra <- quadraF(mod)
+  both <- bothF(simple, quadra)
+  only <- onlyF(both, simple, quadra)
+  par(mfrow = c(length(c(only, both)), 2))
+  # only simple effects
+  lapply(c(only, simple)[duplicated(c(only, simple))], plotMod, mod = mod, predRange = predRange, df = df, type = 's')
+  # simple and quadratic effect
+  lapply(both, plotMod, mod = mod, predRange = predRange, df = df, type = 'sq')
+  # only quadratic effect
+  lapply(quadra[!quadra %in% paste0(both,2)], plotMod, mod = mod, predRange = predRange, df = df, type = 'q')
+}
+
+# 03
+pdf('./initialLandscape/evaluation/modQpet.pdf', width = 7, height = 15)
+plotSp(modQpetraea, plotMod, predRange, salemSI03)
+dev.off()
+
+# 09
+pdf('./initialLandscape/evaluation/modFsyl.pdf', width = 7, height = 15)
+plotSp(modFsylvatica, plotMod, predRange, salemSI09)
+dev.off()
+
+# 61
+pdf('./initialLandscape/evaluation/modAalb.pdf', width = 7, height = 15)
+plotSp(modAalba, plotMod, predRange, salemSI61)
+dev.off()
+
+# 62
+pdf('./initialLandscape/evaluation/modPabi.pdf', width = 7, height = 15)
+plotSp(modPabies, plotMod, predRange, salemSI62)
+dev.off()
