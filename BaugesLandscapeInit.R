@@ -130,21 +130,6 @@ grecoRaster <- rasterize(greco, cellID, field="CODEGRECO")
 crs(grecoRaster) <- crs(park)
 names(grecoRaster) <- 'GRECO'
 
-# geol
-geol <- readOGR(dsn = "./data/GEO", layer = "geol", encoding = "UTF-8", use_iconv = TRUE)
-geol <- geol[, 'NOTATION']
-classGeol <- read.csv("./data/geol/classificationGeol.csv", header = TRUE, sep = ";")
-classGeol <- classGeol[, c('NOTATION', 'Code_carbonate', 'Code_hydro')]
-colnames(classGeol) <- c('NOTATION', 'Cd_crbn', 'Cd_hydr')
-geol <- merge(geol, classGeol, by = 'NOTATION')
-# convert into a raster
-Cd_crbn <- rasterize(geol, cellID, field = "Cd_crbn")
-crs(Cd_crbn) <- crs(park)
-names(Cd_crbn) <- 'Cd_crbn'
-Cd_hydr <- rasterize(geol, cellID, field = "Cd_hydr")
-crs(Cd_hydr) <- crs(park)
-names(Cd_hydr) <- 'Cd_hydr'
-
 ###############################################################
 # save ascii
 ###############################################################
@@ -166,8 +151,6 @@ writeRaster(N, filename = "./data/init/N.asc", format = "ascii", overwrite = TRU
 writeRaster(Dprop, filename = "./data/init/Dprop.asc", format = "ascii", overwrite = TRUE)
 writeRaster(cellID, filename = "./data/init/cellID.asc", format = "ascii", overwrite = TRUE)
 writeRaster(grecoRaster, filename = "./data/init/greco.asc", format = "ascii", overwrite = TRUE)
-writeRaster(Cd_crbn, filename = "./data/init/Cd_crbn.asc", format = "ascii", overwrite = TRUE)
-writeRaster(Cd_hydr, filename = "./data/init/Cd_hydr.asc", format = "ascii", overwrite = TRUE)
 
 ###############################################################
 # save data frame
@@ -175,7 +158,7 @@ writeRaster(Cd_hydr, filename = "./data/init/Cd_hydr.asc", format = "ascii", ove
 
 # create raster stack
 rasterStack <- stack(cellID, parkRaster, forestRaster, elevation, slope,
-                     aspect, swhc, pH, grecoRaster, Cd_crbn, Cd_hydr)
+                     aspect, swhc, pH, grecoRaster)
 plot(rasterStack)
 
 # convert into data frame
@@ -188,6 +171,25 @@ envdf[envdf$GRECO == 9, 'GRECO'] <- 'H'
 
 # predict salem SI (site index)
 envdf <- salemSI(envdf)
+
+# pred SI map
+rasterStack$SIQpet <- envdf$SIQpet
+rasterStack$SIFsyl <- envdf$SIFsyl
+rasterStack$SIAalb <- envdf$SIAalb
+rasterStack$SIPabi <- envdf$SIPabi
+
+pdf('./initialLandscape/evaluation/salemSIpredMap.pdf', width = 10, height = 10)
+plot(rasterStack[[10:13]])
+dev.off()
+
+# pred SI distribution
+pdf('./initialLandscape/evaluation/salemSIpredDist.pdf', width = 10, height = 10)
+par(mfrow = c(2,2))
+hist(envdf$SIQpet, main = 'Q. petraea')
+hist(envdf$SIFsyl, main = 'F. sylvatica')
+hist(envdf$SIAalb, main = 'A. alba')
+hist(envdf$SIPabi, main = 'P. abies')
+dev.off()
 
 # save
 write.csv(envdf, file = './initialLandscape/envVariables.csv', row.names = FALSE)

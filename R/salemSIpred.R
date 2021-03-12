@@ -1,9 +1,20 @@
+# prediction algo
+#
+# In the calibration data slope ranges from 0 to 47 while it ranges from 0 to 80
+# in the prediction data. Besides in the SI models, slope has a quadratic effect.
+# Predictions out of the calibration range might therefore not be reliable. We
+# therefore set the max slope in the prediction data to the max slope in the
+# calibration data.
+
 # predict salem SI (site index) from PROTEST models
 salemSI <- function(df){
+  require(dplyr)
 
   dfBackup <- df
 
-  require(dplyr)
+  # set maximum slope to max slope of calibration data
+  df[!is.na(df$slope) & df$slope > 47.72631, 'slope'] <- 47.72631
+
   # load SI models
   Qpet <- readRDS('./data/salemSI/modQpetraea.rds')
   Fsyl <- readRDS('./data/salemSI/modFsylvatica.rds')
@@ -13,12 +24,6 @@ salemSI <- function(df){
   # manage variable class
   df$forest <- as.factor(df$forest)
   df$GRECO <- as.factor(df$GRECO)
-  df$Cd_crbn <- as.factor(df$Cd_crbn)
-  df$Cd_hydr <- as.factor(df$Cd_hydr)
-
-  # make sure prediction are made on same unit than calibration
-  # convert slope degrees in %
-  df$slope <- tan(df$slope * (2*pi) /360) * 100
 
   # create missing variables
   df <- df %>% mutate(expoNS = cos(df$aspect*pi/180), expoEW = sin(df$aspect*pi/180),

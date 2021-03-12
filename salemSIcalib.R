@@ -1,3 +1,20 @@
+# variable selection algo
+#
+# 1 - all possible combination of variables are compared with the AIC
+# 2 - the model with the largest number of significant terms is chosen
+#     among the models with AIC < AICmin + 2
+# 3 - linear effects are manually added (if missing) when quadratic term are
+#     present. Terms becoming non-signifant because of this operation are removed
+#     until all remaining terms are significant
+# --------------------------------------------
+# 4 - The beech model showed hardly interpretable effects of expoNS and expoEW
+#     (+ their quadratic effects). This may have been due to the correlation of
+#     their coef in the model (with each other and with slope and slope2). Some
+#     of these correlation where > 0.5 (a threshold not found elsewhere in the
+#     other models). Removing one of the expo quadratic effects make the other
+#     expo terms non-significant, which led us to remove all 4 expo terms.
+
+
 ###############################################################
 # initialisation
 ###############################################################
@@ -32,10 +49,6 @@ salemSI$GRECO <- as.factor(salemSI$GRECO)
 # rename variable
 salemSI <- salemSI %>% rename(pH = pH_decor)
 
-# convert slope from degrees to % because SI where built with % and
-# the relationship between degrees and percent is not linear
-salemSI$slope <- tan(salemSI$slope * (2*pi) /360) * 100
-
 # add quadratic effects
 salemSI <- salemSI %>% mutate(elev2 = elev^2, slope2 = slope^2, swhc2 = swhc^2,
                               pH2 = pH^2, expoNS2 = expoNS^2, expoEW2 = expoEW^2)
@@ -62,7 +75,7 @@ bestMod <- function(allMod){
   rank <- 1
   modAIC <- 0
   while(modAIC <= (bestic + 2)){
-    res <- c(rank, nrow(summary(allMod@objects[[rank]])$coef), sum(summary(allMod@objects[[rank]])$coef[, 'Pr(>|t|)'] <= 0.1))
+    res <- c(rank, nrow(summary(allMod@objects[[rank]])$coef), sum(summary(allMod@objects[[rank]])$coef[, 'Pr(>|t|)'] <= 0.05))
     df <- rbind(df, res)
     rank <- rank + 1
     modAIC <- summary(allMod@objects[[rank]])$aic
@@ -173,6 +186,40 @@ modPabies <- allMod62@objects[[df62[1, 'rank']]]
 saveRDS(modPabies , './data/salemSI/modPabies.rds')
 
 ###############################################################
+# manually add linear effects when quadratic term are present
+# and remove terms becoming non-signifant because of this operation
+###############################################################
+
+# 03
+summary(modQpetraea, correlation = TRUE)
+# add missing linear effects and remove ns effects
+modQpetraea <- glm(potentiel_03 ~ slope + swhc + expoNS + slope2 + elev + pH, family = Gamma(link = "log"), data = salemSI03)
+# save
+saveRDS(modQpetraea , './data/salemSI/modQpetraea.rds')
+
+# 09
+summary(modFsylvatica, correlation = TRUE)
+# add missing linear effects and remove ns effects
+modFsylvatica <- (glm(potentiel_09 ~ slope + swhc + pH + slope2 + swhc2 +
+pH2 + elev, family = Gamma(link = "log"), data = salemSI09))
+# save
+saveRDS(modFsylvatica , './data/salemSI/modFsylvatica.rds')
+
+# 61
+summary(modAalba, correlation = TRUE)
+modAalba <- glm(potentiel_61 ~ GRECO + slope + swhc + pH + expoNS + expoEW + slope2 +
+swhc2 + pH2 + elev, family = Gamma(link = "log"), data = salemSI61)
+# save
+saveRDS(modAalba , './data/salemSI/modAalba.rds')
+
+# 62
+summary(modPabies, correlation = TRUE)
+modPabies <- glm(potentiel_62 ~ GRECO + elev + slope + swhc + expoNS + slope2 +
+swhc2 + pH, family = Gamma(link = "log"), data = salemSI62)
+# save
+saveRDS(modPabies , './data/salemSI/modPabies.rds')
+
+###############################################################
 # evaluation
 ###############################################################
 
@@ -230,7 +277,7 @@ ggsave(file = './initialLandscape/evaluation/salemSI.pdf', plot = pl1, width = 1
 # define prediction range of variables
 predRange <- data.frame(var = c('elev', 'slope', 'swhc', 'pH', 'expoNS', 'expoEW'),
                         min = c(237, 0, 1, 4.3, -1, -1),
-                        max = c(2794, 567, 14, 7, 1, 1))
+                        max = c(2794, 80, 14, 7, 1, 1))
 #
 
 # function to retrieve names of continuous simple effects
