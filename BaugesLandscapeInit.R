@@ -149,7 +149,7 @@ writeRaster(dg, filename = "./data/init/dg.asc", format = "ascii", overwrite = T
 writeRaster(BA, filename = "./data/init/BA.asc", format = "ascii", overwrite = TRUE)
 writeRaster(N, filename = "./data/init/N.asc", format = "ascii", overwrite = TRUE)
 writeRaster(Dprop, filename = "./data/init/Dprop.asc", format = "ascii", overwrite = TRUE)
-writeRaster(cellID, filename = "./data/init/cellID.asc", format = "ascii", overwrite = TRUE)
+writeRaster(cellID, filename = "./initialLandscape/cellID.asc", format = "ascii", overwrite = TRUE)
 writeRaster(grecoRaster, filename = "./data/init/greco.asc", format = "ascii", overwrite = TRUE)
 
 ###############################################################

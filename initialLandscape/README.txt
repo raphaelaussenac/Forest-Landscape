@@ -8,6 +8,7 @@ forestMask.asc   forest extent within the park
 parkMask.asc     park extent
                  0 = outside park
                  1 = inside park
+pH.ascii         soil pH
 slope.asc        (degrees)
 swhc.asc         soil water holding capacity (cm)
 
@@ -33,17 +34,8 @@ elev:        elevation (m a.s.l.)
 slope:       (degrees)
 aspect:      (degrees)
 swhc:        soil water holding capacity (cm)
+pH:          soil pH
 GRECO:       GRECO region ID (defined by French NFI)
-Cd_crbn:     carbonate mineral content of the bedrock
-             0 = no or few carbonates
-             1 = moderate presence of carbonates
-             2 = rich in carbonates
-             3 = Nearly pure carbonates
-Cd_hydr:     permeability potential of the bedrock according to its mineralogical nature
-             0 = Highly permeable
-             1 = Permeable
-             2 = Low permeability
-             3 = Impermeable or nearly impermeable
 SIQpet:      salem SI (site index) prediction for Q. petraea
 SIFsyl:      salem SI (site index) prediction for F. sylvatica
 SIAalb:      salem SI (site index) prediction for A. alba

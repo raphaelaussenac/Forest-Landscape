@@ -42,7 +42,7 @@ crpdTFV <- read.csv('./data/NFI/codeTFV_Bauges_2020_10_15.csv', sep = ';')
 
 # first assign TFV to each NFI plot using crpdTFV
 tree <- merge(tree, crpdTFV[, c('idp', 'tfv')], by = 'idp', all.x = TRUE)
-tree$tfv <- droplevels(tree$tfv)
+tree$tfv <- as.factor(tree$tfv)
 colnames(tree)[colnames(tree) == 'tfv'] <- 'CODE_TFV'
 
 # Surface area of each TFV type and number of associated NFI plots

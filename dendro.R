@@ -28,7 +28,7 @@ BA <- raster("./data/init/BA.asc")
 BA[BA > 1000] <- 1000 # correct the wrong min max values
 Dprop <- raster("./data/init/Dprop.asc")
 Dprop <- Dprop / 100
-cellID <- raster("./data/init/cellID.asc")
+cellID <- raster("./initialLandscape/cellID.asc")
 
 # create raster stack
 rasterStack <- stack(compo, Dg, BA, Dprop, cellID)
