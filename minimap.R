@@ -7,6 +7,7 @@ rm(list = ls())
 
 # load packages
 library(raster)
+library(dplyr)
 
 # set work directory
 setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
@@ -64,6 +65,13 @@ cellID <- values(cellID25)
 # reduce envVariables df
 df <- read.csv('./initialLandscape/envVariables.csv')
 df <- df[df$cellID25 %in% cellID,]
+# calculate nb of forest cells per ha for the mini landscape
+# may be different from nb of forest cells in envVariables.csv
+df <- df %>% group_by(cellID100) %>% mutate(forestCellsPerHa = sum(forest))
+# plot hist of nb of forest cells per ha
+test <- df %>% group_by(cellID100) %>% summarise(forestCellsPerHa = unique(forestCellsPerHa))
+hist(test$forestCellsPerHa, breaks = c(0:16))
+# save
 write.csv(df, './initialLandscape/minimap/envVariables.csv', row.names = F)
 
 # surface (ha)
