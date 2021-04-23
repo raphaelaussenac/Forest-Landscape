@@ -39,8 +39,8 @@ salemSI <- function(df){
   df$SIPabi <- predict(Pabi, newdata = df, type = 'response')
 
   # add SI to df
-  df <- merge(dfBackup, df[, c('cellID', 'SIQpet', 'SIFsyl', 'SIAalb', 'SIPabi')],
-              by = 'cellID', all.x = TRUE)
+  df <- merge(dfBackup, df[, c('cellID25', 'SIQpet', 'SIFsyl', 'SIAalb', 'SIPabi')],
+              by = 'cellID25', all.x = TRUE)
   #
 
   return(df)

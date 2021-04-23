@@ -17,6 +17,7 @@ setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
 
 # load sources
 source('R/spTransform.R')
+source('R/saveLandscape.R')
 
 # load composition ID
 compo <- raster("./data/init/compoID.asc")
@@ -28,10 +29,10 @@ BA <- raster("./data/init/BA.asc")
 BA[BA > 1000] <- 1000 # correct the wrong min max values
 Dprop <- raster("./data/init/Dprop.asc")
 Dprop <- Dprop / 100
-cellID <- raster("./initialLandscape/cellID.asc")
+cellID25 <- raster("./initialLandscape/cellID25.asc")
 
 # create raster stack
-rasterStack <- stack(compo, Dg, BA, Dprop, cellID)
+rasterStack <- stack(compo, Dg, BA, Dprop, cellID25)
 
 # load NFI tree data
 tree <- read.csv('./data/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
@@ -89,7 +90,7 @@ assignDendro <- function(cell, i, tree, NFIsp){
   dgtot <- cell[2]
   batot <- cell[3]
   dprop <- cell[4]
-  cellID <- cell[5]
+  cellID25 <- cell[5]
 
   if(sum(is.na(cell)) == 0 & dgtot > 0 & batot > 0){
     # i <- 205157 # i = 205157 = plotid 4740 with 5sp = 2C + 3D:
@@ -165,11 +166,11 @@ assignDendro <- function(cell, i, tree, NFIsp){
     df <- dbh[, c('species_name', 'wlid', 'w25m', 'dbhlid25m')]
     df$wlid <- df$wlid/16
     df$i <- i
-    df$cellID <- cellID
-    colnames(df) <- c('sp', 'wlid', 'n', 'dbh', 'i', 'cellID')
+    df$cellID25 <- cellID25
+    colnames(df) <- c('sp', 'wlid', 'n', 'dbh', 'i', 'cellID25')
 
   } else{
-    df <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = i, cellID = cellID)
+    df <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = i, cellID25 = cellID25)
   }
 
   return(df)
@@ -219,7 +220,7 @@ results <- rbind(results1, results2, results3, results4)
 # these 'strange' trees are created because they are deci or coni on cells
 # with dprop = 0 or 1
 # first count number of cells with composition = XXXX and with all trees dbh = NA
-df2 <- results %>% filter(!is.na(sp)) %>% group_by(cellID) %>% summarise(N = sum(n, na.rm = TRUE))
+df2 <- results %>% filter(!is.na(sp)) %>% group_by(cellID25) %>% summarise(N = sum(n, na.rm = TRUE))
 nrow(df2[df2$N == 0,]) # if equal 0, then no cells are removed only deci or coni trees in cells where dprop = 1 or 0
 # second delete trees with dbh = n = NA if it does not remove the cell
 if (nrow(df2[df2$N == 0,]) == 0){
@@ -227,7 +228,7 @@ if (nrow(df2[df2$N == 0,]) == 0){
 }
 
 # save
-# write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './initialLandscape/trees.csv', row.names = FALSE)
+# write.csv(results[, c('cellID25', 'sp', 'n', 'dbh')], file = './initialLandscape/trees.csv', row.names = FALSE)
 
 ################################################################################
 # remove trees <7.5 cm
@@ -241,29 +242,33 @@ saveResults <- results
 # first count total number of lines per cell, number of line with dbh <7.5
 # and number of lines with dbh >= 7.5
 treeCnt <- results %>% filter(!is.na(sp)) %>% mutate(n = 1, size = ifelse(dbh >= 7.5, 'big', 'small')) %>%
-                   group_by(cellID) %>% count(size, wt = n) %>% pivot_wider(id_cols = cellID, names_from = size, values_from = n) %>%
+                   group_by(cellID25) %>% count(size, wt = n) %>% pivot_wider(id_cols = cellID25, names_from = size, values_from = n) %>%
                    mutate(nbtot = sum(big, small, na.rm = TRUE))
 # list of cells where small trees can (simply) be removed
 removelist <- treeCnt %>% filter(small > 0 & !is.na(small) & big > 0 & !is.na(big))
-removelist <- as.list(removelist[, 'cellID'])
+removelist <- as.list(removelist[, 'cellID25'])
 
 # list of cells where small trees make up the whole stand
 # and cannot be removed --> create a NA line instead
 setToNAlist <- treeCnt %>% filter(small > 0 & !is.na(small) & is.na(big))
-setToNAlist <- as.list(setToNAlist[, 'cellID'])
+setToNAlist <- as.list(setToNAlist[, 'cellID25'])
 
 # remove trees
-results <- results %>% filter(!( cellID %in% removelist$cellID & dbh <7.5))
+results <- results %>% filter(!( cellID25 %in% removelist$cellID25 & dbh <7.5))
 
 # set to NA
 # for that we remove the cells and add new NA lines
-results <- results %>% filter(! (cellID %in% setToNAlist$cellID))
-NAdf <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = NA, cellID = setToNAlist$cellID)
+results <- results %>% filter(! (cellID25 %in% setToNAlist$cellID25))
+NAdf <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = NA, cellID25 = setToNAlist$cellID25)
 results <- rbind(results, NAdf)
-results <- results %>% arrange(cellID)
+results <- results %>% arrange(cellID25)
 
-# results[results$dbh < 7.5 & !is.na(results$dbh), c('sp', 'wlid', 'n', 'dbh')] <- NA
-write.csv(results[, c('cellID', 'sp', 'n', 'dbh')], file = './initialLandscape/trees75.csv', row.names = FALSE)
+
+################################################################################
+# create 100*100m grid and save landscape (tree and environmental data)
+################################################################################
+
+results <- saveLandscape(cellID25, results)
 
 ################################################################################
 # evaluate the effect of rounding on the number of trees
@@ -273,7 +278,7 @@ if (!(dir.exists('./initialLandscape/evaluation'))) {dir.create('./initialLandsc
 
 # distribution of differences between rounded and non-rounded number of trees
 # at the cell level
-Ncell <- results %>% group_by(cellID) %>% summarise(wlid = sum(wlid), n = sum(n)) %>%
+Ncell <- results %>% group_by(cellID25) %>% summarise(wlid = sum(wlid), n = sum(n)) %>%
                      mutate(Ndiff = wlid - n)
 pl1 <- ggplot()+
 geom_histogram(data = Ncell, aes(x = Ndiff), bins = 50, col = 'black', fill = 'white', alpha = 0.5) +
@@ -284,7 +289,7 @@ ggsave(file = './initialLandscape/evaluation/NdiffCell.pdf', plot = pl1, width =
 
 # distribution of differences between rounded and non-rounded number of trees per species
 # at the cell level depending on dbh classes
-sp <- results %>% group_by(cellID, sp) %>% summarise(SpMeanDBH = sum(n * dbh) / sum(n), SpNDiff = sum(wlid) - sum(n))
+sp <- results %>% group_by(cellID25, sp) %>% summarise(SpMeanDBH = sum(n * dbh) / sum(n), SpNDiff = sum(wlid) - sum(n))
 sp$meanDBHclass <- cut(sp$SpMeanDBH, 0:120)
 pl2 <- ggplot() +
 geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
@@ -321,7 +326,7 @@ sum(Ncell$Ndiff, na.rm = TRUE) * 100 /sum(results$n, na.rm = TRUE)
 # check whether BAlidar = sum of BA of trees at each cell
 ################################################################################
 
-BAinit <- results %>% group_by(cellID) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n * 16)) %>% arrange(cellID)
+BAinit <- results %>% group_by(cellID25) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n * 16)) %>% arrange(cellID25)
 rasterStack$BAinit <- BAinit$BAtot
 rasterStack$BAdiff25m <- (rasterStack$BA / 16)  - (rasterStack$BAinit /16)
 rasterStack$BAreldiff25m <- 100 - ( (rasterStack$BAinit /16) * 100 / (rasterStack$BA / 16) )
@@ -338,7 +343,7 @@ plot(rasterStack$BAreldiff25m)
 # check whether Dglidar = mean Dg of trees at each cell
 ################################################################################
 
-Dginit <- results %>% group_by(cellID) %>% summarise(Dgtot = sqrt(sum(dbh^2 * n)/sum(n))) %>% arrange(cellID)
+Dginit <- results %>% group_by(cellID25) %>% summarise(Dgtot = sqrt(sum(dbh^2 * n)/sum(n))) %>% arrange(cellID25)
 rasterStack$Dginit <- Dginit$Dgtot
 rasterStack$Dgdiff <- rasterStack$dg - rasterStack$Dginit
 rasterStack$Dgreldiff <- 100 - (rasterStack$Dginit * 100 /rasterStack$dg)

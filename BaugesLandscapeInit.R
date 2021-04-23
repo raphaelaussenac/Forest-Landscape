@@ -34,7 +34,7 @@ forest <- readOGR(dsn = "./data/GEO", layer = "BD_Foret_V2_PNRfilled_Foret_2014"
 elevation <- raster("./data/GEO/MNT_all_5m.tif")
 # set projection
 crs(elevation) <- crs(park)
-# set resolution
+# set resolution to 25*25 instead of 5*5
 elevation <- aggregate(elevation, fact = 5)
 names(elevation) <- 'elev'
 
@@ -45,7 +45,7 @@ slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
 aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
 
 # convert park into raster and set extent + resolution
-ext <- floor(extent(elevation))
+ext <- extent(elevation)
 r <- raster(ext, res=res(elevation))
 park$ID <- as.factor(park$ID)
 parkRaster <- rasterize(park, r, field = "ID")
@@ -116,17 +116,17 @@ crs(Dprop) <- crs(park)
 Dprop <- resample(Dprop, elevation)
 
 # create cell ID raster
-ext <- floor(extent(elevation))
-cellID <- raster(ext, res=res(elevation))
-cellID$cellID <- c(1:(nrow(cellID) * ncol(cellID)))
-cellID <- cellID$cellID
+ext <- extent(elevation)
+cellID25 <- raster(ext, res=res(elevation))
+cellID25$cellID25 <- c(1:(nrow(cellID25) * ncol(cellID25)))
+cellID25 <- cellID25$cellID25
 
 # greco
 greco <- readOGR(dsn = "./data/GEO", layer = "greco_l93", encoding = "UTF-8", use_iconv = TRUE)
 greco <- spTransform(greco, crs(park)) # change projection
 # convert into a raster
 greco$CODEGRECO <- as.factor(greco$CODEGRECO)
-grecoRaster <- rasterize(greco, cellID, field="CODEGRECO")
+grecoRaster <- rasterize(greco, cellID25, field="CODEGRECO")
 crs(grecoRaster) <- crs(park)
 names(grecoRaster) <- 'GRECO'
 
@@ -149,7 +149,7 @@ writeRaster(dg, filename = "./data/init/dg.asc", format = "ascii", overwrite = T
 writeRaster(BA, filename = "./data/init/BA.asc", format = "ascii", overwrite = TRUE)
 writeRaster(N, filename = "./data/init/N.asc", format = "ascii", overwrite = TRUE)
 writeRaster(Dprop, filename = "./data/init/Dprop.asc", format = "ascii", overwrite = TRUE)
-writeRaster(cellID, filename = "./initialLandscape/cellID.asc", format = "ascii", overwrite = TRUE)
+writeRaster(cellID25, filename = "./initialLandscape/cellID25.asc", format = "ascii", overwrite = TRUE)
 writeRaster(grecoRaster, filename = "./data/init/greco.asc", format = "ascii", overwrite = TRUE)
 
 ###############################################################
@@ -157,7 +157,7 @@ writeRaster(grecoRaster, filename = "./data/init/greco.asc", format = "ascii", o
 ###############################################################
 
 # create raster stack
-rasterStack <- stack(cellID, parkRaster, forestRaster, elevation, slope,
+rasterStack <- stack(cellID25, parkRaster, forestRaster, elevation, slope,
                      aspect, swhc, pH, grecoRaster)
 plot(rasterStack)
 
@@ -171,6 +171,27 @@ envdf[envdf$GRECO == 9, 'GRECO'] <- 'H'
 
 # predict salem SI (site index)
 envdf <- salemSI(envdf)
+
+# save
+envdf$cellID25 <- as.integer(envdf$cellID25)
+envdf$park <- as.integer(envdf$park)
+envdf$forest <- as.integer(envdf$forest)
+envdf$elev <- round(envdf$elev, 2)
+envdf$slope <- round(envdf$slope, 2)
+envdf$aspect <- round(envdf$aspect, 2)
+envdf$swhc <- round(envdf$swhc, 2)
+envdf$pH <- round(envdf$pH, 2)
+envdf$GRECO <- as.factor(envdf$GRECO)
+envdf$SIQpet <- round(envdf$SIQpet, 2)
+envdf$SIFsyl <- round(envdf$SIFsyl, 2)
+envdf$SIAalb <- round(envdf$SIAalb, 2)
+envdf$SIPabi <- round(envdf$SIPabi, 2)
+
+write.csv(envdf, file = './data/init/envVariablesTemp.csv', row.names = FALSE)
+
+###############################################################
+# save SI map
+###############################################################
 
 # pred SI map
 rasterStack$SIQpet <- envdf$SIQpet
@@ -190,6 +211,3 @@ hist(envdf$SIFsyl, main = 'F. sylvatica')
 hist(envdf$SIAalb, main = 'A. alba')
 hist(envdf$SIPabi, main = 'P. abies')
 dev.off()
-
-# save
-write.csv(envdf, file = './initialLandscape/envVariables.csv', row.names = FALSE)
