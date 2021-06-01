@@ -11,7 +11,7 @@ saveLandscape <- function(cellID25, results){
   # assign unique cellID
   values(cellID100) <- c(1:(nrow(cellID100) * ncol(cellID100)))
   # save raster cellID100 at 100*100 resolution
-  writeRaster(cellID100, filename = "./initialLandscape/cellID100.asc", format = "ascii", overwrite = TRUE)
+  writeRaster(cellID100, filename = './initialLandscape/cellID100.asc', format = 'ascii', overwrite = TRUE)
   # change resolution back to cellID25 resolution in order to crop and then
   # stack together
   cellID100 <- disaggregate(cellID100, fact = resFact)
@@ -36,7 +36,7 @@ saveLandscape <- function(cellID25, results){
   # reduce table size in memory
   envdf$cellID100 <- as.integer(envdf$cellID100)
   # sort colnames
-  colOrd <- c("cellID25","cellID100","park","forest","elev","slope","aspect","swhc","pH","GRECO","SIQpet","SIFsyl","SIAalb","SIPabi","forestCellsPerHa")
+  colOrd <- c('cellID25','cellID100','park','forest','elev','slope','aspect','swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi','forestCellsPerHa')
   # save
   write.csv(envdf[, colOrd], file = './initialLandscape/envVariables.csv', row.names = FALSE)
 

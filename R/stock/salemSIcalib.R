@@ -31,7 +31,7 @@ library(glmulti)
 library(ggplot2)
 
 # set work directory
-setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
+setwd('C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit')
 
 # load species-specific SI and env variables at NFI plots
 salemSI <- read.csv('./data/salemSI/bdBauges_for_SI_calibration_2021_03_11.txt', sep = '\t')
@@ -98,13 +98,13 @@ salemSI03 <- spForm(df = salemSI, spCode = '03')
 # start <- Sys.time()
 allMod03 <- glmulti(potentiel_03 ~ ., data = salemSI03, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "log"))
+               family = Gamma(link = 'log'))
 # end <- Sys.time()
 # end - start
 
-# plot(allMod03, type = "p")
-# plot(allMod03, type = "w")
-# plot(allMod03, type = "s")
+# plot(allMod03, type = 'p')
+# plot(allMod03, type = 'w')
+# plot(allMod03, type = 's')
 
 # overview
 print(allMod03)
@@ -129,7 +129,7 @@ salemSI09 <- spForm(df = salemSI, spCode = '09')
 # run all possible models
 allMod09 <- glmulti(potentiel_09 ~ ., data = salemSI09, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "log"))
+               family = Gamma(link = 'log'))
 #
 # check best model
 summary(allMod09@objects[[1]])
@@ -151,7 +151,7 @@ salemSI61 <- spForm(df = salemSI, spCode = '61')
 # run all possible models
 allMod61 <- glmulti(potentiel_61 ~ ., data = salemSI61, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "log"))
+               family = Gamma(link = 'log'))
 #
 # check best model
 summary(allMod61@objects[[1]])
@@ -173,7 +173,7 @@ salemSI62 <- spForm(df = salemSI, spCode = '62')
 # run all possible models
 allMod62 <- glmulti(potentiel_62 ~ ., data = salemSI62, level = 1, method = 'h',
                crit = aic, plotty = TRUE, report = TRUE,
-               family = Gamma(link = "log"))
+               family = Gamma(link = 'log'))
 #
 # check best model
 summary(allMod62@objects[[1]])
@@ -193,7 +193,7 @@ saveRDS(modPabies , './data/salemSI/modPabies.rds')
 # 03
 summary(modQpetraea, correlation = TRUE)
 # add missing linear effects and remove ns effects
-modQpetraea <- glm(potentiel_03 ~ slope + swhc + expoNS + slope2 + elev + pH, family = Gamma(link = "log"), data = salemSI03)
+modQpetraea <- glm(potentiel_03 ~ slope + swhc + expoNS + slope2 + elev + pH, family = Gamma(link = 'log'), data = salemSI03)
 # save
 saveRDS(modQpetraea , './data/salemSI/modQpetraea.rds')
 
@@ -201,21 +201,21 @@ saveRDS(modQpetraea , './data/salemSI/modQpetraea.rds')
 summary(modFsylvatica, correlation = TRUE)
 # add missing linear effects and remove ns effects
 modFsylvatica <- (glm(potentiel_09 ~ slope + swhc + pH + slope2 + swhc2 +
-pH2 + elev, family = Gamma(link = "log"), data = salemSI09))
+pH2 + elev, family = Gamma(link = 'log'), data = salemSI09))
 # save
 saveRDS(modFsylvatica , './data/salemSI/modFsylvatica.rds')
 
 # 61
 summary(modAalba, correlation = TRUE)
 modAalba <- glm(potentiel_61 ~ GRECO + slope + swhc + pH + expoNS + expoEW + slope2 +
-swhc2 + pH2 + elev, family = Gamma(link = "log"), data = salemSI61)
+swhc2 + pH2 + elev, family = Gamma(link = 'log'), data = salemSI61)
 # save
 saveRDS(modAalba , './data/salemSI/modAalba.rds')
 
 # 62
 summary(modPabies, correlation = TRUE)
 modPabies <- glm(potentiel_62 ~ GRECO + elev + slope + swhc + expoNS + slope2 +
-swhc2 + pH, family = Gamma(link = "log"), data = salemSI62)
+swhc2 + pH, family = Gamma(link = 'log'), data = salemSI62)
 # save
 saveRDS(modPabies , './data/salemSI/modPabies.rds')
 
@@ -258,14 +258,14 @@ pl1 <- ggplot(data = df,aes(x = pred, y = potentiel)) +
     geom_point(aes(x = minLim, y = maxLim), alpha = 0) +
     geom_text(data = rdf, aes(x = -Inf, y = Inf, label = paste('r2=',round(r, 3))),
               hjust = -1, vjust = 3, show.legend = FALSE, col = 'red') +
-    facet_wrap(. ~ sp, scale = "free") +
+    facet_wrap(. ~ sp, scale = 'free') +
     ylab('observations') +
     xlab('predictions') +
     theme_light() +
     theme(aspect.ratio = 1, panel.grid.minor = element_blank(),
                   strip.background = element_blank(),
                   strip.text = element_text(colour = 'black'),
-                  legend.position = "bottom",
+                  legend.position = 'bottom',
                   legend.title = element_blank(),
                   panel.spacing = unit(20, 'pt'))
 #

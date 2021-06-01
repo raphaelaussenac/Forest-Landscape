@@ -10,21 +10,21 @@ library(raster)
 library(dplyr)
 
 # set work directory
-setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
+setwd('C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit')
 
 ###############################################################
 # 1 - open all rasters
 ###############################################################
 
-aspect <- raster("./initialLandscape/aspect.asc")
-cellID25 <- raster("./initialLandscape/cellID25.asc")
-cellID100 <- raster("./initialLandscape/cellID100.asc")
-elev <- raster("./initialLandscape/elev.asc")
-forest <- raster("./initialLandscape/forestMask.asc")
-park <- raster("./initialLandscape/parkMask.asc")
-pH <- raster("./initialLandscape/pH.asc")
-slope <- raster("./initialLandscape/slope.asc")
-swhc <- raster("./initialLandscape/swhc.asc")
+aspect <- raster('./initialLandscape/aspect.asc')
+cellID25 <- raster('./initialLandscape/cellID25.asc')
+cellID100 <- raster('./initialLandscape/cellID100.asc')
+elev <- raster('./initialLandscape/elev.asc')
+forest <- raster('./initialLandscape/forestMask.asc')
+park <- raster('./initialLandscape/parkMask.asc')
+pH <- raster('./initialLandscape/pH.asc')
+slope <- raster('./initialLandscape/slope.asc')
+swhc <- raster('./initialLandscape/swhc.asc')
 
 ###############################################################
 # 2 - crop on smaller extent
@@ -45,15 +45,15 @@ swhc <- crop(swhc, ext)
 # 3 - save rasters
 ###############################################################
 
-writeRaster(park, filename = "./initialLandscape/minimap/parkMask.asc", format = "ascii", overwrite = TRUE)
-writeRaster(forest, filename = "./initialLandscape/minimap/forestMask.asc", format = "ascii", overwrite = TRUE)
-writeRaster(elev, filename = "./initialLandscape/minimap/elev.asc", format = "ascii", overwrite = TRUE)
-writeRaster(slope, filename = "./initialLandscape/minimap/slope.asc", format = "ascii", overwrite = TRUE)
-writeRaster(aspect, filename = "./initialLandscape/minimap/aspect.asc", format = "ascii", overwrite = TRUE)
-writeRaster(swhc, filename = "./initialLandscape/minimap/swhc.asc", format = "ascii", overwrite = TRUE)
-writeRaster(pH, filename = "./initialLandscape/minimap/pH.asc", format = "ascii", overwrite = TRUE)
-writeRaster(cellID25, filename = "./initialLandscape/minimap/cellID25.asc", format = "ascii", overwrite = TRUE)
-writeRaster(cellID100, filename = "./initialLandscape/minimap/cellID100.asc", format = "ascii", overwrite = TRUE)
+writeRaster(park, filename = './initialLandscape/minimap/parkMask.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(forest, filename = './initialLandscape/minimap/forestMask.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(elev, filename = './initialLandscape/minimap/elev.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(slope, filename = './initialLandscape/minimap/slope.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(aspect, filename = './initialLandscape/minimap/aspect.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(swhc, filename = './initialLandscape/minimap/swhc.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(pH, filename = './initialLandscape/minimap/pH.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(cellID25, filename = './initialLandscape/minimap/cellID25.asc', format = 'ascii', overwrite = TRUE)
+writeRaster(cellID100, filename = './initialLandscape/minimap/cellID100.asc', format = 'ascii', overwrite = TRUE)
 
 ###############################################################
 # 3 - transform tree and environmental data frames

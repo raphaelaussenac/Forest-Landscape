@@ -4,7 +4,7 @@
 spTransform <- function(tree){
 
   # load correspondence between NFI species code and latin Names
-  spCor <- read.csv('./data/NFI/spCorrespond.csv', sep = ',')
+  spCor <- read.csv('./data/spCorrespond.csv', sep = ',')
 
   # import species latin names
   tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'espar', by.y = 'franceCode')

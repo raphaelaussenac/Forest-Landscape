@@ -13,23 +13,23 @@ library(ggplot2)
 library(tidyr)
 
 # set work directory
-setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
+setwd('C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit')
 
 # load sources
 source('R/spTransform.R')
 source('R/saveLandscape.R')
 
 # load composition ID
-compo <- raster("./data/init/compoID.asc")
+compo <- raster('./data/init/compoID.asc')
 
 # load lidar data
-Dg <- raster("./data/init/Dg.asc")
+Dg <- raster('./data/init/Dg.asc')
 Dg[Dg > 1000] <- 1000 # correct the wrong min max values
-BA <- raster("./data/init/BA.asc")
+BA <- raster('./data/init/BA.asc')
 BA[BA > 1000] <- 1000 # correct the wrong min max values
-Dprop <- raster("./data/init/Dprop.asc")
+Dprop <- raster('./data/init/Dprop.asc')
 Dprop <- Dprop / 100
-cellID25 <- raster("./initialLandscape/cellID25.asc")
+cellID25 <- raster('./initialLandscape/cellID25.asc')
 
 # create raster stack
 rasterStack <- stack(compo, Dg, BA, Dprop, cellID25)
@@ -332,7 +332,7 @@ rasterStack$BAdiff25m <- (rasterStack$BA / 16)  - (rasterStack$BAinit /16)
 rasterStack$BAreldiff25m <- 100 - ( (rasterStack$BAinit /16) * 100 / (rasterStack$BA / 16) )
 
 # difference should be as close to zero as possible
-pdf(file="./initialLandscape/evaluation/BAdiff25m.pdf")
+pdf(file='./initialLandscape/evaluation/BAdiff25m.pdf')
 hist(rasterStack$BAdiff25m, breaks = 100)
 dev.off()
 plot(rasterStack$BAdiff25m)
@@ -351,13 +351,13 @@ rasterStack$Dgreldiff <- 100 - (rasterStack$Dginit * 100 /rasterStack$dg)
 # difference should be as close to zero as possible but it necessarily
 # fluctuates because we had to change the trees dbh to reach the BA
 # prescribed by the LIDAR
-pdf(file="./initialLandscape/evaluation/Dgdiff.pdf")
+pdf(file='./initialLandscape/evaluation/Dgdiff.pdf')
 hist(rasterStack$Dgdiff, breaks = 100)
 dev.off()
 plot(rasterStack$Dgdiff)
 hist(rasterStack$Dgreldiff, breaks = 100)
 plot(rasterStack$Dgreldiff)
-# writeRaster(rasterStack$Dgreldiff, filename = "./data/Init/rasterVerif.asc", format = "ascii", overwrite = TRUE)
+# writeRaster(rasterStack$Dgreldiff, filename = './data/Init/rasterVerif.asc', format = 'ascii', overwrite = TRUE)
 # rasterStack[802041]
 # results[results$cellID == 802041,]
 # saveResults[saveResults$cellID == 802041,]

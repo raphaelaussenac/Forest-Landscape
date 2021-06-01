@@ -12,7 +12,7 @@ options(digits=10)
 library(tidyverse)
 
 # set work directory
-setwd("C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit")
+setwd('C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit')
 
 # function to replace commas by dots and transform character vectors
 # into numeric vectors
