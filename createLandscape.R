@@ -16,6 +16,7 @@ source('./R/salemSIpred.R')
 source('./R/compo.R')
 source('./R/spTransform.R')
 source('./R/evalCompo.R')
+source('./R/dendro.R')
 
 ###############################################################
 # select landscape (bauges, milicz)
@@ -49,4 +50,4 @@ compo(landscape)
 evalCompo()
 
 # assign individual trees to all 25*25m cells
-# dendro(landscape)
+dendro(landscape)
