@@ -37,15 +37,19 @@ saveLandscape <- function(){
   setToNAlist <- as.list(setToNAlist[, 'cellID25'])
 
   # remove trees
-  results <- results %>% filter(!( cellID25 %in% removelist$cellID25 & dbh <7.5))
+  results <- results %>% filter(!( cellID25 %in% removelist$cellID25 & dbh <7.5)) %>% dplyr::select(-i)
 
   # set to NA
   # for that we remove the cells and add new NA lines
   results <- results %>% filter(! (cellID25 %in% setToNAlist$cellID25))
   # NAdf <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = NA, cellID25 = setToNAlist$cellID25)
-  NAdf <- data.frame(cellID25 = setToNAlist$cellID25, sp = NA, n = NA, dbh = NA)
+  NAdf <- data.frame(cellID25 = setToNAlist$cellID25, sp = NA, n = NA, dbh = NA, wlid = NA)
   results <- rbind(results, NAdf)
   results <- results %>% arrange(cellID25)
+
+  # save for evaluation
+  write.csv(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75ForEval.csv'), row.names = FALSE)
+
 
   ################################################################################
   # aggregate data at 100*100 resolution

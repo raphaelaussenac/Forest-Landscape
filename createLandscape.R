@@ -18,7 +18,7 @@ source('./R/spTransform.R')
 source('./R/evalCompo.R')
 source('./R/dendro.R')
 source('./R/saveLandscape.R')
-
+source('./R/evalDendro.R')
 source('./R/minimap.R')
 
 ###############################################################
@@ -61,7 +61,7 @@ dendro(landscape)
 saveLandscape()
 
 # evaluate dendro variables
-# evalDendro()
+evalDendro()
 
 # produce minimap
 minimap(landscape)
