@@ -7,6 +7,7 @@ evalDendro <- function(){
   # load packages
   require(dplyr)
   require(ggplot2)
+  require(raster)
 
   # load tree data
   results <- read.csv(paste0(tempPath, '/trees75ForEval.csv'))

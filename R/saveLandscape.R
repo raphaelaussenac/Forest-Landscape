@@ -47,9 +47,6 @@ saveLandscape <- function(){
   results <- rbind(results, NAdf)
   results <- results %>% arrange(cellID25)
 
-  # save for evaluation
-  write.csv(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75ForEval.csv'), row.names = FALSE)
-
 
   ################################################################################
   # aggregate data at 100*100 resolution
@@ -102,5 +99,7 @@ saveLandscape <- function(){
 
   # save
   write.csv(results[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh')], file = paste0(landPath, './trees75.csv'), row.names = FALSE)
+  write.csv(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75ForEval.csv'), row.names = FALSE)
+
 
 }
