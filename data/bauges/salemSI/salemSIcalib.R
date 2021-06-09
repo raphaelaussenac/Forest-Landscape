@@ -34,7 +34,7 @@ library(ggplot2)
 setwd('C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit')
 
 # load species-specific SI and env variables at NFI plots
-salemSI <- read.csv('./data/salemSI/bdBauges_for_SI_calibration_2021_03_11.txt', sep = '\t')
+salemSI <- read.csv('./data/bauges/salemSI/bdBauges_for_SI_calibration_2021_03_11.txt', sep = '\t')
 
 ###############################################################
 # manage data format, variable class, unit, model selection...
@@ -117,7 +117,7 @@ summary(allMod03@objects[[1]])
 df03 <- bestMod(allMod03)
 summary(allMod03@objects[[df03[1, 'rank']]])
 modQpetraea <- allMod03@objects[[df03[1, 'rank']]]
-saveRDS(modQpetraea , './data/salemSI/modQpetraea.rds')
+saveRDS(modQpetraea , './data/bauges/salemSI/modQpetraea.rds')
 
 ###############################################################
 # model sp 09
@@ -139,7 +139,7 @@ summary(allMod09@objects[[1]])
 df09 <- bestMod(allMod09)
 summary(allMod09@objects[[df09[1, 'rank']]])
 modFsylvatica <- allMod09@objects[[df09[1, 'rank']]]
-saveRDS(modFsylvatica , './data/salemSI/modFsylvatica.rds')
+saveRDS(modFsylvatica , './data/bauges/salemSI/modFsylvatica.rds')
 
 ###############################################################
 # model sp 61
@@ -161,7 +161,7 @@ summary(allMod61@objects[[1]])
 df61 <- bestMod(allMod61)
 summary(allMod61@objects[[df61[1, 'rank']]])
 modAalba <- allMod61@objects[[df61[1, 'rank']]]
-saveRDS(modAalba , './data/salemSI/modAalba.rds')
+saveRDS(modAalba , './data/bauges/salemSI/modAalba.rds')
 
 ###############################################################
 # model sp 62
@@ -183,7 +183,7 @@ summary(allMod62@objects[[1]])
 df62 <- bestMod(allMod62)
 summary(allMod62@objects[[df62[1, 'rank']]])
 modPabies <- allMod62@objects[[df62[1, 'rank']]]
-saveRDS(modPabies , './data/salemSI/modPabies.rds')
+saveRDS(modPabies , './data/bauges/salemSI/modPabies.rds')
 
 ###############################################################
 # manually add linear effects when quadratic term are present
@@ -195,7 +195,7 @@ summary(modQpetraea, correlation = TRUE)
 # add missing linear effects and remove ns effects
 modQpetraea <- glm(potentiel_03 ~ slope + swhc + expoNS + slope2 + elev + pH, family = Gamma(link = 'log'), data = salemSI03)
 # save
-saveRDS(modQpetraea , './data/salemSI/modQpetraea.rds')
+saveRDS(modQpetraea , './data/bauges/salemSI/modQpetraea.rds')
 
 # 09
 summary(modFsylvatica, correlation = TRUE)
@@ -203,21 +203,21 @@ summary(modFsylvatica, correlation = TRUE)
 modFsylvatica <- (glm(potentiel_09 ~ slope + swhc + pH + slope2 + swhc2 +
 pH2 + elev, family = Gamma(link = 'log'), data = salemSI09))
 # save
-saveRDS(modFsylvatica , './data/salemSI/modFsylvatica.rds')
+saveRDS(modFsylvatica , './data/bauges/salemSI/modFsylvatica.rds')
 
 # 61
 summary(modAalba, correlation = TRUE)
 modAalba <- glm(potentiel_61 ~ GRECO + slope + swhc + pH + expoNS + expoEW + slope2 +
 swhc2 + pH2 + elev, family = Gamma(link = 'log'), data = salemSI61)
 # save
-saveRDS(modAalba , './data/salemSI/modAalba.rds')
+saveRDS(modAalba , './data/bauges/salemSI/modAalba.rds')
 
 # 62
 summary(modPabies, correlation = TRUE)
 modPabies <- glm(potentiel_62 ~ GRECO + elev + slope + swhc + expoNS + slope2 +
 swhc2 + pH, family = Gamma(link = 'log'), data = salemSI62)
 # save
-saveRDS(modPabies , './data/salemSI/modPabies.rds')
+saveRDS(modPabies , './data/bauges/salemSI/modPabies.rds')
 
 ###############################################################
 # evaluation
@@ -270,7 +270,7 @@ pl1 <- ggplot(data = df,aes(x = pred, y = potentiel)) +
                   panel.spacing = unit(20, 'pt'))
 #
 # save plot
-ggsave(file = './initialLandscape/evaluation/salemSI.pdf', plot = pl1, width = 10, height = 10)
+ggsave(file = './baugesLandscape/evaluation/salemSI.pdf', plot = pl1, width = 10, height = 10)
 
 
 # plot residuals against variables and prediction ranges
@@ -344,21 +344,21 @@ plotSp <- function(mod, plotMod, predRange, df){
 }
 
 # 03
-pdf('./initialLandscape/evaluation/modQpet.pdf', width = 7, height = 15)
+pdf('./baugesLandscape/evaluation/modQpet.pdf', width = 7, height = 15)
 plotSp(modQpetraea, plotMod, predRange, salemSI03)
 dev.off()
 
 # 09
-pdf('./initialLandscape/evaluation/modFsyl.pdf', width = 7, height = 15)
+pdf('./baugesLandscape/evaluation/modFsyl.pdf', width = 7, height = 15)
 plotSp(modFsylvatica, plotMod, predRange, salemSI09)
 dev.off()
 
 # 61
-pdf('./initialLandscape/evaluation/modAalb.pdf', width = 7, height = 15)
+pdf('./baugesLandscape/evaluation/modAalb.pdf', width = 7, height = 15)
 plotSp(modAalba, plotMod, predRange, salemSI61)
 dev.off()
 
 # 62
-pdf('./initialLandscape/evaluation/modPabi.pdf', width = 7, height = 15)
+pdf('./baugesLandscape/evaluation/modPabi.pdf', width = 7, height = 15)
 plotSp(modPabies, plotMod, predRange, salemSI62)
 dev.off()

@@ -16,10 +16,10 @@ salemSI <- function(df){
   df[!is.na(df$slope) & df$slope > 47.72631, 'slope'] <- 47.72631
 
   # load SI models
-  Qpet <- readRDS('./data/salemSI/modQpetraea.rds')
-  Fsyl <- readRDS('./data/salemSI/modFsylvatica.rds')
-  Aalb <- readRDS('./data/salemSI/modAalba.rds')
-  Pabi <- readRDS('./data/salemSI/modPabies.rds')
+  Qpet <- readRDS('./data/bauges/salemSI/modQpetraea.rds')
+  Fsyl <- readRDS('./data/bauges/salemSI/modFsylvatica.rds')
+  Aalb <- readRDS('./data/bauges/salemSI/modAalba.rds')
+  Pabi <- readRDS('./data/bauges/salemSI/modPabies.rds')
 
   # manage variable class
   df$forest <- as.factor(df$forest)
