@@ -175,7 +175,9 @@ prepBauges <- function(){
   envdf$SIAalb <- round(envdf$SIAalb, 2)
   envdf$SIPabi <- round(envdf$SIPabi, 2)
 
-  write.csv(envdf, file = paste0(tempPath, '/envVariablesTemp.csv'), row.names = FALSE)
+  # write.csv(envdf, file = paste0(tempPath, '/envVariablesTemp.csv'), row.names = FALSE)
+  saveRDS(envdf, file = paste0(tempPath, '/envVariablesTemp.rds'))
+
 
   ###############################################################
   # save SI maps and distributions

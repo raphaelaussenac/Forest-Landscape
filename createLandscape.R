@@ -31,6 +31,9 @@ landscape <- 'bauges'
 # create virtual landscape
 ###############################################################
 
+# running time
+start_time <- Sys.time()
+
 # define folder structure
 tempPath <- paste0('./data/temp/', landscape)
 landPath <- paste0('./', landscape, 'Landscape')
@@ -65,3 +68,7 @@ evalDendro()
 
 # produce minimap
 minimap(landscape)
+
+# running time
+end_time <- Sys.time()
+end_time - start_time

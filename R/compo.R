@@ -159,7 +159,8 @@ compo <- function(landscape){
   # calculate proportion of deciduous BA
   tree$DBH <- tree$c13 / pi
   # save tree file for evaluation
-  write.csv(tree, file = paste0(tempPath, '/treeTemp.csv'), row.names = FALSE)
+  # write.csv(tree, file = paste0(tempPath, '/treeTemp.csv'), row.names = FALSE)
+  saveRDS(tree, file = paste0(tempPath, '/treeTemp.rds'))
   NFIDprop <- tree %>% group_by(idp, spType) %>%
                             summarise(BAdc = sum((pi * (DBH/200)^2) * w)) %>%
                             group_by(idp) %>% mutate(BA = sum(BAdc), Dprop = BAdc/BA) %>%

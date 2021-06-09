@@ -1,5 +1,5 @@
 evalCompo <- function(){
-  
+
   ################################################################################
   # check composition - convert plot id map into species composition map
   ################################################################################
@@ -11,7 +11,8 @@ evalCompo <- function(){
   require(ggplot2)
 
   # load treeTemp
-  tree <- read.csv(paste0(tempPath, '/treeTemp.csv'))
+  # tree <- read.csv(paste0(tempPath, '/treeTemp.csv'))
+  tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
 
   # load compoID
   compo <- raster(paste0(tempPath, '/compoID.asc'))
