@@ -1,7 +1,7 @@
 evalCompo <- function(){
 
   ################################################################################
-  # check composition - convert plot id map into species composition map
+  # initialisation
   ################################################################################
 
   # load packages
@@ -16,6 +16,34 @@ evalCompo <- function(){
 
   # load compoID
   compo <- raster(paste0(tempPath, '/compoID.asc'))
+
+
+  ################################################################################
+  # count number of times NFI plots are picked to define cells compo
+  ################################################################################
+
+  compodf <- as.data.frame(compo)
+  compodf$compoID <- as.factor(compodf$compoID)
+  compodf <- compodf %>% filter(!is.na(compoID)) %>%
+                     group_by(compoID) %>%
+                     summarise(count = n()) %>%
+                     arrange(-count)
+  compodf$compoID <- factor(compodf$compoID, levels = compodf$compoID)
+
+  # plot
+  plpl <- ggplot(data = compodf, aes(x = compoID, y = count)) +
+  geom_bar(stat = 'identity') +
+  xlab('plot ID') +
+  ggtitle('number of times each plot is picked to define cells composition') +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  plpl
+  ggsave(file = paste0(evalPath, '/plotDraw.pdf'), plot = plpl, width = 25, height = 10)
+
+
+  ################################################################################
+  # check composition - convert plot id map into species composition map
+  ################################################################################
 
   # set threshold to identify mainSp
   # thresh = 0.8 means you will get the species making up for > 80% of the stand BA

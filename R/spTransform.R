@@ -4,10 +4,10 @@
 spTransform <- function(tree){
 
   # load correspondence between NFI species code and latin Names
-  spCor <- read.csv('./data/spCorrespond.csv', sep = ',')
+  spCor <- read.csv('./data/spCodeCorrespond.csv', sep = ',')
 
   # import species latin names
-  tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'espar', by.y = 'franceCode')
+  tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'espar', by.y = 'franceCode', all.x = TRUE)
   colnames(tree)[colnames(tree) == 'latinName'] <- 'species_name'
 
   # correct species name
@@ -22,7 +22,7 @@ spTransform <- function(tree){
                    'Acer pseudoplatanus', 'Tilia cordata', 'Salix caprea',
                    'Ulmus glabra', 'Sorbus aucuparia', 'Robinia pseudacacia',
                    'Malus sylvestris', 'Acer platanoides', 'Salix alba',
-                   'Crataegus monogyna', 'Sorbus mougeoti', 'Laburnum anagyroides',
+                   'Crataegus monogyna', 'Sorbus mougeotii', 'Laburnum anagyroides',
                    'Quercus pubescens', 'Alnus glutinosa', 'Salix cinerea',
                    'Alnus incana', 'Ilex aquifolium', 'Buxus sempervirens',
                    'Prunus padus', 'Robinia pseudoacacia')

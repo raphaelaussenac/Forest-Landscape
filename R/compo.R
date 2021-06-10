@@ -106,7 +106,7 @@ compo <- function(landscape){
   # FF0: Forêt fermée sans couvert arboré --------------------> remove
   # LA4: Formation herbacée ----------------------------------> remove
   # LA6: Lande -----------------------------------------------> remove
-  # not specified --------------------------------------------> A
+  # not specified --------------------------------------------> removed
 
   groupTfv <- function(df){
     df <- df[!(df$CODE_TFV %in% c('FO0', 'FF0', 'LA4', 'LA6')) & !is.na(df$CODE_TFV),]
