@@ -189,7 +189,10 @@ compo <- function(landscape){
   # NFI[NFI$idp == '469390', 'CODE_TFV'] <- 'CASTA'
 
   # plot 3d
-  fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01, type='scatter3d', mode = 'markers', color = NFI$CODE_TFV)
+  fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01,
+                 text = NFI$idp, textposition = 'middle right', # text
+                 textfont = list(color = '#000000', size = 16), # text
+                 type='scatter3d', mode = 'markers', color = NFI$CODE_TFV)
   axx <- list(title = 'quadratic diameter (cm)')
   axy <- list(title = 'proportion of Deciduous basal area')
   axz <- list(title = 'basal area (m^2/ha)')
