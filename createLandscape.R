@@ -20,6 +20,7 @@ source('./R/dendro.R')
 source('./R/saveLandscape.R')
 source('./R/evalDendro.R')
 source('./R/minimap.R')
+source('./R/heightPred.R')
 
 ###############################################################
 # select landscape (bauges, milicz)
@@ -65,6 +66,9 @@ saveLandscape()
 
 # evaluate dendro variables
 evalDendro()
+
+# model tree height
+heightPred()
 
 # produce minimap
 minimap(landscape)

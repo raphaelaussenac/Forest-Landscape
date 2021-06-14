@@ -159,7 +159,6 @@ compo <- function(landscape){
   # calculate proportion of deciduous BA
   tree$DBH <- tree$c13 / pi
   # save tree file for evaluation
-  # write.csv(tree, file = paste0(tempPath, '/treeTemp.csv'), row.names = FALSE)
   saveRDS(tree, file = paste0(tempPath, '/treeTemp.rds'))
   NFIDprop <- tree %>% group_by(idp, spType) %>%
                             summarise(BAdc = sum((pi * (DBH/200)^2) * w)) %>%
@@ -192,7 +191,7 @@ compo <- function(landscape){
   fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01,
                  text = NFI$idp, textposition = 'middle right', # text
                  textfont = list(color = '#000000', size = 16), # text
-                 type='scatter3d', mode = 'markers', color = NFI$CODE_TFV)
+                 type='scatter3d', mode = 'markers+text', color = NFI$CODE_TFV)
   axx <- list(title = 'quadratic diameter (cm)')
   axy <- list(title = 'proportion of Deciduous basal area')
   axz <- list(title = 'basal area (m^2/ha)')

@@ -174,8 +174,6 @@ prepBauges <- function(){
   envdf$SIFsyl <- round(envdf$SIFsyl, 2)
   envdf$SIAalb <- round(envdf$SIAalb, 2)
   envdf$SIPabi <- round(envdf$SIPabi, 2)
-
-  # write.csv(envdf, file = paste0(tempPath, '/envVariablesTemp.csv'), row.names = FALSE)
   saveRDS(envdf, file = paste0(tempPath, '/envVariablesTemp.rds'))
 
 

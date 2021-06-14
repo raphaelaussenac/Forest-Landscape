@@ -1,67 +1,59 @@
-###############################################################
-# initialisation
-###############################################################
+heightPred <- function(){
 
-# load packages
-require(nlme)
-require(dplyr)
-require(ggplot2)
+  ###############################################################
+  # initialisation
+  ###############################################################
 
-# load models
-load('./data/bauges/hmodels/diam_height_model_18_02_2021.ro')
+  # load packages
+  require(nlme)
+  require(dplyr)
+  require(ggplot2)
 
-# load virtual tree data
-tree <- read.csv(paste0(landPath, '/trees75.csv'))
+  # load models
+  load('./data/bauges/hmodels/diam_height_model_18_02_2021.ro')
 
-# load correspondence between NFI species code and latin Names
-spCor <- read.csv('./data/spCodeCorrespond.csv', sep = ',')
+  # load virtual tree data
+  tree <- readRDS(paste0(tempPath, '/trees75.rds'))
+  tree <- tree %>% dplyr::select(-wlid)
 
-###############################################################
-# prepare tree data for predictions
-###############################################################
+  # load correspondence between NFI species code and latin Names
+  spCor <- read.csv('./data/spCodeCorrespond.csv', sep = ',')
 
-# add salem sp codes
-tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'sp', by.y = 'latinName', all.x = TRUE)
+  ###############################################################
+  # prepare tree data for predictions
+  ###############################################################
 
-# calculate stand Dg (in 25*25m cells)
-tree <- tree %>% group_by(cellID25) %>%
-                 mutate(DgTotFinal = sqrt(sum(dbh^2 * n)/sum(n))) %>%
-                 arrange(cellID25) %>%
-                 ungroup()
-#
-# calculate relative dbh
-tree$dbh_rel <- tree$dbh / tree$DgTotFinal
+  # add salem sp codes
+  tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'sp', by.y = 'latinName', all.x = TRUE)
 
-# rename columns
-tree <- tree %>% rename(espar = franceCode, idp = cellID25)
+  # calculate stand Dg (in 25*25m cells)
+  tree <- tree %>% group_by(cellID25) %>%
+                   mutate(DgTotFinal = sqrt(sum(dbh^2 * n)/sum(n))) %>%
+                   arrange(cellID25) %>%
+                   ungroup()
+  #
+  # calculate relative dbh
+  tree$dbh_rel <- tree$dbh / tree$DgTotFinal
 
-###############################################################
-# predict
-###############################################################
+  # rename columns
+  tree <- tree %>% rename(espar = franceCode) %>% mutate(ipd = 11)
 
-# subset tree -> keep only 6 modelled sp and XXX lines
-tree <- tree %>% filter(espar %in% c('03', '09', '15S', '17C', '61', '62'))
-tree <- tree[1:1000,]
+  ###############################################################
+  # predict
+  ###############################################################
 
-# predict
-tree$pred <- round(predict(mod_nlme, newdata = tree, level = 0), 2)
+  # predict
+  tree$pred <- round(predict(mod_nlme, newdata = tree, level = 0), 2)
 
+  # plot
+  ggplot(data = tree[1:10000,], aes(x = dbh, y = pred, col = sp)) +
+  geom_point(alpha = 0.5) +
+  ylab('h') +
+  theme_light()
 
+  # save
+  tree <- tree[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh', 'pred')] %>%
+            rename(h = pred)
+  write.csv(tree, paste0(landPath, '/trees75.csv'), row.names = F)
 
-
-
-
-# plot
-ggplot(data = tree, aes(x = dbh, y = pred, col = sp)) +
-geom_point(alpha = 0.5) +
-ylab('h') +
-theme_light()
-
-
-
-
-# summary(mod_nlme)
-
-
-# TODO: what about the other species?
-# TODO: how RE are they managed? (level = 0 ok?)
+}

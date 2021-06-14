@@ -222,7 +222,6 @@ dendro <- function(landscape){
   }
 
   # save
-  # write.csv(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid', 'i')], file = paste0(tempPath, '/trees.csv'), row.names = FALSE)
   saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid', 'i')], file = paste0(tempPath, '/trees.rds'))
 
 }

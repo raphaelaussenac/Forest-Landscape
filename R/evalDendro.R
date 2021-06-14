@@ -10,8 +10,8 @@ evalDendro <- function(){
   require(raster)
 
   # load tree data
-  # results <- read.csv(paste0(tempPath, '/trees75ForEval.csv'))
-  results <- readRDS(paste0(tempPath, '/trees75ForEval.rds'))
+  results <- readRDS(paste0(tempPath, '/trees75.rds'))
+
 
   ################################################################################
   # evaluate the effect of rounding on the number of trees

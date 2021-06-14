@@ -10,7 +10,6 @@ saveLandscape <- function(){
   require(raster)
 
   # load tree data
-  # results <- read.csv(paste0(tempPath, '/trees.csv'))
   results <- readRDS(paste0(tempPath, '/trees.rds'))
 
   # load cellID25 raster
@@ -79,7 +78,6 @@ saveLandscape <- function(){
   ################################################################################
 
   # add cellID100 to environmental data
-  # envdf <- read.csv(paste0(tempPath, './envVariablesTemp.csv'))
   envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
   envdf <- merge(envdf, cellIDdf, by = 'cellID25', all.y = F)
   # nb of forest cells per ha
@@ -100,8 +98,6 @@ saveLandscape <- function(){
   results$dbh <- round(results$dbh, 2)
 
   # save
-  write.csv(results[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh')], file = paste0(landPath, './trees75.csv'), row.names = FALSE)
-  # write.csv(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75ForEval.csv'), row.names = FALSE)
-  saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75ForEval.rds'))
+    saveRDS(results[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75.rds'))
 
 }
