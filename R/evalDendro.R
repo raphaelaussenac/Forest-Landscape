@@ -12,6 +12,15 @@ evalDendro <- function(){
   # load tree data
   results <- readRDS(paste0(tempPath, '/trees75.rds'))
 
+  # load lidar data
+  Dg <- raster(paste0(tempPath, '/dg.asc'))
+  Dg[Dg > 1000] <- 1000 # correct the wrong min max values
+  BA <- raster(paste0(tempPath, '/BA.asc'))
+  BA[BA > 1000] <- 1000 # correct the wrong min max values
+  cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
+  rasterStack <- stack(Dg, BA, cellID25)
+  df <- as.data.frame(rasterStack)
+
 
   ################################################################################
   # evaluate the effect of rounding on the number of trees
@@ -67,43 +76,41 @@ evalDendro <- function(){
   # check whether BAlidar = sum of BA of trees at each cell
   ################################################################################
 
-  BA <- raster(paste0(tempPath, '/BA.asc'))
-  BA[BA > 1000] <- 1000 # correct the wrong min max values
-
   BAinit <- results %>% group_by(cellID25) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n * 16)) %>% arrange(cellID25)
-  BA$BAinit <- BAinit$BAtot
-  BA$BAdiff25m <- (BA$BA / 16)  - (BA$BAinit /16)
-  BA$BAreldiff25m <- 100 - ( (BA$BAinit /16) * 100 / (BA$BA / 16) )
+  df <- merge(df, BAinit, by = 'cellID25', all.x = TRUE)
+  df$BAdiff25m <- (df$BA / 16)  - (df$BAtot /16)
+  df$BAreldiff25m <- 100 - ( (df$BAtot /16) * 100 / (df$BA / 16) )
 
   # difference should be as close to zero as possible
   pdf(file = paste0(evalPath, '/BAdiff25m.pdf'))
-  hist(BA$BAdiff25m, breaks = 100)
+  hist(df$BAdiff25m, breaks = 100)
   dev.off()
-  plot(BA$BAdiff25m)
-  hist(BA$BAreldiff25m, breaks = 100)
-  plot(BA$BAreldiff25m)
+  hist(df$BAreldiff25m, breaks = 100)
+  rasterStack$BAdiff25m <- df$BAdiff25m
+  rasterStack$BAreldiff25m <- df$BAreldiff25m
+  plot(rasterStack$BAdiff25m)
+  plot(rasterStack$BAreldiff25m)
 
   ################################################################################
   # check whether Dglidar = mean Dg of trees at each cell
   ################################################################################
 
-  Dg <- raster(paste0(tempPath, '/dg.asc'))
-  Dg[Dg > 1000] <- 1000 # correct the wrong min max values
-
   Dginit <- results %>% group_by(cellID25) %>% summarise(Dgtot = sqrt(sum(dbh^2 * n)/sum(n))) %>% arrange(cellID25)
-  Dg$Dginit <- Dginit$Dgtot
-  Dg$Dgdiff <- Dg$dg - Dg$Dginit
-  Dg$Dgreldiff <- 100 - (Dg$Dginit * 100 /Dg$dg)
+  df <- merge(df, Dginit, by = 'cellID25', all.x = TRUE)
+  df$Dgdiff <- df$dg - df$Dgtot
+  df$Dgreldiff <- 100 - (df$Dgtot * 100 /df$dg)
 
   # difference should be as close to zero as possible but it necessarily
   # fluctuates because we had to change the trees dbh to reach the BA
   # prescribed by the LIDAR
   pdf(file = paste0(evalPath, '/Dgdiff.pdf'))
-  hist(Dg$Dgdiff, breaks = 100)
+  hist(df$Dgdiff, breaks = 100)
   dev.off()
-  plot(Dg$Dgdiff)
-  hist(Dg$Dgreldiff, breaks = 100)
-  plot(Dg$Dgreldiff)
+  hist(df$Dgreldiff, breaks = 100)
+  rasterStack$Dgdiff <- df$Dgdiff
+  rasterStack$Dgreldiff <- df$Dgreldiff
+  plot(rasterStack$Dgdiff)
+  plot(rasterStack$Dgreldiff)
   # writeRaster(Dg$Dgreldiff, filename = './data/Init/rasterVerif.asc', format = 'ascii', overwrite = TRUE)
   # Dg[802041]
   # results[results$cellID == 802041,]
