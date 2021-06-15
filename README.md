@@ -27,7 +27,7 @@ cellID100:   100m*100m cell ID
 sp:          species latin name
 n:           number of trees
 dbh:         diameter at breast height (cm)
-
+h:           height (m)
 
 
 # envVariables.csv
