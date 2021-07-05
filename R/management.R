@@ -15,15 +15,15 @@ tree <- read.csv(paste0(landPath, '/trees75.csv'))
 env <- read.csv(paste0(landPath, '/envVariables.csv'))
 
 # load protected areas
-ri <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_integrale', encoding = 'UTF-8', use_iconv = TRUE)
 rb <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_biologiques', encoding = 'UTF-8', use_iconv = TRUE)
 rn <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_naturelles', encoding = 'UTF-8', use_iconv = TRUE)
+park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
 
-# load cellID25 raster
-cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
+# load cellID100 raster
+cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
 
 ###############################################################
-# define whether the slope prevents logging
+# define whether the slope makes logging impossible
 ###############################################################
 
 # calculate mean slope on 1ha sites
@@ -55,6 +55,45 @@ df <- merge(df, gini, by = 'cellID100', all.x = TRUE)
 df$type <- as.factor(df$type)
 
 ###############################################################
+# define protected areas
+###############################################################
+
+# set shp extent (not necessary since we use intersect just below
+# but fixes a bugue in package raster when rasterizing afterwards...)
+rb <- crop(rb, cellID100)
+rn <- crop(rn, cellID100)
+
+# keep only 'réserve biologique intégrale'
+# and exclude 'réserve biologique dirigée'
+rb <- rb[rb$code_r_enp == 'I',]
+
+# merge protected areas
+protect <- union(rb, rn)
+protect$protection <- 1
+
+# select protected areas only in study area
+protect <- intersect(protect, park)
+
+# convert into raster
+# use getCover to define proportion of each cell covered by polygon
+protect <- rasterize(protect, cellID100, getCover = TRUE)
+names(protect) <- 'protect'
+
+# stack with cellID100
+protect <- stack(cellID100, protect)
+
+# convert into dataframe
+protect <- as.data.frame(protect)
+
+# if protect >= 0.5 then most of the cell is covered by protected
+# area --> replace by 1. if protect < 0.5 --> replace by 0.
+protect <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
+
+# add to df
+df <- merge(df, protect, by = 'cellID100')
+
+
+###############################################################
 # define composition type
 ###############################################################
 
@@ -71,21 +110,12 @@ df$type <- as.factor(df$type)
 
 
 
-
 ###############################################################
 # calculate rdi
 ###############################################################
 
 valeurs sp / feuillus / pins / autres résineux
 
-
-###############################################################
-# define protected areas
-###############################################################
-
-
-# TODO: mesurer les surfaces
-# TODO: create raster protected areas?
 
 
 ###############################################################
@@ -94,7 +124,7 @@ valeurs sp / feuillus / pins / autres résineux
 
 # lab
 
-
+hist(protect[protect$protect > 0,])
 
 
 
