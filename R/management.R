@@ -19,7 +19,12 @@ env <- read.csv(paste0(landPath, '/envVariables.csv'))
 # load protected areas
 rb <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_biologiques', encoding = 'UTF-8', use_iconv = TRUE)
 rn <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_naturelles', encoding = 'UTF-8', use_iconv = TRUE)
+
+# load park limits
 park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
+
+# load ownership
+own <- readOGR(dsn = './data/bauges/GEO', layer = 'Foret_publique_dep73-74_2814_dissolve', encoding = 'UTF-8', use_iconv = TRUE)
 
 # load cellID100 raster
 cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
@@ -77,7 +82,7 @@ protect$protection <- 1
 protect <- intersect(protect, park)
 
 # convert into raster
-# use getCover to define proportion of each cell covered by polygon
+# use getCover to define proportion of each 100*100m cell covered by polygon
 protect <- rasterize(protect, cellID100, getCover = TRUE)
 names(protect) <- 'protect'
 
@@ -178,6 +183,43 @@ theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
 # TODO: sortir liste des espèces decidues/coniferes (ici et dans spTransform)
 
 ###############################################################
+# ownership
+###############################################################
+
+# retrieve ownership in study area
+own <- intersect(own, park)
+
+# convert into raster
+# use getCover to define proportion of each 100*100m cell covered by polygon
+own <- rasterize(own, cellID100, getCover = TRUE)
+names(own) <- 'public'
+
+# stack with cellID100
+own <- stack(cellID100, own)
+
+# convert into dataframe
+own <- as.data.frame(own)
+
+# if public >= 0.5 then most of the cell is public --> replace by 1.
+# if public < 0.5 --> replace by 0.
+own <- own %>% mutate(public = if_else(public >= 0.5, 1, 0))
+
+# add to df
+df <- merge(df, own, by = 'cellID100')
+
+
+###############################################################
+# access
+###############################################################
+
+###############################################################
+# calculate rdi
+###############################################################
+
+valeurs sp / feuillus / pins / autres résineux
+
+
+###############################################################
 # define stand type (compoType + even / uneven / protect / ...)
 ###############################################################
 
@@ -215,19 +257,7 @@ cellID100$standType <- as.numeric(as.factor(df$standType))
 plot(cellID100$standType)
 plot(park, add = T)
 
-###############################################################
-# ownership
-###############################################################
-
 
 ###############################################################
 # number of forest 25*25m cells in ha
 ###############################################################
-
-
-
-###############################################################
-# calculate rdi
-###############################################################
-
-valeurs sp / feuillus / pins / autres résineux
