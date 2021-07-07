@@ -9,6 +9,7 @@ require(rgdal)
 require(raster)
 require(ggplot2)
 library(stringr)
+library(tidyr)
 
 # load virtual tree data
 tree <- read.csv(paste0(landPath, '/trees75.csv'))
@@ -32,6 +33,9 @@ access[access > 100000] <- 0 # correct values>100000m
 
 # load cellID100 raster
 cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
+
+# load species self-thinning boundary parameters
+rdiParam <- read.table('./data/valeursCoefficientsRdi.txt', header = T)
 
 ###############################################################
 # define whether the slope makes logging impossible
@@ -250,48 +254,123 @@ df <- merge(df, access, by = 'cellID100')
 # calculate rdi
 ###############################################################
 
-valeurs sp / feuillus / pins / autres résineux
+# convert sp code into latinName
+rdiParam <- rdiParam %>% rename(espar = espece)
+rdiParam <- spTransform(rdiParam) %>% rename(sp = species_name)
 
+# number of tree of each sp on each cell
+rdi <- tree %>% group_by(cellID100, sp) %>% summarise(nsp = sum(n),
+                                                      Dgsp = sqrt(sum(dbh^2 * n)/sum(n)))
+rdi <- merge(rdi, rdiParam, by = 'sp')
+
+# calculate species Nmax
+rdi$Nspmax <- exp( rdi$rqIntercept + rdi$rqSlope * log(rdi$Dgsp))
+
+# Calculate sp partial rdi
+rdi$rdip <- rdi$nsp / rdi$Nspmax
+
+# claculate total rdi
+rdit <- rdi %>% group_by(cellID100) %>% summarise(rdi = sum(rdip))
+
+# add to df
+df <- merge(df, rdit, by = 'cellID100', all.x = TRUE)
+
+# define density class for uneven-aged stands
+qtuneven <- quantile(df[df$type == 'uneven' & df$access == 1, 'rdi'], na.rm = T, c(0.33, 0.66))
+hist(df[df$type == 'uneven' & df$access == 1, 'rdi'])
+abline(v = qtuneven, col = 'red', lty = 5, lwd = 2)
+df[df$type == 'uneven' & !is.na(df$type), 'density'] <- 'medium'
+df[df$type == 'uneven' & !is.na(df$type) & df$rdi > qtuneven[2], 'density'] <- 'high'
+df[df$type == 'uneven' & !is.na(df$type) & df$rdi < qtuneven[1], 'density'] <- 'low'
+
+# define density class for even-aged stands
+qteven <- quantile(df[df$type == 'even' & df$access == 1, 'rdi'], na.rm = T, 0.5)
+hist(df[df$type == 'even' & df$access == 1, 'rdi'])
+abline(v = qteven, col = 'red', lty = 5, lwd = 2)
+df[df$type == 'even' & !is.na(df$type), 'density'] <- 'low'
+df[df$type == 'even' & !is.na(df$type) & df$rdi > qteven, 'density'] <- 'high'
+
+# TODO: corriger rdi là où il n'y a pas 16 cellules de foret
 
 ###############################################################
 # define stand type (compoType + even / uneven / protect / ...)
 ###############################################################
 
-# assign compoType to stand type
-df$standType <- paste(df$compoType, df$type)
-
-# mark as 'nologging' non-loggable stands
-df[df$loggable == 0 & !is.na(df$loggable), 'standType'] <- paste(df[df$loggable == 0 & !is.na(df$loggable), 'compoType'], 'noLogging')
-
-# mark as 'protected' protected stands
-df[df$protect == 1, 'standType'] <- 'protected'
-
-# plot stand type share in the landscape
-typeShare <- df %>% mutate(surface = 1) %>% group_by(standType) %>% filter(compoType != 'NA') %>%
-                    summarise(surface = sum(surface)) %>% arrange(-surface) %>%
-                    ungroup() %>% mutate(totSurf = sum(surface)) %>%
-                    group_by(standType) %>% mutate(relSurf = surface * 100 / totSurf) %>%
-                    dplyr::select(-totSurf)
-
-typeShare$standType <- factor(typeShare$standType, levels = typeShare$standType)
-#
-ggplot(data = typeShare) +
-geom_bar(aes(x = standType, y = surface), stat = 'identity') +
-geom_text(aes(x = standType, y = surface, label = paste(round(relSurf, 2), '%') ), vjust = -0.3, size = 5, col = 'orange') +
-geom_text(aes(x = standType, y = surface, label = paste(round(surface, 2), 'ha') ), vjust = +1.2, size = 5, col = 'orange') +
-theme_light() +
-xlab('main species') +
-ylab('surface (ha)') +
-theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-     plot.title = element_text(hjust = 0.5))
+# no management
+noMan <- df %>% filter(!is.na(compoType)) %>% dplyr::select(cellID100, compoType, access, public) %>%
+                filter(access == 0) %>%
+                pivot_wider(names_from = compoType, values_from = access) %>%
+                dplyr::select(-cellID100)
+noManPub <- noMan %>% filter(public == 1) %>% dplyr::select(-public) %>%
+                      summarise_all(~sum(!is.na(.)))
+noManPri <- noMan %>% filter(public == 0) %>% dplyr::select(-public) %>%
+                      summarise_all(~sum(!is.na(.)))
 #
 
-# plot on map
-cellID100$standType <- as.numeric(as.factor(df$standType))
-plot(cellID100$standType)
-plot(park, add = T)
+
+
+--> ajouter distinction public / privé / densité
+
+# uneven-aged
+uneven <- df %>% filter(!is.na(compoType)) %>% dplyr::select(cellID100, compoType, type) %>%
+                filter(type == 'uneven') %>%
+                pivot_wider(names_from = compoType, values_from = type) %>%
+                dplyr::select(-cellID100) %>%
+                summarise_all(~sum(!is.na(.)))
+#
+# even-aged
+even <- df %>% filter(!is.na(compoType)) %>% dplyr::select(cellID100, compoType, type) %>%
+                filter(type == 'even') %>%
+                pivot_wider(names_from = compoType, values_from = type) %>%
+                dplyr::select(-cellID100) %>%
+                summarise_all(~sum(!is.na(.)))
+#
+# public
+
+#
+ggplot(data = df[!is.na(df$compoType),]) +
+geom_bar(aes(x = compoType), stat = 'count')
+
+
+
+# # assign compoType to stand type
+# df$standType <- paste(df$compoType, df$type)
+#
+# # mark as 'nologging' non-loggable stands
+# df[df$loggable == 0 & !is.na(df$loggable), 'standType'] <- paste(df[df$loggable == 0 & !is.na(df$loggable), 'compoType'], 'noLogging')
+#
+# # mark as 'protected' protected stands
+# df[df$protect == 1, 'standType'] <- 'protected'
+#
+# # plot stand type share in the landscape
+# typeShare <- df %>% mutate(surface = 1) %>% group_by(standType) %>% filter(compoType != 'NA') %>%
+#                     summarise(surface = sum(surface)) %>% arrange(-surface) %>%
+#                     ungroup() %>% mutate(totSurf = sum(surface)) %>%
+#                     group_by(standType) %>% mutate(relSurf = surface * 100 / totSurf) %>%
+#                     dplyr::select(-totSurf)
+#
+# typeShare$standType <- factor(typeShare$standType, levels = typeShare$standType)
+# #
+# ggplot(data = typeShare) +
+# geom_bar(aes(x = standType, y = surface), stat = 'identity') +
+# geom_text(aes(x = standType, y = surface, label = paste(round(relSurf, 2), '%') ), vjust = -0.3, size = 5, col = 'orange') +
+# geom_text(aes(x = standType, y = surface, label = paste(round(surface, 2), 'ha') ), vjust = +1.2, size = 5, col = 'orange') +
+# theme_light() +
+# xlab('main species') +
+# ylab('surface (ha)') +
+# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+#      plot.title = element_text(hjust = 0.5))
+# #
+#
+# # plot on map
+# cellID100$standType <- as.numeric(as.factor(df$standType))
+# plot(cellID100$standType)
+# plot(park, add = T)
 
 
 ###############################################################
 # number of forest 25*25m cells in ha
 ###############################################################
+
+# TODO: vérifier que toutes les forets ont des valeurs de access/protect...
+# croiser les fino des colonnes dans les deux sens e.g. access->foret, foret->access
