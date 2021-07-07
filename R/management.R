@@ -26,6 +26,10 @@ park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', u
 # load ownership
 own <- readOGR(dsn = './data/bauges/GEO', layer = 'Foret_publique_dep73-74_2814_dissolve', encoding = 'UTF-8', use_iconv = TRUE)
 
+# load accessibility
+access <- raster('./data/bauges/GEO/PNRfilled_F.distance.tif')
+access[access > 100000] <- 0 # correct values>100000m
+
 # load cellID100 raster
 cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
 
@@ -204,6 +208,9 @@ own <- as.data.frame(own)
 # if public < 0.5 --> replace by 0.
 own <- own %>% mutate(public = if_else(public >= 0.5, 1, 0))
 
+# public = 1 --> public
+# public = 0 --> private
+
 # add to df
 df <- merge(df, own, by = 'cellID100')
 
@@ -211,6 +218,33 @@ df <- merge(df, own, by = 'cellID100')
 ###############################################################
 # access
 ###############################################################
+
+# aggregate access value from 5*5m to 100*100m
+access <- aggregate(access, fact = 20, fun = 'mean', na.rm = TRUE)
+
+# stack with cellID100
+access <- stack(cellID100, access)
+
+# convert into dataframe
+access <- as.data.frame(access)
+names(access) <- c('cellID100', 'dist')
+
+# if access > 2km --> not accessible
+access <- access %>% mutate(access = if_else(dist <= 2000, 1, 0)) %>%
+                     dplyr::select(-dist)
+access[is.na(access$access), 'access'] <- 0
+
+# access = 1 --> accessible
+# access = 0 --> inaccessible
+
+# add to df
+df <- merge(df, access, by = 'cellID100')
+
+# TODO: clarifier overlap entre loggable et access
+# table(df$loggable, df$access)
+# hist(df[df$loggable == 0, 'access'])
+# hist(df[df$loggable == 1, 'access'])
+
 
 ###############################################################
 # calculate rdi
