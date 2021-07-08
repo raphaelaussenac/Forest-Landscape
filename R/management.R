@@ -41,32 +41,6 @@ rdiParam <- read.table('./data/valeursCoefficientsRdi.txt', header = T)
 deciduousSp <- readRDS('./data/deciduousSp.rds')
 coniferousSp <- readRDS('./data/coniferousSp.rds')
 
-# ###############################################################
-# # define whether the slope makes logging impossible
-# ###############################################################
-#
-# # calculate mean slope on 1ha sites
-# # logging impossible if slope >= 110% (slope > 47.73 degrees)
-# df <- env %>% group_by(cellID100) %>% summarise(slope = mean(slope)) %>%
-#               mutate(loggable = if_else(slope < 47.73, 1, 0)) %>%
-#               dplyr::select(-slope)
-# #
-# # loggable = 1 --> can be logged
-# # loggable = 0 --> cannot be logged
-
-###############################################################
-# calculate Gini index on 1ha cells and define stand type
-# (evenaged / unevenaged)
-###############################################################
-
-# if gini<0.45 --> evenaged stand, else --> unevenaged stand
-df <- tree %>% group_by(cellID100) %>% mutate(ba = pi * dbh^2 / 4) %>%
-                 summarise(gini = gini(x = ba, weights = n),
-                           BA_m2 = sum((pi * (dbh/200)^2) * n),
-                           Dg_cm = sqrt(sum(dbh^2 * n)/sum(n)),
-                           meanH_m = sum(h * n) /sum(n)) %>%
-                 mutate(type = if_else(gini < 0.45, 'even', 'uneven'))
-df$type <- as.factor(df$type)
 
 ###############################################################
 # define protected areas
@@ -90,6 +64,7 @@ protect <- intersect(protect, park)
 
 # convert into raster
 # use getCover to define proportion of each 100*100m cell covered by polygon
+testAntiBugue <- rasterize(protect, cellID100, getCover = TRUE)
 protect <- rasterize(protect, cellID100, getCover = TRUE)
 names(protect) <- 'protect'
 
@@ -101,11 +76,25 @@ protect <- as.data.frame(protect)
 
 # if protect >= 0.5 then most of the cell is covered by protected
 # area --> replace by 1. if protect < 0.5 --> replace by 0.
-protect <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
+df <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
 
-# add to df
-df <- merge(df, protect, by = 'cellID100')
 
+###############################################################
+# calculate Gini index on 1ha cells and define stand type
+# (evenaged / unevenaged)
+###############################################################
+
+# if gini<0.45 --> evenaged stand, else --> unevenaged stand
+gini <- tree %>% group_by(cellID100) %>% mutate(ba = pi * dbh^2 / 4) %>%
+                 summarise(gini = gini(x = ba, weights = n),
+                           BA_m2 = sum((pi * (dbh/200)^2) * n),
+                           Dg_cm = sqrt(sum(dbh^2 * n)/sum(n)),
+                           meanH_m = sum(h * n) /sum(n)) %>%
+                 mutate(type = if_else(gini < 0.45, 'even', 'uneven'))
+gini$type <- as.factor(gini$type)
+
+# add non-forest cells
+df <- merge(df, gini, by = 'cellID100', all.x = TRUE)
 
 ###############################################################
 # define composition type
@@ -169,7 +158,6 @@ theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
      plot.title = element_text(hjust = 0.5))
 #
 
-# TODO: sortir liste des espèces decidues/coniferes (ici et dans spTransform)
 
 ###############################################################
 # ownership
@@ -194,7 +182,7 @@ own <- as.data.frame(own)
 own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
 
 # add to df
-df <- merge(df, own, by = 'cellID100')
+df <- merge(df, own[, c('cellID100', 'owner')], by = 'cellID100')
 
 
 ###############################################################
@@ -215,17 +203,11 @@ names(access) <- c('cellID100', 'dist')
 access <- access %>% mutate(access = if_else(dist <= 2000, 1, 0)) %>%
                      dplyr::select(-dist)
 access[is.na(access$access), 'access'] <- 0
-
 # access = 1 --> accessible
 # access = 0 --> inaccessible
 
 # add to df
 df <- merge(df, access, by = 'cellID100')
-
-# TODO: clarifier overlap entre loggable et access
-# table(df$loggable, df$access)
-# hist(df[df$loggable == 0, 'access'])
-# hist(df[df$loggable == 1, 'access'])
 
 
 ###############################################################
@@ -318,13 +300,14 @@ tab <- rbind(tab1, tab2)
 #
 
 
+
+# TODO: verifier les cartes
+# TODO: créer les outputs
+# TODO: créer version minimap
+# TODO: scinder DC en deux catégories D-fs et D-other coniferous
+# TODO: only harvesting ?
+
 # # plot on map
 # cellID100$standType <- as.numeric(as.factor(df$standType))
 # plot(cellID100$standType)
 # plot(park, add = T)
-
-
-
-
-# TODO: vérifier que toutes les forets ont des valeurs de access/protect...
-# croiser les fino des colonnes dans les deux sens e.g. access->foret, foret->access
