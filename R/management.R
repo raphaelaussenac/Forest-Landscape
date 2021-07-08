@@ -251,6 +251,16 @@ df <- merge(df, access, by = 'cellID100')
 
 
 ###############################################################
+# number of forest 25*25m cells in 100*100m cells
+###############################################################
+
+# nb of forest cells per ha
+forCel <- tree %>% group_by(cellID100) %>% summarise(forCel = length(unique(cellID25)))
+
+# add to df
+df <- merge(df, forCel, by = 'cellID100', all.x = TRUE)
+
+###############################################################
 # calculate rdi
 ###############################################################
 
@@ -263,8 +273,11 @@ rdi <- tree %>% group_by(cellID100, sp) %>% summarise(nsp = sum(n),
                                                       Dgsp = sqrt(sum(dbh^2 * n)/sum(n)))
 rdi <- merge(rdi, rdiParam, by = 'sp')
 
+# retrieve number of 25*25m forest cells in 100*100m cells
+rdi <- merge(rdi, df[, c('cellID100', 'forCel')], by = 'cellID100', all.x = TRUE)
+
 # calculate species Nmax
-rdi$Nspmax <- exp( rdi$rqIntercept + rdi$rqSlope * log(rdi$Dgsp))
+rdi$Nspmax <- exp( rdi$rqIntercept + rdi$rqSlope * log(rdi$Dgsp) ) * (rdi$forCel / 16)
 
 # Calculate sp partial rdi
 rdi$rdip <- rdi$nsp / rdi$Nspmax
@@ -277,7 +290,7 @@ df <- merge(df, rdit, by = 'cellID100', all.x = TRUE)
 
 # define density class for uneven-aged stands
 qtuneven <- quantile(df[df$type == 'uneven' & df$access == 1, 'rdi'], na.rm = T, c(0.33, 0.66))
-hist(df[df$type == 'uneven' & df$access == 1, 'rdi'])
+hist(df[df$type == 'uneven' & df$access == 1, 'rdi'], breaks = 100)
 abline(v = qtuneven, col = 'red', lty = 5, lwd = 2)
 df[df$type == 'uneven' & !is.na(df$type), 'density'] <- 'medium'
 df[df$type == 'uneven' & !is.na(df$type) & df$rdi > qtuneven[2], 'density'] <- 'high'
@@ -285,7 +298,7 @@ df[df$type == 'uneven' & !is.na(df$type) & df$rdi < qtuneven[1], 'density'] <- '
 
 # define density class for even-aged stands
 qteven <- quantile(df[df$type == 'even' & df$access == 1, 'rdi'], na.rm = T, 0.5)
-hist(df[df$type == 'even' & df$access == 1, 'rdi'])
+hist(df[df$type == 'even' & df$access == 1, 'rdi'], breaks = 100)
 abline(v = qteven, col = 'red', lty = 5, lwd = 2)
 df[df$type == 'even' & !is.na(df$type), 'density'] <- 'low'
 df[df$type == 'even' & !is.na(df$type) & df$rdi > qteven, 'density'] <- 'high'
@@ -368,9 +381,7 @@ geom_bar(aes(x = compoType), stat = 'count')
 # plot(park, add = T)
 
 
-###############################################################
-# number of forest 25*25m cells in ha
-###############################################################
+
 
 # TODO: vérifier que toutes les forets ont des valeurs de access/protect...
 # croiser les fino des colonnes dans les deux sens e.g. access->foret, foret->access
