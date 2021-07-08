@@ -37,18 +37,22 @@ cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
 # load species self-thinning boundary parameters
 rdiParam <- read.table('./data/valeursCoefficientsRdi.txt', header = T)
 
-###############################################################
-# define whether the slope makes logging impossible
-###############################################################
+# load list of deciduous and coniferous sp
+deciduousSp <- readRDS('./data/deciduousSp.rds')
+coniferousSp <- readRDS('./data/coniferousSp.rds')
 
-# calculate mean slope on 1ha sites
-# logging impossible if slope >= 110% (slope > 47.73 degrees)
-df <- env %>% group_by(cellID100) %>% summarise(slope = mean(slope)) %>%
-              mutate(loggable = if_else(slope < 47.73, 1, 0)) %>%
-              dplyr::select(-slope)
+# ###############################################################
+# # define whether the slope makes logging impossible
+# ###############################################################
 #
-# loggable = 1 --> can be logged
-# loggable = 0 --> cannot be logged
+# # calculate mean slope on 1ha sites
+# # logging impossible if slope >= 110% (slope > 47.73 degrees)
+# df <- env %>% group_by(cellID100) %>% summarise(slope = mean(slope)) %>%
+#               mutate(loggable = if_else(slope < 47.73, 1, 0)) %>%
+#               dplyr::select(-slope)
+# #
+# # loggable = 1 --> can be logged
+# # loggable = 0 --> cannot be logged
 
 ###############################################################
 # calculate Gini index on 1ha cells and define stand type
@@ -56,17 +60,12 @@ df <- env %>% group_by(cellID100) %>% summarise(slope = mean(slope)) %>%
 ###############################################################
 
 # if gini<0.45 --> evenaged stand, else --> unevenaged stand
-gini <- tree %>% group_by(cellID100) %>% mutate(ba = pi * dbh^2 / 4) %>%
+df <- tree %>% group_by(cellID100) %>% mutate(ba = pi * dbh^2 / 4) %>%
                  summarise(gini = gini(x = ba, weights = n),
                            BA_m2 = sum((pi * (dbh/200)^2) * n),
                            Dg_cm = sqrt(sum(dbh^2 * n)/sum(n)),
                            meanH_m = sum(h * n) /sum(n)) %>%
-                 mutate(type = if_else(gini < 0.45, 'even', 'uneven')) %>%
-                 dplyr::select(-gini)
-#
-
-# add to df
-df <- merge(df, gini, by = 'cellID100', all.x = TRUE)
+                 mutate(type = if_else(gini < 0.45, 'even', 'uneven'))
 df$type <- as.factor(df$type)
 
 ###############################################################
@@ -126,24 +125,6 @@ mainSp <- tree %>% group_by(cellID100, sp) %>%
 #
 
 # class main species into composition types:
-# deciduous and coniferous sp list----------------------------------------------
-deciduousSp <- c('Fagus sylvatica', 'Sorbus aria', 'Quercus robur',
-                 'Quercus petraea', 'Acer opalus', 'Tilia platyphyllos',
-                 'Carpinus betulus', 'Castanea sativa', 'Populus nigra',
-                 'Fraxinus excelsior', 'Corylus avellana', 'Acer campestre',
-                 'Betula pendula', 'Populus tremula', 'Prunus avium',
-                 'Acer pseudoplatanus', 'Tilia cordata', 'Salix caprea',
-                 'Ulmus glabra', 'Sorbus aucuparia', 'Robinia pseudacacia',
-                 'Malus sylvestris', 'Acer platanoides', 'Salix alba',
-                 'Crataegus monogyna', 'Sorbus mougeotii', 'Laburnum anagyroides',
-                 'Quercus pubescens', 'Alnus glutinosa', 'Salix cinerea',
-                 'Alnus incana', 'Ilex aquifolium', 'Buxus sempervirens',
-                 'Prunus padus', 'Robinia pseudoacacia')
-#
-coniferousSp <- c('Picea abies', 'Abies alba', 'Pinus sylvestris',
-                  'Taxus baccata', 'Larix decidua', 'Larix kaempferi',
-                  'Picea sitchensis')
-#-------------------------------------------------------------------------------
 # identify deciduous and coniferous stands
 mainSp <- mainSp %>% group_by(cellID100) %>% mutate(D = sum(str_detect(mainSp, deciduousSp)),
                                                     C = sum(str_detect(mainSp, coniferousSp)),
@@ -208,12 +189,9 @@ own <- stack(cellID100, own)
 # convert into dataframe
 own <- as.data.frame(own)
 
-# if public >= 0.5 then most of the cell is public --> replace by 1.
-# if public < 0.5 --> replace by 0.
-own <- own %>% mutate(public = if_else(public >= 0.5, 1, 0))
-
-# public = 1 --> public
-# public = 0 --> private
+# if public >= 0.5 then most of the cell is public --> replace by public.
+# if public < 0.5 --> replace by private.
+own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
 
 # add to df
 df <- merge(df, own, by = 'cellID100')
@@ -303,78 +281,43 @@ abline(v = qteven, col = 'red', lty = 5, lwd = 2)
 df[df$type == 'even' & !is.na(df$type), 'density'] <- 'low'
 df[df$type == 'even' & !is.na(df$type) & df$rdi > qteven, 'density'] <- 'high'
 
-# TODO: corriger rdi là où il n'y a pas 16 cellules de foret
 
 ###############################################################
 # define stand type (compoType + even / uneven / protect / ...)
 ###############################################################
 
-# no management
-noMan <- df %>% filter(!is.na(compoType)) %>% dplyr::select(cellID100, compoType, access, public) %>%
-                filter(access == 0) %>%
-                pivot_wider(names_from = compoType, values_from = access) %>%
-                dplyr::select(-cellID100)
-noManPub <- noMan %>% filter(public == 1) %>% dplyr::select(-public) %>%
-                      summarise_all(~sum(!is.na(.)))
-noManPri <- noMan %>% filter(public == 0) %>% dplyr::select(-public) %>%
-                      summarise_all(~sum(!is.na(.)))
+df$stand <- NA
+#
+df[df$access == 0 & !is.na(df$compoType), 'stand'] <- paste(df[df$access == 0 & !is.na(df$compoType), 'compoType'],
+                                                            df[df$access == 0 & !is.na(df$compoType), 'public'],
+                                                            'noMan', sep = '-')
+df[df$access == 1 & !is.na(df$compoType), 'stand'] <- paste(df[df$access == 1 & !is.na(df$compoType), 'compoType'],
+                                                            df[df$access == 1 & !is.na(df$compoType), 'public'],
+                                                            df[df$access == 1 & !is.na(df$compoType), 'type'],
+                                                            df[df$access == 1 & !is.na(df$compoType), 'density'], sep = '-')
+#
+
+# create synthesis table
+stand <- df %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, type, density) %>% summarise(surf = n()) %>% ungroup()
+mainType <- stand %>% group_by(compoType) %>% summarise(surf = sum(surf)) %>% arrange(-surf)
+stand$compoType <- factor(stand$compoType, levels = mainType$compoType)
+stand$type <- factor(stand$type, levels = c('uneven', 'even'))
+
+# plot
+ggplot(data = stand) +
+geom_bar(aes(x = compoType, y = surf, fill = type), stat = 'identity', position = 'dodge') +
+theme_light()
+
+tab2 <- stand %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
+tab1 <- stand %>% filter(access == 0) %>% group_by(compoType, owner) %>%
+                  summarise(surf = sum(surf)) %>%
+                  pivot_wider(names_from = compoType, values_from = surf) %>%
+                  mutate(access = 0, type = NA, density = NA)
+tab1 <- tab1[, names(tab2)]
+tab <- rbind(tab1, tab2)
 #
 
 
-
---> ajouter distinction public / privé / densité
-
-# uneven-aged
-uneven <- df %>% filter(!is.na(compoType)) %>% dplyr::select(cellID100, compoType, type) %>%
-                filter(type == 'uneven') %>%
-                pivot_wider(names_from = compoType, values_from = type) %>%
-                dplyr::select(-cellID100) %>%
-                summarise_all(~sum(!is.na(.)))
-#
-# even-aged
-even <- df %>% filter(!is.na(compoType)) %>% dplyr::select(cellID100, compoType, type) %>%
-                filter(type == 'even') %>%
-                pivot_wider(names_from = compoType, values_from = type) %>%
-                dplyr::select(-cellID100) %>%
-                summarise_all(~sum(!is.na(.)))
-#
-# public
-
-#
-ggplot(data = df[!is.na(df$compoType),]) +
-geom_bar(aes(x = compoType), stat = 'count')
-
-
-
-# # assign compoType to stand type
-# df$standType <- paste(df$compoType, df$type)
-#
-# # mark as 'nologging' non-loggable stands
-# df[df$loggable == 0 & !is.na(df$loggable), 'standType'] <- paste(df[df$loggable == 0 & !is.na(df$loggable), 'compoType'], 'noLogging')
-#
-# # mark as 'protected' protected stands
-# df[df$protect == 1, 'standType'] <- 'protected'
-#
-# # plot stand type share in the landscape
-# typeShare <- df %>% mutate(surface = 1) %>% group_by(standType) %>% filter(compoType != 'NA') %>%
-#                     summarise(surface = sum(surface)) %>% arrange(-surface) %>%
-#                     ungroup() %>% mutate(totSurf = sum(surface)) %>%
-#                     group_by(standType) %>% mutate(relSurf = surface * 100 / totSurf) %>%
-#                     dplyr::select(-totSurf)
-#
-# typeShare$standType <- factor(typeShare$standType, levels = typeShare$standType)
-# #
-# ggplot(data = typeShare) +
-# geom_bar(aes(x = standType, y = surface), stat = 'identity') +
-# geom_text(aes(x = standType, y = surface, label = paste(round(relSurf, 2), '%') ), vjust = -0.3, size = 5, col = 'orange') +
-# geom_text(aes(x = standType, y = surface, label = paste(round(surface, 2), 'ha') ), vjust = +1.2, size = 5, col = 'orange') +
-# theme_light() +
-# xlab('main species') +
-# ylab('surface (ha)') +
-# theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-#      plot.title = element_text(hjust = 0.5))
-# #
-#
 # # plot on map
 # cellID100$standType <- as.numeric(as.factor(df$standType))
 # plot(cellID100$standType)
