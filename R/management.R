@@ -103,7 +103,7 @@ df <- merge(df, gini, by = 'cellID100', all.x = TRUE)
 # set threshold to identify mainSp
 # thresh = 0.8 means you will get the species making up for >= 80% of
 # the stand BA
-thresh = 0.70
+thresh = 0.75
 # retrieve main species
 mainSp <- tree %>% group_by(cellID100, sp) %>%
                           summarise(BA = sum((pi * (dbh/200)^2) * n)) %>%
@@ -134,6 +134,12 @@ m <- c('Fagus sylvatica - Abies alba','Abies alba - Fagus sylvatica',
        'Picea abies - Fagus sylvatica - Abies alba',
        'Picea abies - Abies alba - Fagus sylvatica')
 mainSp[mainSp$mainSp %in% m , 'compoType'] <- 'beech with fir and/or spruce'
+
+# subdivide DC into DC and DC with fir and or spruce
+mainSp <- mainSp %>% mutate(DCfs = sum(str_detect(mainSp, c('Picea abies', 'Abies alba'))),
+                            DCfsc = if_else(C > DCfs, 1, 0))
+mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 0, 'compoType'] <- 'D with fir and/or spruce'
+mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 1, 'compoType'] <- 'DC with fir and/or spruce'
 
 # add to df
 df <- merge(df, mainSp[, c('cellID100', 'compoType')], by = 'cellID100', all.x = TRUE)
@@ -281,14 +287,33 @@ df[df$access == 1 & !is.na(df$compoType), 'stand'] <- paste(df[df$access == 1 & 
 
 # create synthesis table
 stand <- df %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, type, density) %>% summarise(surf = n()) %>% ungroup()
-mainType <- stand %>% group_by(compoType) %>% summarise(surf = sum(surf)) %>% arrange(-surf)
-stand$compoType <- factor(stand$compoType, levels = mainType$compoType)
 stand$type <- factor(stand$type, levels = c('uneven', 'even'))
+stand$compoType <- factor(stand$compoType, levels = c('D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C', 'DC'))
+mainType <- stand %>% group_by(compoType, type) %>% summarise(surf = sum(surf)) %>% arrange(-surf)
+noAcc <- stand %>% filter(access == 0) %>% group_by(compoType, type) %>% summarise(surf = sum(surf))
 
 # plot
-ggplot(data = stand) +
-geom_bar(aes(x = compoType, y = surf, fill = type), stat = 'identity', position = 'dodge') +
-theme_light()
+ggplot() +
+geom_bar(data = mainType, aes(x = compoType, y = surf, fill = type), stat = 'identity', position = 'dodge') +
+geom_bar(data = noAcc, aes(x = compoType, y = surf, group = type), fill = 'black', alpha = 0.75, stat = 'identity', position = 'dodge') +
+theme_minimal()
+
+# Piedonut ------------
+library(webr)
+stand1 <- stand
+stand1$type <- as.character(stand1$type)
+stand1[stand1$access == 0, 'type'] <- 'inaccessible'
+stand1$type <- factor(stand1$type, levels = c('inaccessible', 'uneven', 'even'))
+donut <- stand1 %>% group_by(compoType, type) %>% summarise(surf = sum(surf)) %>% ungroup() %>%
+                  arrange(compoType, type, -surf) %>% mutate(ymax = cumsum(surf),
+                                            ymin = lag(ymax, default = 0))
+#
+PieDonut(donut, aes(compoType, type, count = surf), showPieName = FALSE,
+         start = pi/2)
+#
+
+
+
 
 tab2 <- stand %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
 tab1 <- stand %>% filter(access == 0) %>% group_by(compoType, owner) %>%
@@ -299,13 +324,11 @@ tab1 <- tab1[, names(tab2)]
 tab <- rbind(tab1, tab2)
 #
 
-
-
 # TODO: verifier les cartes
 # TODO: créer les outputs
 # TODO: créer version minimap
-# TODO: scinder DC en deux catégories D-fs et D-other coniferous
 # TODO: only harvesting ?
+# TODO: take out plots and synthesis table in a "managementEval script"
 
 # # plot on map
 # cellID100$standType <- as.numeric(as.factor(df$standType))
