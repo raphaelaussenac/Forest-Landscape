@@ -21,6 +21,8 @@ source('./R/saveLandscape.R')
 source('./R/evalDendro.R')
 source('./R/minimap.R')
 source('./R/heightPred.R')
+source('./R/management.R')
+source('./R/managSynth.R')
 
 ###############################################################
 # select landscape (bauges, milicz)
@@ -69,6 +71,12 @@ evalDendro()
 
 # model tree height
 heightPred()
+
+# create management table
+managTable()
+
+# synthesise management table
+managSynth()
 
 # produce minimap
 minimap(landscape)

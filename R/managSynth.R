@@ -1,4 +1,4 @@
-managSyn <- function(){
+managSynth <- function(){
 
   ###############################################################
   # initialisation
