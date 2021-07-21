@@ -26,13 +26,16 @@ minimap <- function(landscape){
   # 2 - crop on smaller extent
   ###############################################################
 
+  # select subset of 1ha cells
   if (landscape == 'bauges'){
-    ext <- extent(945000, 945500, 6513400, 6513900)
+    ext <- extent(945000, 945500, 6513400, 6513900) # define random extent
+    # make sure to select entire 1ha cells
+    cellID100 <- crop(cellID100, ext)
+    ext <- extent(cellID100)
   }
 
   aspect <- crop(aspect, ext)
   cellID25 <- crop(cellID25, ext)
-  cellID100 <- crop(cellID100, ext, snap = 'out')
   elev <- crop(elev, ext)
   forest <- crop(forest, ext)
   park <- crop(park, ext)
@@ -55,31 +58,29 @@ minimap <- function(landscape){
   writeRaster(cellID100, filename = paste0(miniPath, '/cellID100.asc'), format = 'ascii', overwrite = TRUE)
 
   ###############################################################
-  # 3 - transform tree and environmental data frames
+  # 3 - transform tree, environment and management data frames
   ###############################################################
 
-  # retrieve cellID
-  cellID <- values(cellID25)
+  # retrieve cellID100
+  cell100 <- values(cellID100)
 
   # reduce envVariables df
   df <- read.csv(paste0(landPath, '/envVariables.csv'))
-  df <- df[df$cellID25 %in% cellID,]
-  # calculate nb of forest cells per ha for the mini landscape
-  # may be different from nb of forest cells in envVariables.csv
-  df <- df %>% group_by(cellID100) %>% mutate(forestCellsPerHa = sum(forest))
-  # plot hist of nb of forest cells per ha
-  test <- df %>% group_by(cellID100) %>% summarise(forestCellsPerHa = unique(forestCellsPerHa))
-  hist(test$forestCellsPerHa, breaks = c(0:16))
+  df <- df[df$cellID100 %in% cell100,]
   # save
   write.csv(df, paste0(miniPath, '/envVariables.csv'), row.names = F)
 
+  # reduce trees75 df
+  tree <- read.csv(paste0(landPath, '/trees75.csv'))
+  tree <- tree[tree$cellID100 %in% cell100,]
+  write.csv(tree, paste0(miniPath, '/trees75.csv'), row.names = F)
+
+  # reduce management df
+  manag <- read.csv(paste0(landPath, '/managTable.csv'))
+  manag <- manag[manag$cellID100 %in% cell100,]
+  write.csv(manag, paste0(miniPath, '/managTable.csv'), row.names = F)
+
   # surface (ha)
   nrow(df)*625/10000
-
-  # reduce trees75 df
-  df <- read.csv(paste0(landPath, '/trees75.csv'))
-  df <- df[df$cellID25 %in% cellID,]
-  write.csv(df, paste0(miniPath, '/trees75.csv'), row.names = F)
-
 
 }
