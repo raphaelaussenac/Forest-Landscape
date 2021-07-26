@@ -11,11 +11,11 @@ Assign trees (specifying their species and size) to all 25*25m forest cells over
 * cellID100.asc    100m*100m cell ID
 * elev.asc         elevation (m a.s.l)
 * forestMask.asc   forest extent within the park
-                   + 0 = outside forest
-                   + 1 = inside forest
+  + 0 = outside forest
+  + 1 = inside forest
 * parkMask.asc     park extent
-                   + 0 = outside park
-                   + 1 = inside park
+  + 0 = outside park
+  + 1 = inside park
 * pH.ascii         soil pH
 * slope.asc        (degrees)
 * swhc.asc         soil water holding capacity (cm)
@@ -34,11 +34,11 @@ Assign trees (specifying their species and size) to all 25*25m forest cells over
 * cellID25:           25m*25m cell ID
 * cellID100:          100m*100m cell ID
 * park:               park extent
-                      + 0 = outside park
-                      + 1 = inside park
+  + 0 = outside park
+  + 1 = inside park
 * forest:             forest extent within the park
-                      + 0 = outside forest
-                      + 1 = inside forest
+  + 0 = outside forest
+  + 1 = inside forest
 * elev:               elevation (m a.s.l.)
 * slope:              (degrees)
 * aspect:             (degrees)
@@ -55,8 +55,8 @@ Assign trees (specifying their species and size) to all 25*25m forest cells over
 ## managTable.csv
 * cellID100:          100m*100m cell ID
 * protect:            protection status
-                      + 0 = non-protected area
-                      + 1 = protect area
+  + 0 = non-protected area
+  + 1 = protect area
 * gini:               gini index (calculated on individual tree basal area)
 * BA:                 total basal area (m2)
 * Dg:                 mean quadratic diameter at breast height (cm)
@@ -65,8 +65,8 @@ Assign trees (specifying their species and size) to all 25*25m forest cells over
 * compoType:          composition type
 * owner:              ownership (public or private)
 * access:             accessibility
-                      + 0 = inaccessible area
-                      + 1 = accessible area
+  + 0 = inaccessible area
+  + 1 = accessible area
 * forestCellsPerHa:   nb of 25*25m cells with forest within 100*100m cells
 * rdi:                rdi density index
 * density:            density level (high, medium, low)
