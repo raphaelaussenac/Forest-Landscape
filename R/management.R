@@ -88,11 +88,11 @@ managTable <- function(){
   # if gini<0.45 --> evenaged stand, else --> unevenaged stand
   gini <- tree %>% group_by(cellID100) %>% mutate(ba = pi * dbh^2 / 4) %>%
                    summarise(gini = gini(x = ba, weights = n),
-                             BA_m2 = sum((pi * (dbh/200)^2) * n),
-                             Dg_cm = sqrt(sum(dbh^2 * n)/sum(n)),
-                             meanH_m = sum(h * n) /sum(n)) %>%
-                   mutate(type = if_else(gini < 0.45, 'even', 'uneven'))
-  gini$type <- as.factor(gini$type)
+                             BA = sum((pi * (dbh/200)^2) * n),
+                             Dg = sqrt(sum(dbh^2 * n)/sum(n)),
+                             meanH = sum(h * n) /sum(n)) %>%
+                   mutate(structure = if_else(gini < 0.45, 'even', 'uneven'))
+  gini$structure <- as.factor(gini$structure)
 
   # add non-forest cells
   df <- merge(df, gini, by = 'cellID100', all.x = TRUE)
@@ -202,7 +202,7 @@ managTable <- function(){
   ###############################################################
 
   # nb of forest cells per ha
-  forCel <- tree %>% group_by(cellID100) %>% summarise(forCel = length(unique(cellID25)))
+  forCel <- tree %>% group_by(cellID100) %>% summarise(forestCellsPerHa = length(unique(cellID25)))
 
   # add to df
   df <- merge(df, forCel, by = 'cellID100', all.x = TRUE)
@@ -221,10 +221,10 @@ managTable <- function(){
   rdi <- merge(rdi, rdiParam, by = 'sp')
 
   # retrieve number of 25*25m forest cells in 100*100m cells
-  rdi <- merge(rdi, df[, c('cellID100', 'forCel')], by = 'cellID100', all.x = TRUE)
+  rdi <- merge(rdi, df[, c('cellID100', 'forestCellsPerHa')], by = 'cellID100', all.x = TRUE)
 
   # calculate species Nmax
-  rdi$Nspmax <- exp( rdi$rqIntercept + rdi$rqSlope * log(rdi$Dgsp) ) * (rdi$forCel / 16)
+  rdi$Nspmax <- exp( rdi$rqIntercept + rdi$rqSlope * log(rdi$Dgsp) ) * (rdi$forestCellsPerHa / 16)
 
   # Calculate sp partial rdi
   rdi$rdip <- rdi$nsp / rdi$Nspmax
@@ -236,19 +236,19 @@ managTable <- function(){
   df <- merge(df, rdit, by = 'cellID100', all.x = TRUE)
 
   # define density class for uneven-aged stands
-  qtuneven <- quantile(df[df$type == 'uneven' & df$access == 1, 'rdi'], na.rm = T, c(0.33, 0.66))
-  hist(df[df$type == 'uneven' & df$access == 1, 'rdi'], breaks = 100)
+  qtuneven <- quantile(df[df$structure == 'uneven' & df$access == 1, 'rdi'], na.rm = T, c(0.33, 0.66))
+  hist(df[df$structure == 'uneven' & df$access == 1, 'rdi'], breaks = 100)
   abline(v = qtuneven, col = 'red', lty = 5, lwd = 2)
-  df[df$type == 'uneven' & !is.na(df$type), 'density'] <- 'medium'
-  df[df$type == 'uneven' & !is.na(df$type) & df$rdi > qtuneven[2], 'density'] <- 'high'
-  df[df$type == 'uneven' & !is.na(df$type) & df$rdi < qtuneven[1], 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure), 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & df$rdi > qtuneven[2], 'density'] <- 'high'
+  df[df$structure == 'uneven' & !is.na(df$structure) & df$rdi < qtuneven[1], 'density'] <- 'low'
 
   # define density class for even-aged stands
-  qteven <- quantile(df[df$type == 'even' & df$access == 1, 'rdi'], na.rm = T, 0.5)
-  hist(df[df$type == 'even' & df$access == 1, 'rdi'], breaks = 100)
+  qteven <- quantile(df[df$structure == 'even' & df$access == 1, 'rdi'], na.rm = T, 0.5)
+  hist(df[df$structure == 'even' & df$access == 1, 'rdi'], breaks = 100)
   abline(v = qteven, col = 'red', lty = 5, lwd = 2)
-  df[df$type == 'even' & !is.na(df$type), 'density'] <- 'low'
-  df[df$type == 'even' & !is.na(df$type) & df$rdi > qteven, 'density'] <- 'high'
+  df[df$structure == 'even' & !is.na(df$structure), 'density'] <- 'low'
+  df[df$structure == 'even' & !is.na(df$structure) & df$rdi > qteven, 'density'] <- 'high'
 
 
   ###############################################################
@@ -263,31 +263,51 @@ managTable <- function(){
   # management
   df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'stand'] <- paste(df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'compoType'],
                                                               df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'owner'],
-                                                              df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'type'],
+                                                              df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'structure'],
                                                               df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'density'], sep = '-')
   #
   ######################################################################################
   # assign 'final cut' management to XX% of some stand types
   # in priority to denser even-aged stands
-  #
+
   # fir and or spruce - private: 25%
   df1 <- df[df$owner == 'private' & df$compoType == 'fir and/or spruce' & !is.na(df$compoType), ]
   prop1 <- round(nrow(df1) * 0.25)
-  df1 <- df1 %>% filter(type == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+  df1 <- df1 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
   # cellSelect1 <- df1$cellID100[1:prop1]
   # df[df$cellID100 %in% cellSelect1, 'stand'] <- 'fir and/or spruce-private-final cut'
+
   # beech: 22%
+  df2 <- df[df$compoType == 'beech' & !is.na(df$compoType), ]
+  prop2 <- round(nrow(df2) * 0.22)
+  df2 <- df2 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+
   # other deciduous: 43%
+  df3 <- df[df$compoType %in% c('D') & !is.na(df$compoType), ]
+  prop3 <- round(nrow(df3) * 0.43)
+  df3 <- df3 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+
   # mixed - private: 4%
+  df4 <- df[df$compoType %in% c('D with fir and/or spruce',
+                                'beech with fir and/or spruce',
+                                'DC with fir and/or spruce',
+                                'DC') & !is.na(df$compoType) & df$owner == 'private', ]
+  prop4 <- round(nrow(df4) * 0.04)
+  df4 <- df4 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+
   ######################################################################################
 
   ###############################################################
   # save
   ###############################################################
 
+  # reorder and rename columns
+  df <- df[, c('cellID100', 'owner', 'access', 'protect', 'forestCellsPerHa',
+               'compoType', 'gini', 'rdi', 'BA', 'Dg', 'meanH',	'structure',
+               'density', 'stand')]
+  #
   write.csv(df, paste0(landPath, '/managTable.csv'), row.names = F)
 
 }
 
 # TODO: only harvesting ?
-# TODO: modify readme
