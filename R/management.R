@@ -142,6 +142,9 @@ managTable <- function(){
   mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 0, 'compoType'] <- 'D with fir and/or spruce'
   mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 1, 'compoType'] <- 'DC with fir and/or spruce'
 
+  # subdivide C into C and C with fir and or spruce
+  mainSp[mainSp$compoType == 'C' & mainSp$DCfs > 0, 'compoType'] <- 'C with fir and/or spruce'
+
   # add to df
   df <- merge(df, mainSp[, c('cellID100', 'compoType')], by = 'cellID100', all.x = TRUE)
 
@@ -271,31 +274,32 @@ managTable <- function(){
   # in priority to denser even-aged stands
 
   # fir and or spruce - private: 25%
-  df1 <- df[df$owner == 'private' & df$compoType == 'fir and/or spruce' & !is.na(df$compoType), ]
-  prop1 <- round(nrow(df1) * 0.25)
-  df1 <- df1 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+  df1 <- df[df$owner == 'private' & df$compoType == 'fir and/or spruce' & !is.na(df$compoType), ] # 3932 ha en tout
+  prop1 <- round(nrow(df1) * 0.25) # dont 983 devraient être 'final cut'
+  df1 <- df1 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # mais que 269 ha éligible (773 avec gini = 0.5)
   # cellSelect1 <- df1$cellID100[1:prop1]
   # df[df$cellID100 %in% cellSelect1, 'stand'] <- 'fir and/or spruce-private-final cut'
 
   # beech: 22%
-  df2 <- df[df$compoType == 'beech' & !is.na(df$compoType), ]
-  prop2 <- round(nrow(df2) * 0.22)
-  df2 <- df2 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+  df2 <- df[df$compoType == 'beech' & !is.na(df$compoType), ] # 611
+  prop2 <- round(nrow(df2) * 0.22) # 134
+  df2 <- df2 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # 144 (234 avec gini = 0.5)
 
   # other deciduous: 43%
-  df3 <- df[df$compoType %in% c('D') & !is.na(df$compoType), ]
-  prop3 <- round(nrow(df3) * 0.43)
-  df3 <- df3 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+  df3 <- df[df$compoType %in% c('D') & !is.na(df$compoType), ] # 10090
+  prop3 <- round(nrow(df3) * 0.43) # 4339
+  df3 <- df3 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # 2224 (4343 avec gini = 0.5)
 
   # mixed - private: 4%
   df4 <- df[df$compoType %in% c('D with fir and/or spruce',
                                 'beech with fir and/or spruce',
                                 'DC with fir and/or spruce',
-                                'DC') & !is.na(df$compoType) & df$owner == 'private', ]
-  prop4 <- round(nrow(df4) * 0.04)
-  df4 <- df4 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi)
+                                'DC') & !is.na(df$compoType) & df$owner == 'private', ] # 30701
+  prop4 <- round(nrow(df4) * 0.04) # 1228
+  df4 <- df4 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # 3085 (8315 avec gini = 0.5)
 
-  ######################################################################################
+  # what about 'C with with fir and/or spruce' and 'C' ?
+
 
   ###############################################################
   # save
@@ -309,5 +313,3 @@ managTable <- function(){
   write.csv(df, paste0(landPath, '/managTable.csv'), row.names = F)
 
 }
-
-# TODO: only harvesting ?

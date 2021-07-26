@@ -1,5 +1,5 @@
 # Goal
-Assign trees (specifying their species and size) to all 25*25m forest cells over different landscapes from LIDAR and inventory data.
+Assign trees (specifying their species, diameter and height) to all 25m*25m forest cells over different landscapes from LIDAR and inventory data.
 
 
 
