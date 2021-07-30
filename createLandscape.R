@@ -12,6 +12,7 @@ setwd('C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit')
 # file.sources = list.files('./R', pattern = '*.R', full.names = TRUE)
 # sapply(file.sources, source, .GlobalEnv)
 source('./R/baugesLandscapePrep.R')
+source('./R/miliczLandscapePrep.R')
 source('./R/salemSIpred.R')
 source('./R/compo.R')
 source('./R/spTransform.R')
@@ -28,7 +29,7 @@ source('./R/managSynth.R')
 # select landscape (bauges, milicz)
 ###############################################################
 
-landscape <- 'bauges'
+landscape <- 'milicz'
 
 ###############################################################
 # create virtual landscape
@@ -52,6 +53,8 @@ if (!(dir.exists(miniPath))) {dir.create(miniPath, recursive = TRUE)}
 # Prepare landscape data
 if(landscape == 'bauges'){
   prepBauges()
+} else if (landscape == 'milicz'){
+  prepMilicz()
 }
 
 # assign composition to all 25*25m cells

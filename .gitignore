@@ -12,6 +12,7 @@
 *.sbn
 *.sbx
 *.rds
+*.rda
 *.back
 *.Rhistory
 *.ro
