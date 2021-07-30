@@ -82,26 +82,6 @@ prepBauges <- function(){
   crs(BA) <- crs(park)
   BA <- resample(BA, elevation)
 
-  # # Quadratic diameter (cm) with all extreme values
-  # dgExtrem <- raster('./data/bauges/GEO/rastDg75error.forest.tif')
-  # crs(dgExtrem) <- crs(park)
-  # dgExtrem <- resample(dgExtrem, elevation)
-  #
-  # # basal area (m2) with all extreme values
-  # BAExtrem <- raster('./data/bauges/GEO/rastG75error.forest.tif')
-  # crs(BAExtrem) <- crs(park)
-  # BAExtrem <- resample(BAExtrem, elevation)
-
-  # N
-  N <- raster('./data/bauges/GEO/N_pred.tif')
-  crs(N) <- crs(park)
-  N <- resample(N, elevation)
-
-  # large tree (BA or proportion of total BA?)
-  # LTBA <- raster('./data/bauges/GEO/GGB_pred.tif')
-  # crs(LTBA) <- crs(park)
-  # LTBA <- resample(LTBA, elevation)
-
   # Deciduous proportion (% of total BA)
   Dprop <- raster('./data/bauges/GEO/propGR_ONF_25filled.tif')
   Dprop <- 100 - Dprop
@@ -136,7 +116,6 @@ prepBauges <- function(){
   writeRaster(cellID25, filename = paste0(landPath, '/cellID25.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(dg, filename = paste0(tempPath, '/dg.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(BA, filename = paste0(tempPath, '/BA.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(N, filename = paste0(tempPath, '/N.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(Dprop, filename = paste0(tempPath, '/Dprop.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(grecoRaster, filename = paste0(tempPath, '/greco.asc'), format = 'ascii', overwrite = TRUE)
 
