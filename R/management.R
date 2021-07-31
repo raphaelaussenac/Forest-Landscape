@@ -57,11 +57,11 @@ managTable <- function(){
   rb <- rb[rb$code_r_enp == 'I',]
 
   # merge protected areas
-  protect <- union(rb, rn)
+  protect <- raster::union(rb, rn)
   protect$protection <- 1
 
   # select protected areas only in study area
-  protect <- intersect(protect, park)
+  protect <- raster::intersect(protect, park)
 
   # convert into raster
   # use getCover to define proportion of each 100*100m cell covered by polygon
@@ -154,7 +154,7 @@ managTable <- function(){
   ###############################################################
 
   # retrieve ownership in study area
-  own <- intersect(own, park)
+  own <- raster::intersect(own, park)
 
   # convert into raster
   # use getCover to define proportion of each 100*100m cell covered by polygon
