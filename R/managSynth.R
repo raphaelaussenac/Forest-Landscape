@@ -46,7 +46,7 @@ managSynth <- function(){
   standType[standType$protect == 1, 'access'] <- 0
   standType <- standType %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
   standType$structure <- factor(standType$structure, levels = c('uneven', 'even'))
-  standType$compoType <- factor(standType$compoType, levels = c('D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
+  standType$compoType <- factor(standType$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
   tab2 <- standType %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
   tab1 <- standType %>% filter(access == 0) %>% group_by(compoType, owner) %>%
                     summarise(surf = sum(surf)) %>%
@@ -64,7 +64,7 @@ managSynth <- function(){
 
   stand <- df %>% filter(!is.na(compoType)) %>% group_by(protect, access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
   stand$structure <- factor(stand$structure, levels = c('uneven', 'even', 'inaccessible', 'protected'))
-  stand$compoType <- factor(stand$compoType, levels = c('D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
+  stand$compoType <- factor(stand$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
   stand$structure2 <- stand$structure
   mainType <- stand %>% group_by(compoType, structure) %>% summarise(surf = sum(surf)) %>% arrange(-surf)
   mainType$structure2 <- mainType$structure
@@ -91,7 +91,8 @@ managSynth <- function(){
   stand1 <- df
   stand1[stand1$protect == 1 & !is.na(stand1$protect), 'access'] <- 0
   stand1 <- stand1 %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
-  stand1$compoType <- factor(stand1$compoType, levels = c('D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
+  stand1$compoType <- factor(stand1$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
+  stand1$compoType <- droplevels(stand1$compoType)
   stand1$structure <- as.character(stand1$structure)
   stand1[stand1$access == 0, 'structure'] <- 'inacc/protect'
   stand1$structure <- factor(stand1$structure, levels = c('inacc/protect', 'uneven', 'even'))

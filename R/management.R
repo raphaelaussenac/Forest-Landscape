@@ -145,6 +145,13 @@ managTable <- function(){
   # subdivide C into C and C with fir and or spruce
   mainSp[mainSp$compoType == 'C' & mainSp$DCfs > 0, 'compoType'] <- 'C with fir and/or spruce'
 
+  # --------- group compoType based on the type of management they will follow
+  # DC / C with fir and/or spruce / DC with fir and/or spruce / D with fir and/or spruce ------> fir and/or spruce with DC
+  mainSp[mainSp$compoType %in% c('DC', 'C with fir and/or spruce', 'DC with fir and/or spruce', 'D with fir and/or spruce'), 'compoType'] <- 'fir and/or spruce with DC'
+  # beech ------> D
+  mainSp[mainSp$compoType == 'beech', 'compoType'] <- 'D'
+  # ---------
+
   # add to df
   df <- merge(df, mainSp[, c('cellID100', 'compoType')], by = 'cellID100', all.x = TRUE)
 

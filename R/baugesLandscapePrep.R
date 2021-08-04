@@ -302,7 +302,7 @@ prepBauges <- function(){
 
 
   ###############################################################
-  # Retrieve Dg, BA, Dprop and TFV for all forest cells
+  # create TFV raster
   ###############################################################
 
   # first assign TFV code to each forest cell
@@ -313,7 +313,7 @@ prepBauges <- function(){
 
 
   ###############################################################
-  # Retrieve Dg, BA, Dprop and TFV for all NFI plots
+  # calculate DBH and retrieve sp latin names
   ###############################################################
 
   # import latin names and create deciduous / coniferous categories
