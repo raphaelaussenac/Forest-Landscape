@@ -245,67 +245,73 @@ managTable <- function(){
   # add to df
   df <- merge(df, rdit, by = 'cellID100', all.x = TRUE)
 
-  # define density class for uneven-aged stands
-  qtuneven <- quantile(df[df$structure == 'uneven' & df$access == 1, 'rdi'], na.rm = T, c(0.33, 0.66))
-  hist(df[df$structure == 'uneven' & df$access == 1, 'rdi'], breaks = 100)
-  abline(v = qtuneven, col = 'red', lty = 5, lwd = 2)
-  df[df$structure == 'uneven' & !is.na(df$structure), 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & df$rdi > qtuneven[2], 'density'] <- 'high'
-  df[df$structure == 'uneven' & !is.na(df$structure) & df$rdi < qtuneven[1], 'density'] <- 'low'
+  ###############################################################
+  # define density class
+  ###############################################################
 
-  # define density class for even-aged stands
-  qteven <- quantile(df[df$structure == 'even' & df$access == 1, 'rdi'], na.rm = T, 0.5)
-  hist(df[df$structure == 'even' & df$access == 1, 'rdi'], breaks = 100)
-  abline(v = qteven, col = 'red', lty = 5, lwd = 2)
-  df[df$structure == 'even' & !is.na(df$structure), 'density'] <- 'low'
-  df[df$structure == 'even' & !is.na(df$structure) & df$rdi > qteven, 'density'] <- 'high'
+  # uneven-aged stands
+  # threshold of BA after thinning from the sylviculture guide for mountain forest
+  # conifers: 35 - 30 - 25 m2 for high - medium - low density
+  # mixed: 30 - 25 - 20 m2
+  # deciduous: 25 - 20 - 15 m2
+  # rational: probability of thinning < 3m2 = 0
+  # ex for conifers:
+  # BA = <33 --> low density
+  # BA = 33-38 --> medium density
+  # BA = >38 --> high density
+
+  # calculate BA/ha
+  df <- df %>% mutate(BA_ha = 16 * BA / forestCellsPerHa)
+
+  # conifers
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha < 33, 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 33 & df$BA_ha < 38, 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 38, 'density'] <- 'high'
+
+  # mixed
+  comp <- c('fir and/or spruce with DC', 'beech with fir and/or spruce')
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha < 28, 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 28 & df$BA_ha < 33, 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 33, 'density'] <- 'high'
+
+  # deciduous
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha < 23, 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 23 & df$BA_ha < 28, 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 28, 'density'] <- 'high'
+
+  # even-aged stands
+  # target rdi: 0.6 and 0.7
+  # stands with rdi up to 0.65 are considered to have a target rdi of 0.6
+  # stands with rdi > 0.65 are considered to have a target rdi of 0.7
+  df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'low'
+  df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.65, 'density'] <- 'high'
 
 
   ###############################################################
-  # define stand type (compoType + even / uneven / protect / ...)
+  # add 'final cut' management based on BA, rdi, Dg
   ###############################################################
 
-  df$stand <- NA
-  # no management (inaccessible + protected)
-  df[(df$access == 0 | df$protect == 1) & !is.na(df$compoType), 'stand'] <- paste(df[(df$access == 0 | df$protect == 1) & !is.na(df$compoType), 'compoType'],
-                                                              df[(df$access == 0 | df$protect == 1) & !is.na(df$compoType), 'owner'],
-                                                              'noMan', sep = '-')
-  # management
-  df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'stand'] <- paste(df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'compoType'],
-                                                              df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'owner'],
-                                                              df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'structure'],
-                                                              df[(df$access == 1 & df$protect == 0) & !is.na(df$compoType), 'density'], sep = '-')
-  #
-  ######################################################################################
-  # assign 'final cut' management to XX% of some stand types
-  # in priority to denser even-aged stands
+  df$manag <- paste(df$structure, '-', df$density)
 
-  # fir and or spruce - private: 25%
-  df1 <- df[df$owner == 'private' & df$compoType == 'fir and/or spruce' & !is.na(df$compoType), ] # 3932 ha en tout
-  prop1 <- round(nrow(df1) * 0.25) # dont 983 devraient être 'final cut'
-  df1 <- df1 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # mais que 269 ha éligible (773 avec gini = 0.5)
-  # cellSelect1 <- df1$cellID100[1:prop1]
-  # df[df$cellID100 %in% cellSelect1, 'stand'] <- 'fir and/or spruce-private-final cut'
+  # uneven-aged stands
+  # coniferous stands above 50 m2 are considered abandoned and will only undergo a final cut
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 50, 'manag'] <- 'final cut'
+  # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 45, 'manag'] <- 'final cut'
+  # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 40, 'manag'] <- 'final cut'
 
-  # beech: 22%
-  df2 <- df[df$compoType == 'beech' & !is.na(df$compoType), ] # 611
-  prop2 <- round(nrow(df2) * 0.22) # 134
-  df2 <- df2 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # 144 (234 avec gini = 0.5)
+  #  even-aged stands
+  # dense stands (rdi > 0.8) with big trees (Dg > 30) are considered abandoned and will only undergo a final cut
+  df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.8 & df$Dg >= 20, 'manag'] <- 'final cut'
+  # deciduous stands with small trees (Dg < 20) are concidered coppice
+  df[df$structure == 'even' & !is.na(df$structure) & df$Dg <= 20 & df$compoType == 'D' & !is.na(df$compoType), 'manag'] <- 'coppice'
 
-  # other deciduous: 43%
-  df3 <- df[df$compoType %in% c('D') & !is.na(df$compoType), ] # 10090
-  prop3 <- round(nrow(df3) * 0.43) # 4339
-  df3 <- df3 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # 2224 (4343 avec gini = 0.5)
+  ###############################################################
+  # define 'no management' areas
+  ###############################################################
 
-  # mixed - private: 4%
-  df4 <- df[df$compoType %in% c('D with fir and/or spruce',
-                                'beech with fir and/or spruce',
-                                'DC with fir and/or spruce',
-                                'DC') & !is.na(df$compoType) & df$owner == 'private', ] # 30701
-  prop4 <- round(nrow(df4) * 0.04) # 1228
-  df4 <- df4 %>% filter(structure == 'even', protect == 0, access == 1) %>% arrange(-rdi) # 3085 (8315 avec gini = 0.5)
-
-  # what about 'C with with fir and/or spruce' and 'C' ?
+  df[df$access == 0 | df$protect == 1, 'manag'] <- 'no manag'
 
 
   ###############################################################
@@ -314,9 +320,14 @@ managTable <- function(){
 
   # reorder and rename columns
   df <- df[, c('cellID100', 'owner', 'access', 'protect', 'forestCellsPerHa',
-               'compoType', 'gini', 'rdi', 'BA', 'Dg', 'meanH',	'structure',
-               'density', 'stand')]
+               'compoType', 'gini', 'rdi', 'BA', 'BA_ha', 'Dg', 'meanH',	'structure',
+               'density', 'manag')]
   #
   write.csv(df, paste0(landPath, '/managTable.csv'), row.names = F)
 
 }
+
+
+# TODO: ajouter management a README + enlever colonne stand
+# TODO: mettre a jour mangSynth / vérifier sum des surface = 65669?
+# TODO: definir rdi après coupe pour even-aged
