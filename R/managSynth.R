@@ -14,6 +14,56 @@ managSynth <- function(){
   df <- read.csv(paste0(landPath, '/managTable.csv'))
 
   ###############################################################
+  # plot stand density
+  ###############################################################
+
+  par(mfrow = c(3,2))
+  pdf(paste0(evalPath, '/densityManag.pdf'), width = 10, height = 10)
+
+  # uneven conifers
+  uc <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$access == 1 & df$protect == 0,]
+  hist(uc[uc$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven conifers', xlab = 'BA_ha (red line = after logging target)')
+  hist(uc[uc$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
+  hist(uc[uc$density == 'high', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'orange')
+  hist(uc[uc$manag == 'final cut', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green3')
+  abline(v = c(25, 30, 35), lwd = 2, col = 'red')
+
+  # uneven mixed
+  comp <- c('fir and/or spruce with DC', 'beech with fir and/or spruce')
+  um <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$access == 1 & df$protect == 0,]
+  hist(um[um$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven mixed', xlab = 'BA_ha (red line = after logging target)', ylim = c(0,1000))
+  hist(um[um$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
+  hist(um[um$density == 'high', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'orange')
+  hist(um[um$manag == 'final cut', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green3')
+  abline(v = c(20, 25, 30), lwd = 2, col = 'red')
+
+  # uneven deciduous
+  ud <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$access == 1 & df$protect == 0,]
+  hist(ud[ud$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven deciduous', xlab = 'BA_ha (red line = after logging target)')
+  hist(ud[ud$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
+  hist(ud[ud$density == 'high', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'orange')
+  hist(ud[ud$manag == 'final cut', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green3')
+  abline(v = c(15, 20, 25), lwd = 2, col = 'red')
+
+  # even except deciduous
+  even <- df[df$structure == 'even' & !is.na(df$structure) & df$access == 1 & df$protect == 0 & df$compoType != 'D' & !is.na(df$compoType), ]
+  hist(even[even$density == 'low', 'rdi'], breaks = seq(0, 2, 0.05), main = 'even except deciduous', xlab = 'rdi')
+  hist(even[even$density == 'high', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'orange')
+  hist(even[even$manag == 'final cut', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'green3')
+  hist(even[even$manag == 'coppice', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'red')
+  abline(v = c(0.6, 0.7), lwd = 2, col = 'red')
+
+  # even deciduous
+  evenD <- df[df$structure == 'even' & !is.na(df$structure) & df$access == 1 & df$protect == 0 & df$compoType == 'D' & !is.na(df$compoType), ]
+  plot(evenD$Dg, evenD$rdi, pch = 16, main = 'even deciduous', xlab = 'Dg (red = coppice, green = abandonned)', ylab = 'rdi')
+  points(evenD[evenD$manag == 'coppice', 'Dg'], evenD[evenD$manag == 'coppice', 'rdi'], col = 'red', pch = 16)
+  points(evenD[evenD$manag == 'final cut', 'Dg'], evenD[evenD$manag == 'final cut', 'rdi'], col = 'green3', pch = 16)
+
+  dev.off()
+  par(mfrow = c(1,1))
+
+
+  ##############################################################
   # plot composition types proportion in landscape
   ###############################################################
 
@@ -113,6 +163,6 @@ managSynth <- function(){
   # plot(cellID100$standType)
   # plot(park, add = T)
 
-  # TODO: verifier les cartes
+  # TODO: cartes pour comprendre les peuplements even et uneven peu dense
 
 }
