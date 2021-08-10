@@ -162,25 +162,40 @@ managSynth <- function(){
 
 
   ###############################################################
-  # management map
+  # maps
   ###############################################################
 
+  #  management map
   # add manag to cellID100 raster
   df$manag <- as.factor(df$manag)
   cellID100$manag <- as.numeric(df$manag)
   plot(cellID100$manag)
-
   # convert raster into polygon
   managPoly <- rasterToPolygons(cellID100$manag, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
-
   # assign management name to polygons (insted of intergers codes)
   corr <- data.frame(level = c(1:length(levels(df$manag))), levels(df$manag))
   managPoly <- merge(managPoly, corr, by.x = 'manag', by.y = 'level')
   managPoly$manag <- NULL
   names(managPoly) <- 'manag'
   plot(managPoly, col = as.factor(managPoly$manag), border = as.factor(managPoly$manag))
-
   # save
   writeOGR(managPoly, evalPath, 'managPoly', driver = 'ESRI Shapefile', overwrite = TRUE)
+
+  # composition type map
+  df$compoType <- as.factor(df$compoType)
+  cellID100$compoType <- as.numeric(df$compoType)
+  plot(cellID100$compoType)
+  # convert raster into polygon
+  compoTypePoly <- rasterToPolygons(cellID100$compoType, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
+  # assign management name to polygons (insted of intergers codes)
+  corr <- data.frame(level = c(1:length(levels(df$compoType))), levels(df$compoType))
+  compoTypePoly <- merge(compoTypePoly, corr, by.x = 'compoType', by.y = 'level')
+  compoTypePoly$compoType <- NULL
+  names(compoTypePoly) <- 'compoType'
+  plot(compoTypePoly, col = as.factor(compoTypePoly$compoType), border = as.factor(compoTypePoly$compoType))
+  # save
+  writeOGR(compoTypePoly, evalPath, 'compoTypePoly', driver = 'ESRI Shapefile', overwrite = TRUE)
+
+
 
 }
