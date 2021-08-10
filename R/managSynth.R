@@ -9,16 +9,22 @@ managSynth <- function(){
   require(ggplot2)
   library(webr)
   library(tidyr)
+  library(raster)
+  require(rgdal)
 
   # load management table
   df <- read.csv(paste0(landPath, '/managTable.csv'))
+
+  # load cellID100 raster
+  cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
+
 
   ###############################################################
   # plot stand density
   ###############################################################
 
-  par(mfrow = c(3,2))
   pdf(paste0(evalPath, '/densityManag.pdf'), width = 10, height = 10)
+  par(mfrow = c(3,2))
 
   # uneven conifers
   uc <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$access == 1 & df$protect == 0,]
@@ -59,8 +65,8 @@ managSynth <- function(){
   points(evenD[evenD$manag == 'coppice', 'Dg'], evenD[evenD$manag == 'coppice', 'rdi'], col = 'red', pch = 16)
   points(evenD[evenD$manag == 'final cut', 'Dg'], evenD[evenD$manag == 'final cut', 'rdi'], col = 'green3', pch = 16)
 
-  dev.off()
   par(mfrow = c(1,1))
+  dev.off()
 
 
   ##############################################################
@@ -159,10 +165,22 @@ managSynth <- function(){
   # management map
   ###############################################################
 
-  # cellID100$standType <- as.numeric(as.factor(df$standType))
-  # plot(cellID100$standType)
-  # plot(park, add = T)
+  # add manag to cellID100 raster
+  df$manag <- as.factor(df$manag)
+  cellID100$manag <- as.numeric(df$manag)
+  plot(cellID100$manag)
 
-  # TODO: cartes pour comprendre les peuplements even et uneven peu dense
+  # convert raster into polygon
+  managPoly <- rasterToPolygons(cellID100$manag, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
+
+  # assign management name to polygons (insted of intergers codes)
+  corr <- data.frame(level = c(1:length(levels(df$manag))), levels(df$manag))
+  managPoly <- merge(managPoly, corr, by.x = 'manag', by.y = 'level')
+  managPoly$manag <- NULL
+  names(managPoly) <- 'manag'
+  plot(managPoly, col = as.factor(managPoly$manag), border = as.factor(managPoly$manag))
+
+  # save
+  writeOGR(managPoly, evalPath, 'managPoly', driver = 'ESRI Shapefile', overwrite = TRUE)
 
 }

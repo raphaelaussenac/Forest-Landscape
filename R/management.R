@@ -311,7 +311,7 @@ managTable <- function(){
   # define 'no management' areas
   ###############################################################
 
-  df[df$access == 0 | df$protect == 1, 'manag'] <- 'no manag'
+  df[(df$access == 0 | df$protect == 1) & !is.na(df$forestCellsPerHa), 'manag'] <- 'no manag'
 
 
   ###############################################################
