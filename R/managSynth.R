@@ -28,7 +28,7 @@ managSynth <- function(){
 
   # uneven conifers
   uc <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$access == 1 & df$protect == 0,]
-  hist(uc[uc$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven conifers', xlab = 'BA_ha (red line = after logging target)')
+  hist(uc[uc$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven conifers', xlab = 'BA_ha (red line = after logging target, dark green = abandonned)')
   hist(uc[uc$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
   hist(uc[uc$density == 'high', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'orange')
   hist(uc[uc$manag == 'final cut', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green3')
@@ -37,7 +37,7 @@ managSynth <- function(){
   # uneven mixed
   comp <- c('fir and/or spruce with DC', 'beech with fir and/or spruce')
   um <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$access == 1 & df$protect == 0,]
-  hist(um[um$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven mixed', xlab = 'BA_ha (red line = after logging target)', ylim = c(0,1000))
+  hist(um[um$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven mixed', xlab = 'BA_ha (red line = after logging target, dark green = abandonned)', ylim = c(0,1000))
   hist(um[um$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
   hist(um[um$density == 'high', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'orange')
   hist(um[um$manag == 'final cut', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green3')
@@ -45,7 +45,7 @@ managSynth <- function(){
 
   # uneven deciduous
   ud <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$access == 1 & df$protect == 0,]
-  hist(ud[ud$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven deciduous', xlab = 'BA_ha (red line = after logging target)')
+  hist(ud[ud$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven deciduous', xlab = 'BA_ha (red line = after logging target, dark green = abandonned)')
   hist(ud[ud$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
   hist(ud[ud$density == 'high', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'orange')
   hist(ud[ud$manag == 'final cut', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green3')
@@ -53,15 +53,15 @@ managSynth <- function(){
 
   # even except deciduous
   even <- df[df$structure == 'even' & !is.na(df$structure) & df$access == 1 & df$protect == 0 & df$compoType != 'D' & !is.na(df$compoType), ]
-  hist(even[even$density == 'low', 'rdi'], breaks = seq(0, 2, 0.05), main = 'even except deciduous', xlab = 'rdi')
+  hist(even[even$density == 'low', 'rdi'], breaks = seq(0, 2, 0.05), main = 'even except deciduous', xlab = 'rdi (red line = after logging target, dark green = abandonned)')
   hist(even[even$density == 'high', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'orange')
   hist(even[even$manag == 'final cut', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'green3')
   hist(even[even$manag == 'coppice', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'red')
-  abline(v = c(0.6, 0.7), lwd = 2, col = 'red')
+  abline(v = c(0.55, 0.65), lwd = 2, col = 'red')
 
   # even deciduous
   evenD <- df[df$structure == 'even' & !is.na(df$structure) & df$access == 1 & df$protect == 0 & df$compoType == 'D' & !is.na(df$compoType), ]
-  plot(evenD$Dg, evenD$rdi, pch = 16, main = 'even deciduous', xlab = 'Dg (red = coppice, green = abandonned)', ylab = 'rdi')
+  plot(evenD$Dg, evenD$rdi, pch = 16, main = 'even deciduous', xlab = 'Dg (red = coppice, dark green = abandonned)', ylab = 'rdi')
   points(evenD[evenD$manag == 'coppice', 'Dg'], evenD[evenD$manag == 'coppice', 'rdi'], col = 'red', pch = 16)
   points(evenD[evenD$manag == 'final cut', 'Dg'], evenD[evenD$manag == 'final cut', 'rdi'], col = 'green3', pch = 16)
 
@@ -69,7 +69,7 @@ managSynth <- function(){
   dev.off()
 
 
-  ##############################################################
+  ###############################################################
   # plot composition types proportion in landscape
   ###############################################################
 
@@ -98,19 +98,49 @@ managSynth <- function(){
   # synthesise management type for each composition
   ###############################################################
 
+  # funcrtion to make sure all tables have similar structure
+  # in order to rbind them
+  fillTab <- function(tab){
+    # create table structure
+    structureTab <- data.frame(matrix(ncol = 8, nrow = nrow(tab)))
+    names(structureTab) <- c('access', 'owner', 'structure', 'density', 'beech with fir and/or spruce', 'D', 'fir and/or spruce', 'fir and/or spruce with DC')
+    # fill the table
+    for (i in names(tab)){
+      structureTab[, i] <- tab[, i]
+    }
+    return(structureTab)
+  }
+
+  # accessible stands
   standType <- df
   standType[standType$protect == 1, 'access'] <- 0
-  standType <- standType %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
-  standType$structure <- factor(standType$structure, levels = c('uneven', 'even'))
-  standType$compoType <- factor(standType$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
-  tab2 <- standType %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
-  tab1 <- standType %>% filter(access == 0) %>% group_by(compoType, owner) %>%
+    # [e]ven and [u]neven [s]tands
+  eus <- standType %>% filter(!is.na(compoType), !(manag %in% c('coppice', 'final cut'))) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
+  tab2 <- eus %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
+  tab2 <- fillTab(tab2)
+   # [cop]pice stands
+  cop <- standType %>% filter(!is.na(compoType), manag == 'coppice') %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
+  tab3 <- cop %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
+  tab3$structure <- 'coppice'
+  tab3$density <- NA
+  tab3 <- fillTab(tab3)
+   # [fin]al cut stands
+  fin <- standType %>% filter(!is.na(compoType), manag == 'final cut') %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
+  tab4 <- fin %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
+  tab4$structure <- 'final cut'
+  tab4$density <- NA
+  tab4 <- fillTab(tab4)
+  # [inacc]essible stands
+  inacc <- standType %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
+  tab1 <- inacc %>% filter(access == 0) %>% group_by(compoType, owner) %>%
                     summarise(surf = sum(surf)) %>%
                     pivot_wider(names_from = compoType, values_from = surf) %>%
                     mutate(access = 0, structure = NA, density = NA)
-  tab1 <- tab1[, names(tab2)]
-  tab <- rbind(tab1, tab2)
-  tab <- tab %>% rename(accessProtec = access)
+  tab1 <- fillTab(tab1)
+
+  # rbind tables
+  tab <- rbind(tab1, tab3, tab4, tab2)
+  tab <- tab %>% rename(accessProtec = access, manag = structure)
 
   write.csv(tab, paste0(evalPath, '/managSyn.csv'), row.names = F)
 
@@ -118,23 +148,17 @@ managSynth <- function(){
   # surface barplot of each type
   ###############################################################
 
-  stand <- df %>% filter(!is.na(compoType)) %>% group_by(protect, access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
-  stand$structure <- factor(stand$structure, levels = c('uneven', 'even', 'inaccessible', 'protected'))
+  stand <- df %>% filter(!is.na(forestCellsPerHa))
+  stand[stand$manag %in% c('coppice', 'final cut'), 'structure'] <- stand[stand$manag %in% c('coppice', 'final cut'), 'manag']
+  stand[stand$access == 0 | stand$protect == 1, 'structure'] <- 'inacc&protec'
+  stand <- stand %>% group_by(compoType, structure) %>% summarise(surf = n()) %>% arrange(-surf)
+  stand$structure <- factor(stand$structure, levels = c('uneven', 'inacc&protec', 'even', 'final cut', 'coppice'))
   stand$compoType <- factor(stand$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
-  stand$structure2 <- stand$structure
-  mainType <- stand %>% group_by(compoType, structure) %>% summarise(surf = sum(surf)) %>% arrange(-surf)
-  mainType$structure2 <- mainType$structure
-  noAcc <- stand %>% filter(access == 0) %>% group_by(compoType, structure) %>% summarise(surf = sum(surf))
-  noAcc$structure2 <- 'inaccessible'
-  protect <- stand %>% filter(protect == 1) %>% group_by(compoType, structure) %>% summarise(surf = sum(surf))
-  protect$structure2 <- 'protected'
 
   # plot
   pl2 <- ggplot() +
-  geom_bar(data = mainType, aes(x = compoType, y = surf, group = structure, fill = structure2), stat = 'identity', position = position_dodge(width = 1)) +
-  geom_bar(data = noAcc, aes(x = compoType, y = surf, group = structure, fill = structure2), width = 0.5, stat = 'identity', position = position_dodge(width = 1)) +
-  geom_bar(data = protect, aes(x = compoType, y = surf, group = structure, fill = structure2), width = 0.25, stat = 'identity', position = position_dodge(width = 1)) +
-  scale_fill_manual(values = c("green3", "orange3", "red", 'green4')) +
+  geom_bar(data = stand, aes(x = compoType, y = surf, fill = structure), stat = 'identity', position = position_dodge(width = 1)) +
+  # scale_fill_manual(values = c('green4', 'orange4', 'green3', 'blue1', 'orange')) +
   theme_minimal()
   pl2
 
@@ -146,18 +170,19 @@ managSynth <- function(){
 
   stand1 <- df
   stand1[stand1$protect == 1 & !is.na(stand1$protect), 'access'] <- 0
+  stand1[stand1$manag %in% c('coppice', 'final cut'), 'structure'] <- stand1[stand1$manag %in% c('coppice', 'final cut'), 'manag']
   stand1 <- stand1 %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
   stand1$compoType <- factor(stand1$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
   stand1$compoType <- droplevels(stand1$compoType)
   stand1$structure <- as.character(stand1$structure)
   stand1[stand1$access == 0, 'structure'] <- 'inacc/protect'
-  stand1$structure <- factor(stand1$structure, levels = c('inacc/protect', 'uneven', 'even'))
+  stand1$structure <- factor(stand1$structure, levels = c('inacc/protect', 'uneven', 'even', 'final cut', 'coppice'))
   donut <- stand1 %>% group_by(compoType, structure) %>% summarise(surf = sum(surf)) %>% ungroup() %>%
                     arrange(compoType, structure, -surf) %>% mutate(ymax = cumsum(surf),
                                               ymin = lag(ymax, default = 0))
   #
   pdf(paste0(evalPath, '/managSurf2.pdf'), width = 10, height = 10)
-  PieDonut(donut, aes(compoType, structure, count = surf), showPieName = FALSE, start = pi/2)
+  PieDonut(donut, aes(compoType, structure, count = surf), showPieName = FALSE, start = pi/2, title = 'inacc/protect / uneven / even / final cut / coppice')
   dev.off()
 
 
