@@ -254,33 +254,29 @@ managTable <- function(){
   # conifers: 35 - 30 - 25 m2 for high - medium - low density
   # mixed: 30 - 25 - 20 m2
   # deciduous: 25 - 20 - 15 m2
-  # rational: probability of thinning < 3m2 = 0
-  # ex for conifers:
-  # BA = <33 --> low density
-  # BA = 33-38 --> medium density
-  # BA = >38 --> high density
 
   # calculate BA/ha
   df <- df %>% mutate(BA_ha = 16 * BA / forestCellsPerHa)
 
   # conifers
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha < 33, 'density'] <- 'low'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 33 & df$BA_ha < 38, 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 38, 'density'] <- 'high'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha < 30, 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 30 & df$BA_ha < 35, 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 35, 'density'] <- 'high'
 
   # mixed
   comp <- c('fir and/or spruce with DC', 'beech with fir and/or spruce')
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha < 28, 'density'] <- 'low'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 28 & df$BA_ha < 33, 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 33, 'density'] <- 'high'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha < 25, 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 25 & df$BA_ha < 30, 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 30, 'density'] <- 'high'
 
   # deciduous
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha < 23, 'density'] <- 'low'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 23 & df$BA_ha < 28, 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 28, 'density'] <- 'high'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha < 20, 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 20 & df$BA_ha < 25, 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 25, 'density'] <- 'high'
 
   # even-aged stands
-  # target rdi: 0.6 and 0.7
+  # mean target rdi: 0.6 and 0.7
+  # after thinning targets: 0.55 and 0.65
   # stands with rdi up to 0.65 are considered to have a target rdi of 0.6
   # stands with rdi > 0.65 are considered to have a target rdi of 0.7
   df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'low'
@@ -304,8 +300,11 @@ managTable <- function(){
   #  even-aged stands
   # dense stands (rdi > 0.8) with big trees (Dg > 30) are considered abandoned and will only undergo a final cut
   df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.8 & df$Dg >= 20, 'manag'] <- 'final cut'
-  # deciduous stands with small trees (Dg < 20) are concidered coppice
-  df[df$structure == 'even' & !is.na(df$structure) & df$Dg <= 20 & df$compoType == 'D' & !is.na(df$compoType), 'manag'] <- 'coppice'
+  # XX% of deciduous stands with small trees (Dg < 20) are concidered coppice (whatever their rdi)
+  # create column with integer for subsetting those stands
+  df$sub <- rep(x = c(1,2), length.out = nrow(df)) # change x to change size of subset
+  df[df$structure == 'even' & !is.na(df$structure) & df$Dg <= 20 & df$compoType == 'D' & !is.na(df$compoType) & df$sub == 2, 'manag'] <- 'coppice'
+
 
   ###############################################################
   # define 'no management' areas
@@ -329,5 +328,4 @@ managTable <- function(){
 
 
 # TODO: ajouter management a README + enlever colonne stand
-# TODO: mettre a jour mangSynth / vérifier sum des surface = 65669?
-# TODO: definir rdi après coupe pour even-aged
+# TODO: coppice only in private?
