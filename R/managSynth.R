@@ -27,7 +27,7 @@ managSynth <- function(){
   par(mfrow = c(3,2))
 
   # uneven conifers
-  uc <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$access == 1 & df$protect == 0,]
+  uc <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$access == 1 & df$protect == 0,]
   hist(uc[uc$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven conifers', xlab = 'BA_ha (red line = after logging target, dark green = abandonned)')
   hist(uc[uc$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
   hist(uc[uc$density == 'high', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'orange')
@@ -35,7 +35,7 @@ managSynth <- function(){
   abline(v = c(25, 30, 35), lwd = 2, col = 'red')
 
   # uneven mixed
-  comp <- c('fir and/or spruce with DC', 'beech with fir and/or spruce')
+  comp <- c('fir and or spruce with DC', 'beech with fir and or spruce')
   um <- df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$access == 1 & df$protect == 0,]
   hist(um[um$density == 'low', 'BA_ha'], breaks = seq(0, 110, 1), main = 'uneven mixed', xlab = 'BA_ha (red line = after logging target, dark green = abandonned)', ylim = c(0,1000))
   hist(um[um$density == 'medium', 'BA_ha'], breaks = seq(0, 110, 1), add = TRUE, col = 'green')
@@ -103,7 +103,7 @@ managSynth <- function(){
   fillTab <- function(tab){
     # create table structure
     structureTab <- data.frame(matrix(ncol = 8, nrow = nrow(tab)))
-    names(structureTab) <- c('access', 'owner', 'structure', 'density', 'beech with fir and/or spruce', 'D', 'fir and/or spruce', 'fir and/or spruce with DC')
+    names(structureTab) <- c('access', 'owner', 'structure', 'density', 'beech with fir and or spruce', 'D', 'fir and or spruce', 'fir and or spruce with DC')
     # fill the table
     for (i in names(tab)){
       structureTab[, i] <- tab[, i]
@@ -153,7 +153,7 @@ managSynth <- function(){
   stand[stand$access == 0 | stand$protect == 1, 'structure'] <- 'inacc&protec'
   stand <- stand %>% group_by(compoType, structure) %>% summarise(surf = n()) %>% arrange(-surf)
   stand$structure <- factor(stand$structure, levels = c('uneven', 'inacc&protec', 'even', 'final cut', 'coppice'))
-  stand$compoType <- factor(stand$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
+  stand$compoType <- factor(stand$compoType, levels = c('fir and or spruce with DC', 'D with fir and or spruce', 'beech with fir and or spruce', 'fir and or spruce', 'D', 'DC with fir and or spruce', 'beech', 'C with fir and or spruce', 'DC'))
 
   # plot
   pl2 <- ggplot() +
@@ -172,7 +172,7 @@ managSynth <- function(){
   stand1[stand1$protect == 1 & !is.na(stand1$protect), 'access'] <- 0
   stand1[stand1$manag %in% c('coppice', 'final cut'), 'structure'] <- stand1[stand1$manag %in% c('coppice', 'final cut'), 'manag']
   stand1 <- stand1 %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
-  stand1$compoType <- factor(stand1$compoType, levels = c('fir and/or spruce with DC', 'D with fir and/or spruce', 'beech with fir and/or spruce', 'fir and/or spruce', 'D', 'DC with fir and/or spruce', 'beech', 'C with fir and/or spruce', 'DC'))
+  stand1$compoType <- factor(stand1$compoType, levels = c('fir and or spruce with DC', 'D with fir and or spruce', 'beech with fir and or spruce', 'fir and or spruce', 'D', 'DC with fir and or spruce', 'beech', 'C with fir and or spruce', 'DC'))
   stand1$compoType <- droplevels(stand1$compoType)
   stand1$structure <- as.character(stand1$structure)
   stand1[stand1$access == 0, 'structure'] <- 'inacc/protect'

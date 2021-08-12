@@ -125,10 +125,10 @@ managTable <- function(){
   #
   # beech
   mainSp[mainSp$mainSp == 'Fagus sylvatica' , 'compoType'] <- 'beech'
-  # fir and/or spruce
+  # fir and or spruce
   fs <- c('Abies alba', 'Picea abies', 'Abies alba - Picea abies', 'Picea abies - Abies alba')
-  mainSp[mainSp$mainSp %in% fs , 'compoType'] <- 'fir and/or spruce'
-  # mixed beech - fir and/or spruce
+  mainSp[mainSp$mainSp %in% fs , 'compoType'] <- 'fir and or spruce'
+  # mixed beech - fir and or spruce
   m <- c('Fagus sylvatica - Abies alba','Abies alba - Fagus sylvatica',
          'Fagus sylvatica - Picea abies','Picea abies - Fagus sylvatica',
          'Fagus sylvatica - Abies alba - Picea abies',
@@ -137,20 +137,20 @@ managTable <- function(){
          'Abies alba - Fagus sylvatica - Picea abies',
          'Picea abies - Fagus sylvatica - Abies alba',
          'Picea abies - Abies alba - Fagus sylvatica')
-  mainSp[mainSp$mainSp %in% m , 'compoType'] <- 'beech with fir and/or spruce'
+  mainSp[mainSp$mainSp %in% m , 'compoType'] <- 'beech with fir and or spruce'
 
   # subdivide DC into DC and DC with fir and or spruce
   mainSp <- mainSp %>% mutate(DCfs = sum(str_detect(mainSp, c('Picea abies', 'Abies alba'))),
                               DCfsc = if_else(C > DCfs, 1, 0))
-  mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 0, 'compoType'] <- 'D with fir and/or spruce'
-  mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 1, 'compoType'] <- 'DC with fir and/or spruce'
+  mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 0, 'compoType'] <- 'D with fir and or spruce'
+  mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 1, 'compoType'] <- 'DC with fir and or spruce'
 
   # subdivide C into C and C with fir and or spruce
-  mainSp[mainSp$compoType == 'C' & mainSp$DCfs > 0, 'compoType'] <- 'C with fir and/or spruce'
+  mainSp[mainSp$compoType == 'C' & mainSp$DCfs > 0, 'compoType'] <- 'C with fir and or spruce'
 
   # --------- group compoType based on the type of management they will follow
-  # DC / C with fir and/or spruce / DC with fir and/or spruce / D with fir and/or spruce ------> fir and/or spruce with DC
-  mainSp[mainSp$compoType %in% c('DC', 'C with fir and/or spruce', 'DC with fir and/or spruce', 'D with fir and/or spruce'), 'compoType'] <- 'fir and/or spruce with DC'
+  # DC / C with fir and or spruce / DC with fir and or spruce / D with fir and or spruce ------> fir and or spruce with DC
+  mainSp[mainSp$compoType %in% c('DC', 'C with fir and or spruce', 'DC with fir and or spruce', 'D with fir and or spruce'), 'compoType'] <- 'fir and or spruce with DC'
   # beech ------> D
   mainSp[mainSp$compoType == 'beech', 'compoType'] <- 'D'
   # ---------
@@ -262,12 +262,12 @@ managTable <- function(){
   df <- df %>% mutate(BA_ha = 16 * BA / forestCellsPerHa)
 
   # conifers
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha < 30, 'density'] <- 'low'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 30 & df$BA_ha < 35, 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 35, 'density'] <- 'high'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha < 30, 'density'] <- 'low'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 30 & df$BA_ha < 35, 'density'] <- 'medium'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 35, 'density'] <- 'high'
 
   # mixed
-  comp <- c('fir and/or spruce with DC', 'beech with fir and/or spruce')
+  comp <- c('fir and or spruce with DC', 'beech with fir and or spruce')
   df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha < 25, 'density'] <- 'low'
   df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 25 & df$BA_ha < 30, 'density'] <- 'medium'
   df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 30, 'density'] <- 'high'
@@ -294,7 +294,7 @@ managTable <- function(){
 
   # uneven-aged stands
   # coniferous stands above 50 m2 are considered abandoned and will only undergo a final cut
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and/or spruce' & df$BA_ha >= 50, 'manag'] <- 'final cut'
+  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 50, 'manag'] <- 'final cut'
   # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
   df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 45, 'manag'] <- 'final cut'
   # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
@@ -330,14 +330,8 @@ managTable <- function(){
 }
 
 
-# TODO: ajouter management a README + enlever colonne stand
-
 # ##########################
 #  TODO:
-# - remove cellID100 from tree75.csv and cell25.csv
-# - remove forestCellsPerha from envVariables
-# - do not refer to forest extent raster anymore
-# - calculate forestCellsPerHa from tree data (not using forest extent raster)
 # - changer nom des compo / gestion (1,2,3,..)
 # - forestCellsPerHa map
 # - create new forest raster from tree data? (instead of BDV2)
