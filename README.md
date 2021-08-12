@@ -20,7 +20,6 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 
 ## trees.csv
 * cellID25: 25m*25m cell ID
-* cellID100: 100m*100m cell ID
 * sp: species latin name
 * n: number of trees
 * dbh: diameter at breast height (cm)
@@ -43,7 +42,6 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * SIFsyl: salem SI (site index) prediction for F. sylvatica
 * SIAalb: salem SI (site index) prediction for A. alba
 * SIPabi: salem SI (site index) prediction for P. abies
-* forestCellsPerHa: nb of 25m*25m cells with forest within 100m *100m cells
 
 
 ## managTableCell100.csv
@@ -60,8 +58,9 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * gini: gini index (calculated on individual tree basal area)
 * rdi: rdi density index
 * BA: total basal area (m2)
+* BA_ha: basal area per (m2/ha). May be different from 'BA' depending on 'forestCellsPerHa'
 * Dg: mean quadratic diameter at breast height (cm)
 * meanH: mean height (m)
 * structure: even-aged or uneven-aged structure
 * density: density level (high, medium, low)
-* stand: stand full name
+* manag: stand management (management - density)
