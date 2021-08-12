@@ -18,7 +18,7 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * swhc.asc: soil water holding capacity (cm)
 
 
-## trees75.csv
+## trees.csv
 * cellID25: 25m*25m cell ID
 * cellID100: 100m*100m cell ID
 * sp: species latin name
@@ -27,7 +27,7 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * h: height (m)
 
 
-## envVariables.csv
+## cell25.csv
 * cellID25: 25m*25m cell ID
 * cellID100: 100m*100m cell ID
 * park: Bauges Geopark extent
@@ -46,7 +46,7 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * forestCellsPerHa: nb of 25m*25m cells with forest within 100m *100m cells
 
 
-## managTable.csv
+## managTableCell100.csv
 * cellID100: 100m*100m cell ID
 * owner: ownership (public or private)
 * access: accessibility

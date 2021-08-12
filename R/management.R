@@ -13,10 +13,10 @@ managTable <- function(){
   library(stringr)
 
   # load environmental data
-  env <- read.csv(paste0(landPath, '/envVariables.csv'))
+  env <- read.csv(paste0(landPath, '/cell25.csv'))
 
   # load virtual tree data
-  tree <- read.csv(paste0(landPath, '/trees75.csv'))
+  tree <- read.csv(paste0(landPath, '/trees.csv'))
   # add cellID100 variable to tree data
   tree <- merge(tree, env[, c('cellID25', 'cellID100')], by = 'cellID25', all.x = TRUE, all.y = FALSE)
   tree <- tree[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh', 'h')]
@@ -325,7 +325,7 @@ managTable <- function(){
                'compoType', 'gini', 'rdi', 'BA', 'BA_ha', 'Dg', 'meanH',	'structure',
                'density', 'manag')]
   #
-  write.csv(df, paste0(landPath, '/managTable.csv'), row.names = F)
+  write.csv(df, paste0(landPath, '/managTableCell100.csv'), row.names = F)
 
 }
 
@@ -334,9 +334,10 @@ managTable <- function(){
 
 # ##########################
 #  TODO:
-# - remove cellID100 from tree75.csv and envVariables.csv
+# - remove cellID100 from tree75.csv and cell25.csv
 # - remove forestCellsPerha from envVariables
 # - do not refer to forest extent raster anymore
 # - calculate forestCellsPerHa from tree data (not using forest extent raster)
 # - changer nom des compo / gestion (1,2,3,..)
 # - forestCellsPerHa map
+# - create new forest raster from tree data? (instead of BDV2)

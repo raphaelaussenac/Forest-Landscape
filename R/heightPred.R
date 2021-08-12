@@ -54,6 +54,6 @@ heightPred <- function(){
   # save
   tree <- tree[, c('cellID25', 'sp', 'n', 'dbh', 'pred')] %>%
             rename(h = pred)
-  write.csv(tree, paste0(landPath, '/trees75.csv'), row.names = F)
+  write.csv(tree, paste0(landPath, '/trees.csv'), row.names = F)
 
 }

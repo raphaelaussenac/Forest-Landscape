@@ -83,7 +83,7 @@ saveLandscape <- function(){
   # sort colnames
   colOrd <- c('cellID25','cellID100','park','elev','slope','aspect','swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
   # save
-  write.csv(envdf[, colOrd], file = paste0(landPath, './envVariables.csv'), row.names = FALSE)
+  write.csv(envdf[, colOrd], file = paste0(landPath, './cell25.csv'), row.names = FALSE)
 
   # remove cells with no trees
   results <- results[!is.na(results$dbh),]

@@ -13,7 +13,7 @@ managSynth <- function(){
   require(rgdal)
 
   # load management table
-  df <- read.csv(paste0(landPath, '/managTable.csv'))
+  df <- read.csv(paste0(landPath, '/managTableCell100.csv'))
 
   # load cellID100 raster
   cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
