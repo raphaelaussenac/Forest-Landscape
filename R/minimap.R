@@ -61,8 +61,9 @@ minimap <- function(landscape){
   # 3 - transform tree, environment and management data frames
   ###############################################################
 
-  # retrieve cellID100
+  # retrieve cellIDs
   cell100 <- values(cellID100)
+  cell25 <- values(cellID25)
 
   # reduce envVariables df
   df <- read.csv(paste0(landPath, '/envVariables.csv'))
@@ -72,7 +73,7 @@ minimap <- function(landscape){
 
   # reduce trees75 df
   tree <- read.csv(paste0(landPath, '/trees75.csv'))
-  tree <- tree[tree$cellID100 %in% cell100,]
+  tree <- tree[tree$cellID25 %in% cell25,]
   write.csv(tree, paste0(miniPath, '/trees75.csv'), row.names = F)
 
   # reduce management df

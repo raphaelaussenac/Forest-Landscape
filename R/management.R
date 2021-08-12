@@ -12,11 +12,14 @@ managTable <- function(){
   require(ggplot2)
   library(stringr)
 
-  # load virtual tree data
-  tree <- read.csv(paste0(landPath, '/trees75.csv'))
-
   # load environmental data
   env <- read.csv(paste0(landPath, '/envVariables.csv'))
+
+  # load virtual tree data
+  tree <- read.csv(paste0(landPath, '/trees75.csv'))
+  # add cellID100 variable to tree data
+  tree <- merge(tree, env[, c('cellID25', 'cellID100')], by = 'cellID25', all.x = TRUE, all.y = FALSE)
+  tree <- tree[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh', 'h')]
 
   # load protected areas
   rb <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_biologiques', encoding = 'UTF-8', use_iconv = TRUE)
@@ -328,4 +331,12 @@ managTable <- function(){
 
 
 # TODO: ajouter management a README + enlever colonne stand
-# TODO: coppice only in private?
+
+# ##########################
+#  TODO:
+# - remove cellID100 from tree75.csv and envVariables.csv
+# - remove forestCellsPerha from envVariables
+# - do not refer to forest extent raster anymore
+# - calculate forestCellsPerHa from tree data (not using forest extent raster)
+# - changer nom des compo / gestion (1,2,3,..)
+# - forestCellsPerHa map

@@ -69,8 +69,6 @@ saveLandscape <- function(){
   cellID <- stack(cellID25, cellID100)
   # cellID correspondence dataframe
   cellIDdf <- as.data.frame(values(cellID))
-  # merge with other results
-  results <- merge(results, cellIDdf, by = 'cellID25')
 
 
   ################################################################################
@@ -80,12 +78,10 @@ saveLandscape <- function(){
   # add cellID100 to environmental data
   envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
   envdf <- merge(envdf, cellIDdf, by = 'cellID25', all.y = F)
-  # nb of forest cells per ha
-  envdf <- envdf %>% group_by(cellID100) %>% mutate(forestCellsPerHa = sum(forest))
   # reduce table size in memory
   envdf$cellID100 <- as.integer(envdf$cellID100)
   # sort colnames
-  colOrd <- c('cellID25','cellID100','park','forest','elev','slope','aspect','swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi','forestCellsPerHa')
+  colOrd <- c('cellID25','cellID100','park','elev','slope','aspect','swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
   # save
   write.csv(envdf[, colOrd], file = paste0(landPath, './envVariables.csv'), row.names = FALSE)
 
@@ -93,11 +89,10 @@ saveLandscape <- function(){
   results <- results[!is.na(results$dbh),]
   # reduce table size in memory
   results$cellID25 <- as.integer(results$cellID25)
-  results$cellID100 <- as.integer(results$cellID100)
   results$n <- as.integer(results$n)
   results$dbh <- round(results$dbh, 2)
 
   # save
-    saveRDS(results[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75.rds'))
+    saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75.rds'))
 
 }

@@ -52,7 +52,7 @@ heightPred <- function(){
   theme_light()
 
   # save
-  tree <- tree[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh', 'pred')] %>%
+  tree <- tree[, c('cellID25', 'sp', 'n', 'dbh', 'pred')] %>%
             rename(h = pred)
   write.csv(tree, paste0(landPath, '/trees75.csv'), row.names = F)
 
