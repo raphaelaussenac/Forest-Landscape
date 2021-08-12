@@ -10,9 +10,6 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * cellID25.asc: 25m*25m cell ID
 * cellID100.asc: 100m*100m cell ID
 * elev.asc: elevation (m a.s.l)
-* forestMask.asc: forest extent within study area
-  + 0 = outside forest
-  + 1 = inside forest
 * parkMask.asc: Bauges Geopark extent
   + 0 = outside park
   + 1 = inside park
@@ -36,9 +33,6 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * park: Bauges Geopark extent
   + 0 = outside park
   + 1 = inside park
-* forest: forest extent within study area
-  + 0 = outside forest
-  + 1 = inside forest
 * elev: elevation (m a.s.l.)
 * slope: slope (degrees)
 * aspect: aspect (degrees)

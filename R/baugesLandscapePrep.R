@@ -21,9 +21,6 @@ prepBauges <- function(){
   # park
   park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
 
-  # forest
-  forest <- readOGR(dsn = './data/bauges/GEO', layer = 'BD_Foret_V2_PNRfilled_Foret_2014', encoding = 'UTF-8', use_iconv = TRUE)
-
   # elevation (m a.s.l.)
   elevation <- raster('./data/bauges/GEO/MNT_all_5m.tif')
   # set projection
@@ -50,17 +47,6 @@ prepBauges <- function(){
                      c(1, 0))
   parkRaster <- reclassify(parkRaster, rcl = isBecomes)
   names(parkRaster) <- 'park'
-
-  # convert forest into raster and set extent + resolution
-  forest$ID <- as.factor(forest$ID)
-  forestRaster <- rasterize(forest, r, field = 'ID')
-  # set projection
-  crs(forestRaster) <- crs(forest)
-  # convert NA into 0
-  isBecomes <- cbind(c(1:nrow(forest), NA),
-                     c(rep(1, nrow(forest)), 0))
-  forestRaster <- reclassify(forestRaster, rcl = isBecomes)
-  names(forestRaster) <- 'forest'
 
   # swhc (cm)
   swhc <- raster('./data/bauges/GEO/rum_500_v2009.tif')
@@ -108,7 +94,6 @@ prepBauges <- function(){
   ###############################################################
 
   writeRaster(parkRaster, filename = paste0(landPath, '/parkMask.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(forestRaster, filename = paste0(landPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(elevation, filename = paste0(landPath, '/elev.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(slope, filename = paste0(landPath, '/slope.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(aspect, filename = paste0(landPath, '/aspect.asc'), format = 'ascii', overwrite = TRUE)
@@ -125,7 +110,7 @@ prepBauges <- function(){
   ###############################################################
 
   # create raster stack
-  rasterStack <- stack(cellID25, parkRaster, forestRaster, elevation, slope,
+  rasterStack <- stack(cellID25, parkRaster, elevation, slope,
                        aspect, swhc, pH, grecoRaster)
   plot(rasterStack)
 
@@ -143,7 +128,6 @@ prepBauges <- function(){
   # save
   envdf$cellID25 <- as.integer(envdf$cellID25)
   envdf$park <- as.integer(envdf$park)
-  envdf$forest <- as.integer(envdf$forest)
   envdf$elev <- round(envdf$elev, 2)
   envdf$slope <- round(envdf$slope, 2)
   envdf$aspect <- round(envdf$aspect, 2)
