@@ -13,6 +13,9 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * parkMask.asc: Bauges Geopark extent
   + 0 = outside park
   + 1 = inside park
+* forestMask.asc: forest extent
+  + 0 = outside forest
+  + 1 = inside forest
 * pH.ascii: soil pH
 * slope.asc: slope (degrees)
 * swhc.asc: soil water holding capacity (cm)

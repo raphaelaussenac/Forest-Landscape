@@ -190,7 +190,7 @@ managSynth <- function(){
   # maps
   ###############################################################
 
-  #  management map
+  # management map
   # add manag to cellID100 raster
   df$manag <- as.factor(df$manag)
   cellID100$manag <- as.numeric(df$manag)
@@ -220,7 +220,6 @@ managSynth <- function(){
   plot(compoTypePoly, col = as.factor(compoTypePoly$compoType), border = as.factor(compoTypePoly$compoType))
   # save
   writeOGR(compoTypePoly, evalPath, 'compoTypePoly', driver = 'ESRI Shapefile', overwrite = TRUE)
-
 
 
 }

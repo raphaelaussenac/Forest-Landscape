@@ -328,10 +328,3 @@ managTable <- function(){
   write.csv(df, paste0(landPath, '/managTableCell100.csv'), row.names = F)
 
 }
-
-
-# ##########################
-#  TODO:
-# - forestCellsPerHa map
-# - create new forest raster from tree data et cellID100? (instead of BDV2) --> dans ce cas
-# predire les SI seulement sur l'emprise de cette carte plutot que sur le parc entier

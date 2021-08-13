@@ -85,6 +85,17 @@ saveLandscape <- function(){
   # save
   write.csv(envdf[, colOrd], file = paste0(landPath, './cell25.csv'), row.names = FALSE)
 
+  # create forest extent raster
+  # create df of unique cellID with total number of trees N
+  df <- results %>% group_by(cellID25) %>% summarise(N = sum(n))
+  # define the forest variable based on N
+  df <- df %>% mutate(forest = if_else(is.na(N), 0, 1))
+  # add forest to cellID25 raster
+  cellID25$forest <- df$forest
+  plot(cellID25$forest)
+  # save raster
+  writeRaster(cellID25$forest, filename = paste0(landPath, './forestMask.asc'), format = 'ascii', overwrite = TRUE)
+
   # remove cells with no trees
   results <- results[!is.na(results$dbh),]
   # reduce table size in memory
@@ -93,6 +104,6 @@ saveLandscape <- function(){
   results$dbh <- round(results$dbh, 2)
 
   # save
-    saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75.rds'))
+  saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75.rds'))
 
 }
