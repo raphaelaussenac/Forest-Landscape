@@ -75,26 +75,27 @@ saveLandscape <- function(){
   # save
   ################################################################################
 
-  # add cellID100 to environmental data
-  envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
-  envdf <- merge(envdf, cellIDdf, by = 'cellID25', all.y = F)
-  # reduce table size in memory
-  envdf$cellID100 <- as.integer(envdf$cellID100)
-  # sort colnames
-  colOrd <- c('cellID25','cellID100','park','elev','slope','aspect','swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
-  # save
-  write.csv(envdf[, colOrd], file = paste0(landPath, './cell25.csv'), row.names = FALSE)
-
   # create forest extent raster
   # create df of unique cellID with total number of trees N
   df <- results %>% group_by(cellID25) %>% summarise(N = sum(n))
   # define the forest variable based on N
   df <- df %>% mutate(forest = if_else(is.na(N), 0, 1))
-  # add forest to cellID25 raster
-  cellID25$forest <- df$forest
-  plot(cellID25$forest)
+  # add forest to cellID raster
+  cellID$forest <- df$forest
+  plot(cellID$forest)
   # save raster
-  writeRaster(cellID25$forest, filename = paste0(landPath, './forestMask.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(cellID$forest, filename = paste0(landPath, './forestMask.asc'), format = 'ascii', overwrite = TRUE)
+
+  # add cellID100 to environmental data
+  envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
+  cellIDforest <- as.data.frame(values(cellID))
+  envdf <- merge(envdf, cellIDforest, by = 'cellID25', all.y = F)
+  # reduce table size in memory
+  envdf$cellID100 <- as.integer(envdf$cellID100)
+  # sort colnames
+  colOrd <- c('cellID25','cellID100','park', 'forest', 'elev','slope','aspect','swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
+  # save
+  write.csv(envdf[, colOrd], file = paste0(landPath, './cell25.csv'), row.names = FALSE)
 
   # remove cells with no trees
   results <- results[!is.na(results$dbh),]

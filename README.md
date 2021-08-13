@@ -35,6 +35,9 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * park: Bauges Geopark extent
   + 0 = outside park
   + 1 = inside park
+* forest: forest cells to be simulated
+  + 0 = not simulated (no trees at the initial state or outside the simulated area)
+  + 1 = simulated (presence of trees at the initial state and inside the simulated area)
 * elev: elevation (m a.s.l.)
 * slope: slope (degrees)
 * aspect: aspect (degrees)
