@@ -22,7 +22,6 @@ salemSI <- function(df){
   Pabi <- readRDS('./data/bauges/salemSI/modPabies.rds')
 
   # manage variable class
-  df$forest <- as.factor(df$forest)
   df$GRECO <- as.factor(df$GRECO)
 
   # create missing variables
@@ -31,8 +30,8 @@ salemSI <- function(df){
                       pH2 = pH^2, expoNS2 = expoNS^2, expoEW2 = expoEW^2)
   #
 
-  # predict SI only in forest cells
-  df <- df %>% filter(forest == 1)
+  # predict SI only in park area
+  df <- df %>% filter(park == 1)
   df$SIQpet <- predict(Qpet, newdata = df, type = 'response')
   df$SIFsyl <- predict(Fsyl, newdata = df, type = 'response')
   df$SIAalb <- predict(Aalb, newdata = df, type = 'response')

@@ -332,6 +332,6 @@ managTable <- function(){
 
 # ##########################
 #  TODO:
-# - changer nom des compo / gestion (1,2,3,..)
 # - forestCellsPerHa map
-# - create new forest raster from tree data? (instead of BDV2)
+# - create new forest raster from tree data et cellID100? (instead of BDV2) --> dans ce cas
+# predire les SI seulement sur l'emprise de cette carte plutot que sur le parc entier

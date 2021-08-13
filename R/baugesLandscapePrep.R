@@ -152,7 +152,7 @@ prepBauges <- function(){
   rasterStack$SIPabi <- envdf$SIPabi
 
   pdf(paste0(evalPath, '/salemSIpredMap.pdf'), width = 10, height = 10)
-  plot(rasterStack[[10:13]])
+  plot(rasterStack[[(dim(rasterStack)[3]-3):dim(rasterStack)[3]]])
   dev.off()
 
   # pred SI distribution
