@@ -17,6 +17,7 @@ minimap <- function(landscape){
   cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
   elev <- raster(paste0(landPath, '/elev.asc'))
   park <- raster(paste0(landPath, '/parkMask.asc'))
+  forest <- raster(paste0(landPath, '/forestMask.asc'))
   pH <- raster(paste0(landPath, '/pH.asc'))
   slope <- raster(paste0(landPath, '/slope.asc'))
   swhc <- raster(paste0(landPath, '/swhc.asc'))
@@ -37,6 +38,7 @@ minimap <- function(landscape){
   cellID25 <- crop(cellID25, ext)
   elev <- crop(elev, ext)
   park <- crop(park, ext)
+  forest <- crop(forest, ext)
   pH <- crop(pH, ext)
   slope <- crop(slope, ext)
   swhc <- crop(swhc, ext)
@@ -46,6 +48,7 @@ minimap <- function(landscape){
   ###############################################################
 
   writeRaster(park, filename = paste0(miniPath, '/parkMask.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(forest, filename = paste0(miniPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(elev, filename = paste0(miniPath, '/elev.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(slope, filename = paste0(miniPath, '/slope.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(aspect, filename = paste0(miniPath, '/aspect.asc'), format = 'ascii', overwrite = TRUE)
