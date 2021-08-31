@@ -27,7 +27,7 @@ minimap <- function(landscape){
 
   # select subset of 1ha cells
   if (landscape == 'bauges'){
-    ext <- extent(945000, 945500, 6513400, 6513900) # define random extent
+    ext <- extent(aspect) / 10
     # make sure to select entire 1ha cells
     cellID100 <- crop(cellID100, ext)
     ext <- extent(cellID100)
