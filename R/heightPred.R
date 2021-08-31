@@ -10,7 +10,7 @@ heightPred <- function(){
   require(ggplot2)
 
   # load models
-  load('./data/bauges/hmodels/diam_height_model_18_02_2021.ro')
+  load('./data/bauges/hmodels/diam_height_model_Bauges_30_08_2021.ro')
 
   # load virtual tree data
   tree <- readRDS(paste0(tempPath, '/trees75.rds'))
@@ -32,11 +32,9 @@ heightPred <- function(){
                    arrange(cellID25) %>%
                    ungroup()
   #
-  # calculate relative dbh
-  tree$dbh_rel <- tree$dbh / tree$DgTotFinal
 
   # rename columns
-  tree <- tree %>% rename(espar = franceCode) %>% mutate(ipd = 11)
+  tree <- tree %>% rename(espar = franceCode)
 
   ###############################################################
   # predict
