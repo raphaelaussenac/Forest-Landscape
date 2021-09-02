@@ -282,7 +282,7 @@ managTable <- function(){
   # after thinning targets: 0.55 and 0.65
   # stands with rdi up to 0.65 are considered to have a target rdi of 0.6
   # stands with rdi > 0.65 are considered to have a target rdi of 0.7
-  df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'low'
+  df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'medium'
   df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.65, 'density'] <- 'high'
 
 

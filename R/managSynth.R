@@ -53,7 +53,7 @@ managSynth <- function(){
 
   # even except deciduous
   even <- df[df$structure == 'even' & !is.na(df$structure) & df$access == 1 & df$protect == 0 & df$compoType != 'D' & !is.na(df$compoType), ]
-  hist(even[even$density == 'low', 'rdi'], breaks = seq(0, 2, 0.05), main = 'even except deciduous', xlab = 'rdi (red line = after logging target, dark green = abandonned)')
+  hist(even[even$density == 'medium', 'rdi'], breaks = seq(0, 2, 0.05), main = 'even except deciduous', xlab = 'rdi (red line = after logging target, dark green = abandonned)')
   hist(even[even$density == 'high', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'orange')
   hist(even[even$manag == 'final cut', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'green3')
   hist(even[even$manag == 'coppice', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'red')
