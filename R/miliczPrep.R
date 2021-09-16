@@ -13,6 +13,7 @@ prepMilicz <- function(){
   require(gdalUtils)
   require(sf)
   require(stringr)
+  require(dplyr)
 
   ###############################################################
   # load/create data and set extent and resolution
@@ -119,14 +120,40 @@ prepMilicz <- function(){
   tree$height <- comTodot(tree$height)
   tree$species <- as.factor(tree$species)
   tree$species <- recode_factor(tree$species, 'Malus silvestris' = 'Malus sylvestris',
-                                                  'Quercus undefined' = 'Quercus spp.',
+                                                  'Quercus undefined' = 'Quercus sp.',
                                                   'Rhamnus frangula' = 'Frangula alnus',
-                                                  'Robinia pseudoacacia' = 'Robinia pseudacacia',
-                                                  'Ulmus' = 'Ulmus spp.')
+                                                  'Ulmus' = 'Ulmus sp.')
   #
 
+  # add missing columns remove useless columns
+  tree <- tree %>% dplyr::select(plot_id, DBH, species) %>%
+                   rename(idp = plot_id, species_name = species) %>%
+                   mutate(w = NA, spType = NA) %>%
+                   relocate(idp, w, species_name, spType, DBH)
+  #
+  # define tree weights
+  # plot radius = 12.62 m --> pi*12.62^2 = 500.3439 m2
+  tree$w <- 10000 / 500.3439
+
+  # remove trees < 7.5cm*
+  tree <- tree %>% filter(DBH >= 7.5)
+
+  # load list of deciduous and coniferous sp
+  deciduousSp <- readRDS('./data/deciduousSp.rds')
+  deciduousSp <- c(deciduousSp, 'Quercus sp.', 'Ulmus sp.')
+  coniferousSp <- readRDS('./data/coniferousSp.rds')
+  # define spType
+  tree[tree$species_name %in% deciduousSp, 'spType'] <- 'D'
+  tree[tree$species_name %in% coniferousSp, 'spType'] <- 'C'
+
+  # save tree file
+  saveRDS(tree, file = paste0(tempPath, '/treeTemp.rds'))
 
 }
+
+
+
+# TODO mail Jareck quercus & ulmus undefined?
 
 
 #

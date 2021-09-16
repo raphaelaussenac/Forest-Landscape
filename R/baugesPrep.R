@@ -303,9 +303,9 @@ prepBauges <- function(){
   # import latin names and create deciduous / coniferous categories
   tree <- spTransform(tree)
 
-  # calculate proportion of deciduous BA
+  # calculate DBH
   tree$DBH <- tree$c13 / pi
-  # save tree file for evaluation
+  # save tree file
   saveRDS(tree, file = paste0(tempPath, '/treeTemp.rds'))
 
 }
