@@ -12,6 +12,7 @@ prepMilicz <- function(){
   # require(velox)
   require(gdalUtils)
   require(sf)
+  require(stringr)
 
   ###############################################################
   # load/create data and set extent and resolution
@@ -100,4 +101,49 @@ prepMilicz <- function(){
   envdf$aspect <- round(envdf$aspect, 2)
   saveRDS(envdf, file = paste0(tempPath, '/envVariablesTemp.rds'))
 
+  ###############################################################
+  # load tree data
+  ###############################################################
+
+  # load NFI tree data
+  tree <- read.csv('./data/milicz/inventory/Milicz_trees.csv', sep = ';')
+
+  # function to replace commas by dots and transform character vectors
+  # into numeric vectors
+  comTodot <- function(charVect){
+    charVect <- as.numeric(str_replace_all(charVect, ',', '\\.'))
+    return(charVect)
+  }
+
+  tree$DBH <- comTodot(tree$DBH)
+  tree$height <- comTodot(tree$height)
+  tree$species <- as.factor(tree$species)
+  tree$species <- recode_factor(tree$species, 'Malus silvestris' = 'Malus sylvestris',
+                                                  'Quercus undefined' = 'Quercus spp.',
+                                                  'Rhamnus frangula' = 'Frangula alnus',
+                                                  'Robinia pseudoacacia' = 'Robinia pseudacacia',
+                                                  'Ulmus' = 'Ulmus spp.')
+  #
+
+
 }
+
+
+#
+#
+# code sp hmodels:
+#
+# trees[species == "Pinus sylvestris", ':=' (sp = "Pisy", color = "red")]
+# trees[species == "Fagus sylvatica", ':=' (sp = "Fasy", color = "blue")]
+# trees[species == "Picea abies", ':=' (sp = "Piab", color = "darkred")]
+# trees[species == "Quercus undefined", ':=' (sp = "Quun", color = "forestgreen")]
+# trees[species == "Betula pendula", ':=' (sp = "Bepe", color = "green3")]
+# trees[species == "Alnus glutinosa", ':=' (sp = "Algl", color = "green3")]
+# trees[species == "Carpinus betulus", ':=' (sp = "Cabe", color = "green3")]
+# trees[species == "Larix decidua", ':=' (sp = "Lade", color = "black")]
+# trees[species == "Tilia cordata", ':=' (sp = "Tico", color = "green3")]
+# trees[species == "Quercus rubra", ':=' (sp = "Quru", color = "green3")]
+# trees[species == "Acer pseudoplatanus", ':=' (sp = "Acps", color = "green3")]
+# trees[species == "Prunus serotina", ':=' (sp = "Prse", color = "green3")]
+# trees[species %in% c("Abies alba", "Pseudotsuga menziesii", "Pinus strobus"), ':=' (sp = "OtherCon", color = "black")]
+# trees[is.na(sp) , ':=' (sp = "OtherDec", color = "green3")]
