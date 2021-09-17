@@ -6,6 +6,7 @@ evalCompo <- function(){
 
   # load packages
   require(dplyr)
+  require(tidyr)
   require(raster)
   require(rgdal)
   require(ggplot2)
@@ -21,12 +22,18 @@ evalCompo <- function(){
   # count number of times NFI plots are picked to define cells compo
   ################################################################################
 
+  # create df with plot ID
+  idp <- data.frame(compoID = as.factor(unique(tree$idp)))
+
+  # count number of times plots are picked
   compodf <- as.data.frame(compo)
   compodf$compoID <- as.factor(compodf$compoID)
   compodf <- compodf %>% filter(!is.na(compoID)) %>%
                      group_by(compoID) %>%
-                     summarise(count = n()) %>%
-                     arrange(-count)
+                     summarise(count = n())
+  compodf <- left_join(idp, compodf, by = 'compoID') %>%
+             replace_na(list(count = 0)) %>%
+             arrange(-count)
   compodf$compoID <- factor(compodf$compoID, levels = compodf$compoID)
 
   # plot
