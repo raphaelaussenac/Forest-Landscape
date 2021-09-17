@@ -29,17 +29,22 @@ dendro <- function(landscape){
   # load NFI tree data
   if(landscape == 'bauges'){
     tree <- read.csv('./data/bauges/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
+    # import latin names and create deciduous / coniferous categories
+    tree <- spTransform(tree)
+    # calculate tree DBH
+    tree$DBH <- tree$c13 / pi
+  } else if(landscape == 'milicz'){
+    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
   }
 
-  # import latin names and create deciduous / coniferous categories
-  tree <- spTransform(tree)
+# TODO: utiliser treeTemp pour les bauges aussi? et donc tempPath/treeTemp.rds
+      # pour Bauges/milicz + comparer les classes dans les tree vs treeTemp
+      # relancer les bauges avec treeTemp et comparer avec landscape précédent
 
   ###############################################################
   # calculate N, Dg, BA, Dprop in NFI plots
   ###############################################################
 
-  # calculate tree DBH
-  tree$DBH <- tree$c13 / pi
   # Calculate N, Dg and BA for the whole plote, for deciduous and coniferous and
   # for ech species
   tree <- tree %>% mutate(BAtree =  (pi * (DBH/200)^2) * w) %>%

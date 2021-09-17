@@ -154,23 +154,3 @@ prepMilicz <- function(){
 
 
 # TODO mail Jareck quercus & ulmus undefined?
-
-
-#
-#
-# code sp hmodels:
-#
-# trees[species == "Pinus sylvestris", ':=' (sp = "Pisy", color = "red")]
-# trees[species == "Fagus sylvatica", ':=' (sp = "Fasy", color = "blue")]
-# trees[species == "Picea abies", ':=' (sp = "Piab", color = "darkred")]
-# trees[species == "Quercus undefined", ':=' (sp = "Quun", color = "forestgreen")]
-# trees[species == "Betula pendula", ':=' (sp = "Bepe", color = "green3")]
-# trees[species == "Alnus glutinosa", ':=' (sp = "Algl", color = "green3")]
-# trees[species == "Carpinus betulus", ':=' (sp = "Cabe", color = "green3")]
-# trees[species == "Larix decidua", ':=' (sp = "Lade", color = "black")]
-# trees[species == "Tilia cordata", ':=' (sp = "Tico", color = "green3")]
-# trees[species == "Quercus rubra", ':=' (sp = "Quru", color = "green3")]
-# trees[species == "Acer pseudoplatanus", ':=' (sp = "Acps", color = "green3")]
-# trees[species == "Prunus serotina", ':=' (sp = "Prse", color = "green3")]
-# trees[species %in% c("Abies alba", "Pseudotsuga menziesii", "Pinus strobus"), ':=' (sp = "OtherCon", color = "black")]
-# trees[is.na(sp) , ':=' (sp = "OtherDec", color = "green3")]

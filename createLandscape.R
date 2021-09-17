@@ -67,13 +67,13 @@ evalCompo()
 dendro(landscape)
 
 # produce landscape tree and environmental data
-saveLandscape()
+saveLandscape(landscape)
 
 # evaluate dendro variables
 evalDendro()
 
 # model tree height
-heightPred()
+heightPred(landscape)
 
 # create management table
 managTable()

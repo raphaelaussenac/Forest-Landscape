@@ -90,10 +90,17 @@ saveLandscape <- function(){
   envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
   cellIDforest <- as.data.frame(values(cellID))
   envdf <- merge(envdf, cellIDforest, by = 'cellID25', all.y = F)
+  if(landscape != 'bauges'){
+    envdf <- envdf %>% dplyr::select(-forest.y) %>% rename(forest = forest.x) %>%
+                       mutate(park = NA)
+  }
   # reduce table size in memory
   envdf$cellID100 <- as.integer(envdf$cellID100)
   # sort colnames
-  colOrd <- c('cellID25','cellID100','park', 'forest', 'elev','slope','aspect','swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
+  colOrd <- c('cellID25','cellID100','park', 'forest', 'elev','slope','aspect')
+  if(landscape == 'bauges'){
+    colOrd <- c(colOrd,'swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
+  }
   # save
   write.csv(envdf[, colOrd], file = paste0(landPath, './cell25.csv'), row.names = FALSE)
 
