@@ -128,8 +128,8 @@ prepMilicz <- function(){
   # add missing columns remove useless columns
   tree <- tree %>% dplyr::select(plot_id, DBH, species) %>%
                    rename(idp = plot_id, species_name = species) %>%
-                   mutate(w = NA, spType = NA) %>%
-                   relocate(idp, w, species_name, spType, DBH)
+                   mutate(idp = as.factor(idp), w = NA, spType = NA, CODE_TFV = as.factor(99)) %>%
+                   relocate(idp, w, CODE_TFV, species_name, spType, DBH)
   #
   # define tree weights
   # plot radius = 12.62 m --> pi*12.62^2 = 500.3439 m2
@@ -145,12 +145,12 @@ prepMilicz <- function(){
   # define spType
   tree[tree$species_name %in% deciduousSp, 'spType'] <- 'D'
   tree[tree$species_name %in% coniferousSp, 'spType'] <- 'C'
+  tree$spType <- as.factor(tree$spType)
 
   # save tree file
   saveRDS(tree, file = paste0(tempPath, '/treeTemp.rds'))
 
 }
-
 
 
 # TODO mail Jareck quercus & ulmus undefined?
