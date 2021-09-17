@@ -18,9 +18,11 @@ compo <- function(landscape){
   BA <- raster(paste0(tempPath, '/BA.asc'))
   BA[BA > 1000] <- 1000 # correct the wrong min max values
   Dprop <- raster(paste0(tempPath, '/Dprop.asc'))
-  Dprop <- Dprop / 100
-  TFVraster <- raster(paste0(tempPath, '/tfv.asc'))
-  names(TFVraster) <- 'CODE_TFV'
+  if(landscape == 'bauges'){
+    Dprop <- Dprop / 100
+    TFVraster <- raster(paste0(tempPath, '/tfv.asc'))
+    names(TFVraster) <- 'CODE_TFV'
+  }
 
   # load tree data and vegetation type data
   tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
@@ -69,7 +71,9 @@ compo <- function(landscape){
   fig
 
   # convert NFI TFV CODE in numeric values
-  NFI$CODE_TFV <- factor(NFI$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
+  if (landscape == 'bauges'){
+      NFI$CODE_TFV <- factor(NFI$CODE_TFV, levels = c('FF1-00-00', 'FF2G61-61', 'FF31', 'FF32', 'FF1-09-09'))
+  }
   NFI$CODE_TFV <- as.numeric(NFI$CODE_TFV)
   NFI <- NFI %>% select(idp, Dprop, Dg01, BA01, CODE_TFV)
 
@@ -86,6 +90,18 @@ compo <- function(landscape){
   compo <- BA
   compo[!is.na(compo)] <- NA
   names(compo) <- 'compo'
+
+
+  ###############################################################
+  # create CODE_TFV raster if not provided
+  ###############################################################
+
+  if(landscape != 'bauges'){
+    TFVraster <- BA
+    TFVraster[!is.na(TFVraster)] <- unique(NFI$CODE_TFV)
+    names(TFVraster) <- 'CODE_TFV'
+  }
+
 
   ###############################################################
   # claculate distance between forest cells values and NFI values
@@ -166,3 +182,8 @@ compo <- function(landscape){
   writeRaster(rast3$compo, paste0(tempPath, '/compoID.asc'), overwrite = TRUE)
 
 }
+
+
+
+
+# TODO: pourquoi échelle différente (0 - 0.6) au lieu de (0 - 1) dans compoRaster pour Dg01 / BA01
