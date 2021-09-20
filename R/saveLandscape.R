@@ -1,4 +1,4 @@
-saveLandscape <- function(){
+saveLandscape <- function(landscape){
 
   ###############################################################
   # initialisation
