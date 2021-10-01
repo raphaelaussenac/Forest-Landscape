@@ -34,7 +34,7 @@ heightPred <- function(landscape){
     tree[tree$sp == 'Pinus sylvestris', 'espar'] <- 'Pisy'
     tree[tree$sp == 'Fagus sylvatica', 'espar'] <- 'Fasy'
     tree[tree$sp == 'Picea abies', 'espar'] <- 'Piab'
-    tree[tree$sp == 'Quercus sp.', 'espar'] <- 'Quun'
+    tree[tree$sp == 'Quercus robur', 'espar'] <- 'Quun'
     tree[tree$sp == 'Betula pendula', 'espar'] <- 'Bepe'
     tree[tree$sp == 'Alnus glutinosa', 'espar'] <- 'Algl'
     tree[tree$sp == 'Carpinus betulus', 'espar'] <- 'Cabe'

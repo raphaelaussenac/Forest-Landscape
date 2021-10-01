@@ -120,9 +120,9 @@ prepMilicz <- function(){
   tree$height <- comTodot(tree$height)
   tree$species <- as.factor(tree$species)
   tree$species <- recode_factor(tree$species, 'Malus silvestris' = 'Malus sylvestris',
-                                                  'Quercus undefined' = 'Quercus sp.',
+                                                  'Quercus undefined' = 'Quercus robur',
                                                   'Rhamnus frangula' = 'Frangula alnus',
-                                                  'Ulmus' = 'Ulmus sp.')
+                                                  'Ulmus' = 'Ulmus minor')
   #
 
   # add missing columns remove useless columns
@@ -140,7 +140,6 @@ prepMilicz <- function(){
 
   # load list of deciduous and coniferous sp
   deciduousSp <- readRDS('./data/deciduousSp.rds')
-  deciduousSp <- c(deciduousSp, 'Quercus sp.', 'Ulmus sp.')
   coniferousSp <- readRDS('./data/coniferousSp.rds')
   # define spType
   tree[tree$species_name %in% deciduousSp, 'spType'] <- 'D'
@@ -151,6 +150,3 @@ prepMilicz <- function(){
   saveRDS(tree, file = paste0(tempPath, '/treeTemp.rds'))
 
 }
-
-
-# TODO mail Jareck quercus & ulmus undefined?
