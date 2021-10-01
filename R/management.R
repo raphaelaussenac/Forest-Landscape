@@ -1,4 +1,4 @@
-managTable <- function(){
+managTable <- function(landscape){
 
   ###############################################################
   # initialisation
@@ -21,19 +21,25 @@ managTable <- function(){
   tree <- merge(tree, env[, c('cellID25', 'cellID100')], by = 'cellID25', all.x = TRUE, all.y = FALSE)
   tree <- tree[, c('cellID25', 'cellID100', 'sp', 'n', 'dbh', 'h')]
 
-  # load protected areas
-  rb <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_biologiques', encoding = 'UTF-8', use_iconv = TRUE)
-  rn <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_naturelles', encoding = 'UTF-8', use_iconv = TRUE)
-
-  # load park limits
-  park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
-
-  # load ownership
-  own <- readOGR(dsn = './data/bauges/GEO', layer = 'Foret_publique_dep73-74_2814_dissolve', encoding = 'UTF-8', use_iconv = TRUE)
-
-  # load accessibility
-  access <- raster('./data/bauges/GEO/PNRfilled_F.distance.tif')
-  access[access > 100000] <- 0 # correct values>100000m
+  if(landscape == 'bauges'){
+    # load protected areas
+    rb <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_biologiques', encoding = 'UTF-8', use_iconv = TRUE)
+    rn <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_naturelles', encoding = 'UTF-8', use_iconv = TRUE)
+    # load park limits
+    park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
+    # load ownership
+    own <- readOGR(dsn = './data/bauges/GEO', layer = 'Foret_publique_dep73-74_2814_dissolve', encoding = 'UTF-8', use_iconv = TRUE)
+    # load accessibility
+    access <- raster('./data/bauges/GEO/PNRfilled_F.distance.tif')
+    access[access > 100000] <- 0 # correct values>100000m
+  } else if(landscape == 'milicz'){
+    # load protected areas
+    protect <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_protected_area', encoding = 'UTF-8', use_iconv = TRUE)
+    # load ownership
+    # own <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_forest ownership', encoding = 'UTF-8', use_iconv = TRUE)
+    # load forest limits
+    forest <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_forest_stands', encoding = 'UTF-8', use_iconv = TRUE)
+  }
 
   # load cellID100 raster
   cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
@@ -50,21 +56,27 @@ managTable <- function(){
   # define protected areas
   ###############################################################
 
-  # set shp extent (not necessary since we use intersect just below
-  # but fixes a bugue in package raster when rasterizing afterwards...)
-  rb <- crop(rb, cellID100)
-  rn <- crop(rn, cellID100)
+  if(landscape == 'bauges'){
+    # set shp extent (not necessary since we use intersect just below
+    # but fixes a bugue in package raster when rasterizing afterwards...)
+    rb <- crop(rb, cellID100)
+    rn <- crop(rn, cellID100)
+    # keep only 'réserve biologique intégrale'
+    # and exclude 'réserve biologique dirigée'
+    rb <- rb[rb$code_r_enp == 'I',]
+    # merge protected areas
+    protect <- raster::union(rb, rn)
+    protect$protection <- 1
+    # select protected areas only in study area
+    protect <- raster::intersect(protect, park)
 
-  # keep only 'réserve biologique intégrale'
-  # and exclude 'réserve biologique dirigée'
-  rb <- rb[rb$code_r_enp == 'I',]
-
-  # merge protected areas
-  protect <- raster::union(rb, rn)
-  protect$protection <- 1
-
-  # select protected areas only in study area
-  protect <- raster::intersect(protect, park)
+  } else if(landscape == 'milicz'){
+    # set shp extent (not necessary since we use intersect just below
+    # but fixes a bugue in package raster when rasterizing afterwards...)
+    protect <- crop(protect, cellID100)
+    # select protected areas only in study area
+    protect <- raster::intersect(protect, forest)
+  }
 
   # convert into raster
   # use getCover to define proportion of each 100*100m cell covered by polygon
@@ -117,43 +129,50 @@ managTable <- function(){
                             filter(cumulProp <= minCompo) %>% summarise(mainSp = paste(sp, collapse=' - '))
   #
 
-  # class main species into composition types:
   # identify deciduous and coniferous stands
   mainSp <- mainSp %>% group_by(cellID100) %>% mutate(D = sum(str_detect(mainSp, deciduousSp)),
                                                       C = sum(str_detect(mainSp, coniferousSp)),
                                                       compoType = if_else(D>0 & C>0, 'DC', if_else(D>0 & C==0, 'D', 'C')))
   #
-  # beech
-  mainSp[mainSp$mainSp == 'Fagus sylvatica' , 'compoType'] <- 'beech'
-  # fir and or spruce
-  fs <- c('Abies alba', 'Picea abies', 'Abies alba - Picea abies', 'Picea abies - Abies alba')
-  mainSp[mainSp$mainSp %in% fs , 'compoType'] <- 'fir and or spruce'
-  # mixed beech - fir and or spruce
-  m <- c('Fagus sylvatica - Abies alba','Abies alba - Fagus sylvatica',
-         'Fagus sylvatica - Picea abies','Picea abies - Fagus sylvatica',
-         'Fagus sylvatica - Abies alba - Picea abies',
-         'Fagus sylvatica - Picea abies - Abies alba',
-         'Abies alba - Picea abies - Fagus sylvatica',
-         'Abies alba - Fagus sylvatica - Picea abies',
-         'Picea abies - Fagus sylvatica - Abies alba',
-         'Picea abies - Abies alba - Fagus sylvatica')
-  mainSp[mainSp$mainSp %in% m , 'compoType'] <- 'beech with fir and or spruce'
 
-  # subdivide DC into DC and DC with fir and or spruce
-  mainSp <- mainSp %>% mutate(DCfs = sum(str_detect(mainSp, c('Picea abies', 'Abies alba'))),
-                              DCfsc = if_else(C > DCfs, 1, 0))
-  mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 0, 'compoType'] <- 'D with fir and or spruce'
-  mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 1, 'compoType'] <- 'DC with fir and or spruce'
+  # classify main species into composition types:
+  if(landscape == 'bauges'){
 
-  # subdivide C into C and C with fir and or spruce
-  mainSp[mainSp$compoType == 'C' & mainSp$DCfs > 0, 'compoType'] <- 'C with fir and or spruce'
+    # beech
+    mainSp[mainSp$mainSp == 'Fagus sylvatica' , 'compoType'] <- 'beech'
+    # fir and or spruce
+    fs <- c('Abies alba', 'Picea abies', 'Abies alba - Picea abies', 'Picea abies - Abies alba')
+    mainSp[mainSp$mainSp %in% fs , 'compoType'] <- 'fir and or spruce'
+    # mixed beech - fir and or spruce
+    m <- c('Fagus sylvatica - Abies alba','Abies alba - Fagus sylvatica',
+           'Fagus sylvatica - Picea abies','Picea abies - Fagus sylvatica',
+           'Fagus sylvatica - Abies alba - Picea abies',
+           'Fagus sylvatica - Picea abies - Abies alba',
+           'Abies alba - Picea abies - Fagus sylvatica',
+           'Abies alba - Fagus sylvatica - Picea abies',
+           'Picea abies - Fagus sylvatica - Abies alba',
+           'Picea abies - Abies alba - Fagus sylvatica')
+    mainSp[mainSp$mainSp %in% m , 'compoType'] <- 'beech with fir and or spruce'
 
-  # --------- group compoType based on the type of management they will follow
-  # DC / C with fir and or spruce / DC with fir and or spruce / D with fir and or spruce ------> fir and or spruce with DC
-  mainSp[mainSp$compoType %in% c('DC', 'C with fir and or spruce', 'DC with fir and or spruce', 'D with fir and or spruce'), 'compoType'] <- 'fir and or spruce with DC'
-  # beech ------> D
-  mainSp[mainSp$compoType == 'beech', 'compoType'] <- 'D'
-  # ---------
+    # subdivide DC into DC and DC with fir and or spruce
+    mainSp <- mainSp %>% mutate(DCfs = sum(str_detect(mainSp, c('Picea abies', 'Abies alba'))),
+                                DCfsc = if_else(C > DCfs, 1, 0))
+    mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 0, 'compoType'] <- 'D with fir and or spruce'
+    mainSp[mainSp$compoType == 'DC' & mainSp$DCfs > 0 & mainSp$DCfsc == 1, 'compoType'] <- 'DC with fir and or spruce'
+
+    # subdivide C into C and C with fir and or spruce
+    mainSp[mainSp$compoType == 'C' & mainSp$DCfs > 0, 'compoType'] <- 'C with fir and or spruce'
+
+    # --------- group compoType based on the type of management they will follow
+    # DC / C with fir and or spruce / DC with fir and or spruce / D with fir and or spruce ------> fir and or spruce with DC
+    mainSp[mainSp$compoType %in% c('DC', 'C with fir and or spruce', 'DC with fir and or spruce', 'D with fir and or spruce'), 'compoType'] <- 'fir and or spruce with DC'
+    # beech ------> D
+    mainSp[mainSp$compoType == 'beech', 'compoType'] <- 'D'
+    # ---------
+
+  } else if(landscape == 'milicz'){
+    mainSp[mainSp$mainSp == 'Pinus sylvestris', 'compoType'] <- 'Pinus sylvestris'
+  }
 
   # add to df
   df <- merge(df, mainSp[, c('cellID100', 'compoType')], by = 'cellID100', all.x = TRUE)
@@ -164,50 +183,65 @@ managTable <- function(){
   ###############################################################
 
   # retrieve ownership in study area
-  own <- raster::intersect(own, park)
+  if(landscape == 'bauges'){
+    own <- raster::intersect(own, park)
 
-  # convert into raster
-  # use getCover to define proportion of each 100*100m cell covered by polygon
-  own <- rasterize(own, cellID100, getCover = TRUE)
-  names(own) <- 'public'
+    # convert into raster
+    # use getCover to define proportion of each 100*100m cell covered by polygon
+    own <- rasterize(own, cellID100, getCover = TRUE)
+    names(own) <- 'public'
 
-  # stack with cellID100
-  own <- stack(cellID100, own)
+    # stack with cellID100
+    own <- stack(cellID100, own)
 
-  # convert into dataframe
-  own <- as.data.frame(own)
+    # convert into dataframe
+    own <- as.data.frame(own)
 
-  # if public >= 0.5 then most of the cell is public --> replace by public.
-  # if public < 0.5 --> replace by private.
-  own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
+    if(landscape == 'bauges'){
+      # if public >= 0.5 then most of the cell is public --> replace by public.
+      # if public < 0.5 --> replace by private.
+      own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
+    } else if(landscape == 'milicz'){
+      # reverse condition for milicz
+      own <- own %>% mutate(owner = if_else(public >= 0.5, 'private', 'public'))
+    }
 
-  # add to df
-  df <- merge(df, own[, c('cellID100', 'owner')], by = 'cellID100')
+    # add to df
+    df <- merge(df, own[, c('cellID100', 'owner')], by = 'cellID100')
+  } else if(landscape == 'milicz'){
+    df$owner <- NA
+  }
 
 
   ###############################################################
   # access
   ###############################################################
 
-  # aggregate access value from 5*5m to 100*100m
-  access <- aggregate(access, fact = 20, fun = 'mean', na.rm = TRUE)
+  if(landscape == 'bauges'){
+    # aggregate access value from 5*5m to 100*100m
+    access <- aggregate(access, fact = 20, fun = 'mean', na.rm = TRUE)
 
-  # stack with cellID100
-  access <- stack(cellID100, access)
+    # stack with cellID100
+    access <- stack(cellID100, access)
 
-  # convert into dataframe
-  access <- as.data.frame(access)
-  names(access) <- c('cellID100', 'dist')
+    # convert into dataframe
+    access <- as.data.frame(access)
+    names(access) <- c('cellID100', 'dist')
 
-  # if access > 2km --> not accessible
-  access <- access %>% mutate(access = if_else(dist <= 2000, 1, 0)) %>%
-                       dplyr::select(-dist)
-  access[is.na(access$access), 'access'] <- 0
-  # access = 1 --> accessible
-  # access = 0 --> inaccessible
+    # if access > 2km --> not accessible
+    access <- access %>% mutate(access = if_else(dist <= 2000, 1, 0)) %>%
+                         dplyr::select(-dist)
+    access[is.na(access$access), 'access'] <- 0
+    # access = 1 --> accessible
+    # access = 0 --> inaccessible
 
-  # add to df
-  df <- merge(df, access, by = 'cellID100')
+    # add to df
+    df <- merge(df, access, by = 'cellID100')
+
+  } else if(landscape == 'milicz'){
+    df$access <- 1
+  }
+
 
 
   ###############################################################
@@ -252,61 +286,67 @@ managTable <- function(){
   # define density class
   ###############################################################
 
-  # uneven-aged stands
-  # threshold of BA after thinning from the sylviculture guide for mountain forest
-  # conifers: 35 - 30 - 25 m2 for high - medium - low density
-  # mixed: 30 - 25 - 20 m2
-  # deciduous: 25 - 20 - 15 m2
-
   # calculate BA/ha
   df <- df %>% mutate(BA_ha = 16 * BA / forestCellsPerHa)
 
-  # conifers
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha < 30, 'density'] <- 'low'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 30 & df$BA_ha < 35, 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 35, 'density'] <- 'high'
+  if(landscape == 'bauges'){
+    # uneven-aged stands
+    # threshold of BA after thinning from the sylviculture guide for mountain forest
+    # conifers: 35 - 30 - 25 m2 for high - medium - low density
+    # mixed: 30 - 25 - 20 m2
+    # deciduous: 25 - 20 - 15 m2
 
-  # mixed
-  comp <- c('fir and or spruce with DC', 'beech with fir and or spruce')
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha < 25, 'density'] <- 'low'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 25 & df$BA_ha < 30, 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 30, 'density'] <- 'high'
+    # conifers
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha < 30, 'density'] <- 'low'
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 30 & df$BA_ha < 35, 'density'] <- 'medium'
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 35, 'density'] <- 'high'
 
-  # deciduous
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha < 20, 'density'] <- 'low'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 20 & df$BA_ha < 25, 'density'] <- 'medium'
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 25, 'density'] <- 'high'
+    # mixed
+    comp <- c('fir and or spruce with DC', 'beech with fir and or spruce')
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha < 25, 'density'] <- 'low'
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 25 & df$BA_ha < 30, 'density'] <- 'medium'
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 30, 'density'] <- 'high'
 
-  # even-aged stands
-  # mean target rdi: 0.6 and 0.7
-  # after thinning targets: 0.55 and 0.65
-  # stands with rdi up to 0.65 are considered to have a target rdi of 0.6
-  # stands with rdi > 0.65 are considered to have a target rdi of 0.7
-  df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'medium'
-  df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.65, 'density'] <- 'high'
+    # deciduous
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha < 20, 'density'] <- 'low'
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 20 & df$BA_ha < 25, 'density'] <- 'medium'
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 25, 'density'] <- 'high'
+
+    # even-aged stands
+    # mean target rdi: 0.6 and 0.7
+    # after thinning targets: 0.55 and 0.65
+    # stands with rdi up to 0.65 are considered to have a target rdi of 0.6
+    # stands with rdi > 0.65 are considered to have a target rdi of 0.7
+    df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'medium'
+    df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.65, 'density'] <- 'high'
 
 
-  ###############################################################
-  # add 'final cut' management based on BA, rdi, Dg
-  ###############################################################
+    ###############################################################
+    # add 'final cut' management based on BA, rdi, Dg
+    ###############################################################
 
-  df$manag <- paste(df$structure, '-', df$density)
+    df$manag <- paste(df$structure, '-', df$density)
 
-  # uneven-aged stands
-  # coniferous stands above 50 m2 are considered abandoned and will only undergo a final cut
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 50, 'manag'] <- 'final cut'
-  # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 45, 'manag'] <- 'final cut'
-  # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
-  df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 40, 'manag'] <- 'final cut'
+    # uneven-aged stands
+    # coniferous stands above 50 m2 are considered abandoned and will only undergo a final cut
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'fir and or spruce' & df$BA_ha >= 50, 'manag'] <- 'final cut'
+    # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType %in% comp & df$BA_ha >= 45, 'manag'] <- 'final cut'
+    # mixed stands above 45 m2 are considered abandoned and will only undergo a final cut
+    df[df$structure == 'uneven' & !is.na(df$structure) & !is.na(df$compoType) & df$compoType == 'D' & df$BA_ha >= 40, 'manag'] <- 'final cut'
 
-  #  even-aged stands
-  # dense stands (rdi > 0.8) with big trees (Dg > 30) are considered abandoned and will only undergo a final cut
-  df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.8 & df$Dg >= 20, 'manag'] <- 'final cut'
-  # XX% of deciduous stands with small trees (Dg < 20) are concidered coppice (whatever their rdi)
-  # create column with integer for subsetting those stands
-  df$sub <- rep(x = c(1,2), length.out = nrow(df)) # change x to change size of subset
-  df[df$structure == 'even' & !is.na(df$structure) & df$Dg <= 20 & df$compoType == 'D' & !is.na(df$compoType) & df$sub == 2, 'manag'] <- 'coppice'
+    #  even-aged stands
+    # dense stands (rdi > 0.8) with big trees (Dg > 30) are considered abandoned and will only undergo a final cut
+    df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.8 & df$Dg >= 20, 'manag'] <- 'final cut'
+    # XX% of deciduous stands with small trees (Dg < 20) are concidered coppice (whatever their rdi)
+    # create column with integer for subsetting those stands
+    df$sub <- rep(x = c(1,2), length.out = nrow(df)) # change x to change size of subset
+    df[df$structure == 'even' & !is.na(df$structure) & df$Dg <= 20 & df$compoType == 'D' & !is.na(df$compoType) & df$sub == 2, 'manag'] <- 'coppice'
+
+  } else if(landscape == 'milicz'){
+    df$density <- NA
+    df$manag <- as.character(df$structure)
+  }
 
 
   ###############################################################

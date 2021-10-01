@@ -76,10 +76,10 @@ evalDendro()
 heightPred(landscape)
 
 # create management table
-managTable()
+managTable(landscape)
 
 # synthesise management table
-managSynth()
+managSynth(landscape)
 
 # produce minimap
 minimap(landscape)
