@@ -19,15 +19,23 @@ prepMilicz <- function(){
   # load/create data and set extent and resolution
   ###############################################################
 
-  # forest
-  forest <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_forest_stands', encoding = 'UTF-8', use_iconv = TRUE)
-
-  # elevation (m a.s.l.)
+  # case study area extent
+  # retrieve from lidar elevation map
   load('./data/milicz/GEO/altitude.rda')
   elevation <- altitude
+  parkRaster <- altitude
+  # convert non NA values in 1
+  parkRaster[!is.na(parkRaster)] <- 1
+  # convert NA into 0
+  isBecomes <- cbind(c(1, NA),
+                     c(1, 0))
+  parkRaster <- reclassify(parkRaster, rcl = isBecomes)
+  names(parkRaster) <- 'park'
+
+  # elevation (m a.s.l.)
   names(elevation) <- 'elev'
   # set projection
-  crs(elevation) <- crs(forest)
+  crs(elevation) <- crs(parkRaster)
 
   # slope (degree)
   slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
@@ -35,32 +43,19 @@ prepMilicz <- function(){
   # aspect (degree)
   aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
 
-  # convert forest into raster and set extent + resolution
-  ext <- extent(elevation)
-  r <- raster(ext, res = res(elevation))
-  forest$ID <- as.factor(forest$stand_id)
-  forestRaster <- rasterize(forest, r, field = 'ID')
-  # set projection
-  crs(forestRaster) <- crs(forest)
-  # convert NA into 0
-  isBecomes <- cbind(c(1:nrow(forest), NA),
-                     c(rep(1, nrow(forest)), 0))
-  forestRaster <- reclassify(forestRaster, rcl = isBecomes)
-  names(forestRaster) <- 'forest'
-
   # Quadratic diameter (cm) [0, 80]
   dg <- raster('./data/milicz/GEO/map.DBH.stratified.tif')
-  crs(dg) <- crs(forest)
+  crs(dg) <- crs(parkRaster)
   dg <- resample(dg, elevation)
 
   # basal area (m2) [0, 120]
   BA <- raster('./data/milicz/GEO/map.BA.stratified.tif')
-  crs(BA) <- crs(forest)
+  crs(BA) <- crs(parkRaster)
   BA <- resample(BA, elevation)
 
   # Deciduous proportion (% of total BA)
   Dprop <- raster('./data/milicz/GEO/map.DP.stratified.tif')
-  crs(Dprop) <- crs(forest)
+  crs(Dprop) <- crs(parkRaster)
   Dprop <- resample(Dprop, elevation)
 
   # create cell ID raster
@@ -73,7 +68,7 @@ prepMilicz <- function(){
   # save ascii
   ###############################################################
 
-  writeRaster(forestRaster, filename = paste0(landPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(parkRaster, filename = paste0(landPath, '/parkMask.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(elevation, filename = paste0(landPath, '/elev.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(slope, filename = paste0(landPath, '/slope.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(aspect, filename = paste0(landPath, '/aspect.asc'), format = 'ascii', overwrite = TRUE)
@@ -87,7 +82,7 @@ prepMilicz <- function(){
   ###############################################################
 
   # create raster stack
-  rasterStack <- stack(cellID25, forestRaster, elevation, slope,
+  rasterStack <- stack(cellID25, parkRaster, elevation, slope,
                        aspect)
   plot(rasterStack)
 
@@ -96,7 +91,7 @@ prepMilicz <- function(){
 
   # save
   envdf$cellID25 <- as.integer(envdf$cellID25)
-  envdf$forest <- as.integer(envdf$forest)
+  envdf$park <- as.integer(envdf$park)
   envdf$elev <- round(envdf$elev, 2)
   envdf$slope <- round(envdf$slope, 2)
   envdf$aspect <- round(envdf$aspect, 2)

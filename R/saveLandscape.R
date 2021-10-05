@@ -59,7 +59,7 @@ saveLandscape <- function(landscape){
   # assign unique cellID
   values(cellID100) <- c(1:(nrow(cellID100) * ncol(cellID100)))
   # save raster cellID100 at 100*100 resolution
-  writeRaster(cellID100, filename = paste0(landPath, './cellID100.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(cellID100, filename = paste0(landPath, '/cellID100.asc'), format = 'ascii', overwrite = TRUE)
   # change resolution back to cellID25 resolution in order to crop and then
   # stack together
   cellID100 <- disaggregate(cellID100, fact = resFact)
@@ -84,16 +84,13 @@ saveLandscape <- function(landscape){
   cellID$forest <- df$forest
   plot(cellID$forest)
   # save raster
-  writeRaster(cellID$forest, filename = paste0(landPath, './forestMask.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(cellID$forest, filename = paste0(landPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
 
-  # add cellID100 to environmental data
+  # add cellID100 and forest extent to environmental data
   envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
   cellIDforest <- as.data.frame(values(cellID))
-  envdf <- merge(envdf, cellIDforest, by = 'cellID25', all.y = F)
-  if(landscape != 'bauges'){
-    envdf <- envdf %>% dplyr::select(-forest.y) %>% rename(forest = forest.x) %>%
-                       mutate(park = NA)
-  }
+  envdf <- merge(envdf, cellIDforest, by = 'cellID25')
+
   # reduce table size in memory
   envdf$cellID100 <- as.integer(envdf$cellID100)
   # sort colnames
@@ -102,7 +99,7 @@ saveLandscape <- function(landscape){
     colOrd <- c(colOrd,'swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
   }
   # save
-  write.csv(envdf[, colOrd], file = paste0(landPath, './cell25.csv'), row.names = FALSE)
+  write.csv(envdf[, colOrd], file = paste0(landPath, '/cell25.csv'), row.names = FALSE)
 
   # remove cells with no trees
   results <- results[!is.na(results$dbh),]
