@@ -99,7 +99,9 @@ saveLandscape <- function(landscape){
     colOrd <- c(colOrd,'swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
   }
   # save
-  write.csv(envdf[, colOrd], file = paste0(landPath, '/cell25.csv'), row.names = FALSE)
+  envdf <- envdf %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID25, cellID100) %>%
+                     mutate(across(c('elev','slope','aspect'), round, 4))
+  write.csv(envdf, file = paste0(landPath, '/cell25.csv'), row.names = FALSE)
 
   # remove cells with no trees
   results <- results[!is.na(results$dbh),]

@@ -67,8 +67,17 @@ heightPred <- function(landscape){
   theme_light()
 
   # save
-  tree <- tree[, c('cellID25', 'sp', 'n', 'dbh', 'pred')] %>%
-            rename(h = pred)
+  tree <- tree %>% dplyr::select('cellID25', 'sp', 'n', 'dbh', 'pred') %>%
+            rename(h = pred) %>% arrange(cellID25) %>% group_by(cellID25) %>%
+            arrange(sp, dbh, .by_group = TRUE) %>%
+            mutate(across(c(dbh, h), round, 4)) %>% ungroup()
   write.csv(tree, paste0(landPath, '/trees.csv'), row.names = F)
 
 }
+
+
+
+
+# TODO: sort tree df by sp & dbh (to facilitate comaparison between versions)
+# TODO: sort cell25
+# TODO: sort managTable

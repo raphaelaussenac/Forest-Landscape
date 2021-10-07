@@ -360,10 +360,14 @@ managTable <- function(landscape){
   # save
   ###############################################################
 
-  # reorder and rename columns
-  df <- df[, c('cellID100', 'owner', 'access', 'protect', 'forestCellsPerHa',
+  # reorder columns
+  colOrd <- c('cellID100', 'owner', 'access', 'protect', 'forestCellsPerHa',
                'compoType', 'gini', 'rdi', 'BA', 'BA_ha', 'Dg', 'meanH',	'structure',
-               'density', 'manag')]
+               'density', 'manag')
+  # round numbers
+  colRou <- c('gini', 'rdi', 'BA', 'BA_ha', 'Dg', 'meanH')
+  df <- df %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID100) %>%
+               mutate(across(all_of(colRou), round, 4))
   #
   write.csv(df, paste0(landPath, '/managTableCell100.csv'), row.names = F)
 
