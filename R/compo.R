@@ -182,8 +182,3 @@ compo <- function(landscape){
   writeRaster(rast3$compo, paste0(tempPath, '/compoID.asc'), overwrite = TRUE)
 
 }
-
-
-
-
-# TODO: pourquoi échelle différente (0 - 0.6) au lieu de (0 - 1) dans compoRaster pour Dg01 / BA01

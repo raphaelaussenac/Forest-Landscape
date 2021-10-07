@@ -27,15 +27,7 @@ dendro <- function(landscape){
   rasterStack <- stack(compo, Dg, BA, Dprop, cellID25)
 
   # load NFI tree data
-  if(landscape == 'bauges'){
-    tree <- read.csv('./data/bauges/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
-    # import latin names and create deciduous / coniferous categories
-    tree <- spTransform(tree)
-    # calculate tree DBH
-    tree$DBH <- tree$c13 / pi
-  } else if(landscape == 'milicz'){
-    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
-  }
+  tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
 
 # TODO: utiliser treeTemp pour les bauges aussi? et donc tempPath/treeTemp.rds
       # pour Bauges/milicz + comparer les classes dans les tree vs treeTemp
