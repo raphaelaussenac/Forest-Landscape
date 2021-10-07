@@ -29,9 +29,6 @@ dendro <- function(landscape){
   # load NFI tree data
   tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
 
-# TODO: utiliser treeTemp pour les bauges aussi? et donc tempPath/treeTemp.rds
-      # pour Bauges/milicz + comparer les classes dans les tree vs treeTemp
-      # relancer les bauges avec treeTemp et comparer avec landscape précédent
 
   ###############################################################
   # calculate N, Dg, BA, Dprop in NFI plots

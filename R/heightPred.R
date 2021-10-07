@@ -74,10 +74,3 @@ heightPred <- function(landscape){
   write.csv(tree, paste0(landPath, '/trees.csv'), row.names = F)
 
 }
-
-
-
-
-# TODO: sort tree df by sp & dbh (to facilitate comaparison between versions)
-# TODO: sort cell25
-# TODO: sort managTable

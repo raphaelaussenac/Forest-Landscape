@@ -19,11 +19,20 @@ prepMilicz <- function(){
   # load/create data and set extent and resolution
   ###############################################################
 
-  # case study area extent
-  # retrieve from lidar elevation map
+  # elevation (m a.s.l.)
   load('./data/milicz/GEO/altitude.rda')
   elevation <- altitude
-  parkRaster <- altitude
+  names(elevation) <- 'elev'
+
+  # slope (degree)
+  slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
+
+  # aspect (degree)
+  aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
+
+  # case study area extent ('park' layer)
+  # retrieve from lidar slope map
+  parkRaster <- slope
   # convert non NA values in 1
   parkRaster[!is.na(parkRaster)] <- 1
   # convert NA into 0
@@ -31,17 +40,6 @@ prepMilicz <- function(){
                      c(1, 0))
   parkRaster <- reclassify(parkRaster, rcl = isBecomes)
   names(parkRaster) <- 'park'
-
-  # elevation (m a.s.l.)
-  names(elevation) <- 'elev'
-  # set projection
-  crs(elevation) <- crs(parkRaster)
-
-  # slope (degree)
-  slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
-
-  # aspect (degree)
-  aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
 
   # Quadratic diameter (cm) [0, 80]
   dg <- raster('./data/milicz/GEO/map.DBH.stratified.tif')
