@@ -9,11 +9,14 @@ saveLandscape <- function(landscape){
   require(tidyr)
   require(raster)
 
-  # load tree data
+  # load tree and env data
   results <- readRDS(paste0(tempPath, '/trees.rds'))
+  envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
 
-  # load cellID25 raster
+  # load rasters
   cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
+  compo <- raster(paste0(tempPath, '/compoID.asc'))
+  park <- raster(paste0(landPath, '/parkMask.asc'))
 
   ################################################################################
   # remove trees <7.5 cm
@@ -65,34 +68,41 @@ saveLandscape <- function(landscape){
   cellID100 <- disaggregate(cellID100, fact = resFact)
   # reduce extent of cellID100 to minimum common extent with cellID25
   cellID100 <- crop(cellID100, extent(cellID25))
-  # stack rasters
-  cellID <- stack(cellID25, cellID100)
-  # cellID correspondence dataframe
-  cellIDdf <- as.data.frame(values(cellID))
 
+
+  ################################################################################
+  # create forest extent raster:
+  ################################################################################
+
+  # wherever there's a compoID inside the case study area (= park)
+  compo[!is.na(compo)] <- 1
+  # convert NA into 0
+  isBecomes <- cbind(c(1, NA),
+                     c(1, 0))
+  compo <- reclassify(compo, rcl = isBecomes)
+  # union of park and compo
+  compoUpark <- park + compo
+  # convert values
+  isBecomes <- cbind(c(0, 1, 2),
+                     c(0, 0, 1))
+  forest <- reclassify(compoUpark, rcl = isBecomes)
+  names(forest) <- 'forest'
+  # add forest to cell data
+  cellID <- stack(cellID25, cellID100, forest)
+  plot(cellID)
+  writeRaster(cellID$forest, filename = paste0(landPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
+
+  # add cellID100 and forest extent to env data
+  cellIDforest <- as.data.frame(values(cellID))
+  envdf <- merge(envdf, cellIDforest, by = 'cellID25')
 
   ################################################################################
   # save
   ################################################################################
 
-  # create forest extent raster
-  # create df of unique cellID with total number of trees N
-  df <- results %>% group_by(cellID25) %>% summarise(N = sum(n))
-  # define the forest variable based on N
-  df <- df %>% mutate(forest = if_else(is.na(N), 0, 1))
-  # add forest to cellID raster
-  cellID$forest <- df$forest
-  plot(cellID$forest)
-  # save raster
-  writeRaster(cellID$forest, filename = paste0(landPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
-
-  # add cellID100 and forest extent to environmental data
-  envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
-  cellIDforest <- as.data.frame(values(cellID))
-  envdf <- merge(envdf, cellIDforest, by = 'cellID25')
-
   # reduce table size in memory
   envdf$cellID100 <- as.integer(envdf$cellID100)
+  envdf$forest <- as.integer(envdf$forest)
   # sort colnames
   colOrd <- c('cellID25','cellID100','park', 'forest', 'elev','slope','aspect')
   if(landscape == 'bauges'){
@@ -105,6 +115,9 @@ saveLandscape <- function(landscape){
 
   # remove cells with no trees
   results <- results[!is.na(results$dbh),]
+  # remove trees not in forest cells
+  forestCells <- envdf[envdf$forest == 1, 'cellID25']
+  results <- results %>% filter(cellID25 %in% forestCells)
   # reduce table size in memory
   results$cellID25 <- as.integer(results$cellID25)
   results$n <- as.integer(results$n)
