@@ -14,19 +14,18 @@ compo <- function(landscape){
 
   # load LIDAR rasters
   Dg <- raster(paste0(tempPath, '/dg.asc'))
-  Dg[Dg > 1000] <- 1000 # correct the wrong min max values
+  Dg <- setMinMax(Dg)
   BA <- raster(paste0(tempPath, '/BA.asc'))
-  BA[BA > 1000] <- 1000 # correct the wrong min max values
+  BA <- setMinMax(BA)
   Dprop <- raster(paste0(tempPath, '/Dprop.asc'))
+  Dprop <- setMinMax(Dprop)
   if(landscape == 'bauges'){
-    Dprop <- Dprop / 100
     TFVraster <- raster(paste0(tempPath, '/tfv.asc'))
     names(TFVraster) <- 'CODE_TFV'
   }
 
   # load tree data and vegetation type data
   tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
-
 
   ###############################################################
   # Retrieve Dg, BA, Dprop and TFV for all plots

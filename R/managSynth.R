@@ -187,7 +187,7 @@ managSynth <- function(landscape){
     stand[stand$access == 0 | stand$protect == 1, 'structure'] <- 'inacc&protec'
     stand <- stand %>% group_by(compoType, structure) %>% summarise(surf = n()) %>% arrange(-surf)
     stand$structure <- factor(stand$structure, levels = c('even', 'uneven', 'inacc&protec'))
-    stand$compoType <- factor(stand$compoType, levels = c('Pinus sylvestris', 'C', 'DC', 'D'))
+    stand$compoType <- factor(stand$compoType, levels = c('Pinus sylvestris', 'DC', 'D', 'C'))
 
   }
 

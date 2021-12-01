@@ -41,17 +41,17 @@ prepMilicz <- function(){
   parkRaster <- reclassify(parkRaster, rcl = isBecomes)
   names(parkRaster) <- 'park'
 
-  # Quadratic diameter (cm) [0, 80]
+  # Quadratic diameter (cm)
   dg <- raster('./data/milicz/GEO/map.DBH.stratified.tif')
   crs(dg) <- crs(parkRaster)
   dg <- resample(dg, elevation)
 
-  # basal area (m2) [0, 120]
+  # basal area (m2)
   BA <- raster('./data/milicz/GEO/map.BA.stratified.tif')
   crs(BA) <- crs(parkRaster)
   BA <- resample(BA, elevation)
 
-  # Deciduous proportion (% of total BA)
+  # Deciduous proportion
   Dprop <- raster('./data/milicz/GEO/map.DP.stratified.tif')
   crs(Dprop) <- crs(parkRaster)
   Dprop <- resample(Dprop, elevation)

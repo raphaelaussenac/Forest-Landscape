@@ -14,9 +14,9 @@ evalDendro <- function(){
 
   # load lidar data
   Dg <- raster(paste0(tempPath, '/dg.asc'))
-  Dg[Dg > 1000] <- 1000 # correct the wrong min max values
+  Dg <- setMinMax(Dg)
   BA <- raster(paste0(tempPath, '/BA.asc'))
-  BA[BA > 1000] <- 1000 # correct the wrong min max values
+  BA <- setMinMax(BA)
   cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
   rasterStack <- stack(Dg, BA, cellID25)
   df <- as.data.frame(rasterStack)
@@ -45,7 +45,7 @@ evalDendro <- function(){
   geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  xlab('species mean dbh in cells') +
+  xlab('mean dbh in cells') +
   ylab('species N diff at the cell level (negative values = overestimation)')
   pl2
   ggsave(file = paste0(evalPath, '/NdiffDBH.pdf'), plot = pl2, width = 30, height = 20)
