@@ -128,9 +128,6 @@ prepMilicz <- function(){
   # plot radius = 12.62 m --> pi*12.62^2 = 500.3439 m2
   tree$w <- 10000 / 500.3439
 
-  # remove trees < 7.5cm*
-  tree <- tree %>% filter(DBH >= 7.5)
-
   # load list of deciduous and coniferous sp
   deciduousSp <- readRDS('./data/deciduousSp.rds')
   coniferousSp <- readRDS('./data/coniferousSp.rds')

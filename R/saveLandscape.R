@@ -10,6 +10,7 @@ saveLandscape <- function(landscape){
   require(raster)
 
   # load tree and env data
+  tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
   results <- readRDS(paste0(tempPath, '/trees.rds'))
   envdf <- readRDS(file = paste0(tempPath, '/envVariablesTemp.rds'))
 
@@ -19,15 +20,18 @@ saveLandscape <- function(landscape){
   park <- raster(paste0(landPath, '/parkMask.asc'))
 
   ################################################################################
-  # remove trees <7.5 cm
+  # remove trees with dbh < min dbh of tree-level inventory data
   ################################################################################
 
-  # remove trees <7.5cm in cells where there are some trees left
-  # otherwise, if all trees are <7.5 then replace by a line of NA
+  # define min dbh of tree-level inventory data
+  minDBH <- min(tree$DBH)
 
-  # first count total number of lines per cell, number of line with dbh <7.5
-  # and number of lines with dbh >= 7.5
-  treeCnt <- results %>% filter(!is.na(sp)) %>% mutate(n = 1, size = ifelse(dbh >= 7.5, 'big', 'small')) %>%
+  # remove trees < minDBH
+  # if all trees are < minDBH then replace by a line of NA
+
+  # first count total number of lines per cell, number of line with dbh < minDBH
+  # and number of lines with dbh >= minDBH
+  treeCnt <- results %>% filter(!is.na(sp)) %>% mutate(n = 1, size = ifelse(dbh >= minDBH, 'big', 'small')) %>%
                      group_by(cellID25) %>% count(size, wt = n) %>% pivot_wider(id_cols = cellID25, names_from = size, values_from = n) %>%
                      mutate(nbtot = sum(big, small, na.rm = TRUE))
   # list of cells where small trees can (simply) be removed
@@ -40,7 +44,7 @@ saveLandscape <- function(landscape){
   setToNAlist <- as.list(setToNAlist[, 'cellID25'])
 
   # remove trees
-  results <- results %>% filter(!( cellID25 %in% removelist$cellID25 & dbh <7.5)) %>% dplyr::select(-i)
+  results <- results %>% filter(!( cellID25 %in% removelist$cellID25 & dbh <minDBH)) %>% dplyr::select(-i)
 
   # set to NA
   # for that we remove the cells and add new NA lines

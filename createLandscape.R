@@ -82,7 +82,7 @@ managTable(landscape)
 managSynth(landscape)
 
 # produce minimap
-minimap(landscape)
+# minimap(landscape)
 
 # running time
 end_time <- Sys.time()
