@@ -116,6 +116,7 @@ managTable <- function(landscape){
   # define composition type
   ###############################################################
 
+  if(landscape == 'bauges'){
   # set threshold to identify mainSp
   # thresh = 0.8 means you will get the species making up for >= 80% of
   # the stand BA
@@ -128,16 +129,12 @@ managTable <- function(landscape){
                               cumulProp >= thresh ~ cumulProp), minCompo = min(HigherThanthresh, na.rm = TRUE)) %>%
                             filter(cumulProp <= minCompo) %>% summarise(mainSp = paste(sp, collapse=' - '))
   #
-
   # identify deciduous and coniferous stands
   mainSp <- mainSp %>% group_by(cellID100) %>% mutate(D = sum(str_detect(mainSp, deciduousSp)),
                                                       C = sum(str_detect(mainSp, coniferousSp)),
                                                       compoType = if_else(D>0 & C>0, 'DC', if_else(D>0 & C==0, 'D', 'C')))
   #
-
   # classify main species into composition types:
-  if(landscape == 'bauges'){
-
     # beech
     mainSp[mainSp$mainSp == 'Fagus sylvatica' , 'compoType'] <- 'beech'
     # fir and or spruce
@@ -171,7 +168,12 @@ managTable <- function(landscape){
     # ---------
 
   } else if(landscape == 'milicz'){
-    mainSp[mainSp$mainSp == 'Pinus sylvestris', 'compoType'] <- 'Pinus sylvestris'
+    # retrieve dominant species
+    mainSp <- tree %>% group_by(cellID100, sp) %>%
+                              summarise(BA = sum((pi * (dbh/200)^2) * n)) %>%
+                              group_by(cellID100) %>% arrange(cellID100, -BA) %>%
+                              filter(BA == max(BA)) %>% rename(compoType = sp)
+    #
   }
 
   # add to df
