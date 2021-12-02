@@ -10,7 +10,7 @@ managTable <- function(landscape){
   require(rgdal)
   require(raster)
   require(ggplot2)
-  library(stringr)
+  require(stringr)
 
   # load environmental data
   env <- read.csv(paste0(landPath, '/cell25.csv'))
@@ -35,10 +35,6 @@ managTable <- function(landscape){
   } else if(landscape == 'milicz'){
     # load protected areas
     protect <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_protected_area', encoding = 'UTF-8', use_iconv = TRUE)
-    # load ownership
-    # own <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_forest ownership', encoding = 'UTF-8', use_iconv = TRUE)
-    # load forest limits
-    forest <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_forest_stands', encoding = 'UTF-8', use_iconv = TRUE)
   }
 
   # load cellID100 raster
@@ -74,8 +70,7 @@ managTable <- function(landscape){
     # set shp extent (not necessary since we use intersect just below
     # but fixes a bugue in package raster when rasterizing afterwards...)
     protect <- crop(protect, cellID100)
-    # select protected areas only in study area
-    protect <- raster::intersect(protect, forest)
+
   }
 
   # convert into raster
@@ -190,7 +185,7 @@ managTable <- function(landscape){
 
     # convert into raster
     # use getCover to define proportion of each 100*100m cell covered by polygon
-    own <- rasterize(own, cellID100, getCover = TRUE)
+    own <- rasterize(own, cellID100, getCover = TRUE) #TODO: attention avec getcover?
     names(own) <- 'public'
 
     # stack with cellID100
@@ -199,19 +194,19 @@ managTable <- function(landscape){
     # convert into dataframe
     own <- as.data.frame(own)
 
-    if(landscape == 'bauges'){
-      # if public >= 0.5 then most of the cell is public --> replace by public.
-      # if public < 0.5 --> replace by private.
-      own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
-    } else if(landscape == 'milicz'){
-      # reverse condition for milicz
-      own <- own %>% mutate(owner = if_else(public >= 0.5, 'private', 'public'))
-    }
+    # if public >= 0.5 then most of the cell is public --> replace by public.
+    # if public < 0.5 --> replace by private.
+    own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
 
     # add to df
     df <- merge(df, own[, c('cellID100', 'owner')], by = 'cellID100')
+
   } else if(landscape == 'milicz'){
-    df$owner <- NA
+
+    # we only consider public forests in milicz as defined in saveLandscape
+    # --> set ownership to public wherever there's forest
+    df <- df %>% mutate(owner = ifelse(!is.na(BA), 'public', NA))
+
   }
 
 

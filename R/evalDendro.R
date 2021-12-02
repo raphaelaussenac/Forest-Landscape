@@ -37,7 +37,7 @@ evalDendro <- function(){
   pl1
   ggsave(file = paste0(evalPath, '/NdiffCell.pdf'), plot = pl1, width = 10, height = 10)
 
-  # distribution of differences between rounded and non-rounded number of trees per species
+  # distribution of differences between rounded and non-rounded number of trees
   # at the cell level depending on dbh classes
   sp <- results %>% group_by(cellID25, sp) %>% summarise(SpMeanDBH = sum(n * dbh) / sum(n), SpNDiff = sum(wlid) - sum(n))
   sp$meanDBHclass <- cut(sp$SpMeanDBH, 0:120)
@@ -46,7 +46,7 @@ evalDendro <- function(){
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   xlab('mean dbh in cells') +
-  ylab('species N diff at the cell level (negative values = overestimation)')
+  ylab('N diff at the cell level (negative values = overestimation)')
   pl2
   ggsave(file = paste0(evalPath, '/NdiffDBH.pdf'), plot = pl2, width = 30, height = 20)
 

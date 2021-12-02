@@ -8,6 +8,7 @@ saveLandscape <- function(landscape){
   require(dplyr)
   require(tidyr)
   require(raster)
+  require(rgdal)
 
   # load tree and env data
   tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
@@ -18,6 +19,11 @@ saveLandscape <- function(landscape){
   cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
   compo <- raster(paste0(tempPath, '/compoID.asc'))
   park <- raster(paste0(landPath, '/parkMask.asc'))
+  # only consider public forests at milicz
+  if(landscape == 'milicz'){
+    # load ownership
+    own <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_forest ownership', encoding = 'UTF-8', use_iconv = TRUE)
+  }
 
   ################################################################################
   # remove trees with dbh < min dbh of tree-level inventory data
@@ -84,13 +90,39 @@ saveLandscape <- function(landscape){
   isBecomes <- cbind(c(1, NA),
                      c(1, 0))
   compo <- reclassify(compo, rcl = isBecomes)
-  # union of park and compo
-  compoUpark <- park + compo
-  # convert values
-  isBecomes <- cbind(c(0, 1, 2),
-                     c(0, 0, 1))
-  forest <- reclassify(compoUpark, rcl = isBecomes)
-  names(forest) <- 'forest'
+
+  if(landscape == 'bauges'){
+    # union of park and compo
+    compoUpark <- park + compo
+    # convert values
+    isBecomes <- cbind(c(0, 1, 2),
+                       c(0, 0, 1))
+    forest <- reclassify(compoUpark, rcl = isBecomes)
+    names(forest) <- 'forest'
+
+  }
+
+  # only consider public forests at milicz
+  if(landscape == 'milicz'){
+    # convert ownership into raster
+    own <- rasterize(own[,1], cellID25, background = 10)
+    names(own) <- 'public'
+    # convert values
+    isBecomes <- cbind(c(1, 2, 10),
+                       c(1, 0, 0))
+    own <- reclassify(own, rcl = isBecomes)
+    names(own) <- 'public'
+
+    # union of own + compo
+    compoUown <- own + compo
+    # convert values
+    isBecomes <- cbind(c(0, 1, 2),
+                       c(0, 0, 1))
+    forest <- reclassify(compoUown, rcl = isBecomes)
+    names(forest) <- 'forest'
+
+  }
+
   # add forest to cell data
   cellID <- stack(cellID25, cellID100, forest)
   plot(cellID)
@@ -104,6 +136,9 @@ saveLandscape <- function(landscape){
   # save
   ################################################################################
 
+  # remove cells with no trees in tree data set
+  results <- results[!is.na(results$dbh),]
+
   # reduce table size in memory
   envdf$cellID100 <- as.integer(envdf$cellID100)
   envdf$forest <- as.integer(envdf$forest)
@@ -112,13 +147,14 @@ saveLandscape <- function(landscape){
   if(landscape == 'bauges'){
     colOrd <- c(colOrd,'swhc','pH','GRECO','SIQpet','SIFsyl','SIAalb','SIPabi')
   }
-  # save
+  # format
   envdf <- envdf %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID25, cellID100) %>%
                      mutate(across(c('elev','slope','aspect'), round, 4))
+  # define forest = 0 if there's no tree
+  envdf[!(envdf$cellID25 %in% unique(results$cellID25)), 'forest'] <- 0
+  # save
   write.csv(envdf, file = paste0(landPath, '/cell25.csv'), row.names = FALSE)
 
-  # remove cells with no trees
-  results <- results[!is.na(results$dbh),]
   # remove trees not in forest cells
   forestCells <- envdf[envdf$forest == 1, 'cellID25']
   results <- results %>% filter(cellID25 %in% forestCells)
