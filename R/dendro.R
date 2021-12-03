@@ -16,11 +16,11 @@ dendro <- function(landscape){
 
   # load lidar data
   Dg <- raster(paste0(tempPath, '/dg.asc'))
-  Dg[Dg > 1000] <- 1000 # correct the wrong min max values
+  Dg <- setMinMax(Dg)
   BA <- raster(paste0(tempPath, '/BA.asc'))
-  BA[BA > 1000] <- 1000 # correct the wrong min max values
+  BA <- setMinMax(BA)
   Dprop <- raster(paste0(tempPath, '/Dprop.asc'))
-  Dprop <- Dprop / 100
+  Dprop <- setMinMax(Dprop)
   cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
 
   # create raster stack
@@ -28,7 +28,6 @@ dendro <- function(landscape){
 
   # load NFI tree data
   tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
-
 
   ###############################################################
   # calculate N, Dg, BA, Dprop in NFI plots
@@ -55,9 +54,6 @@ dendro <- function(landscape){
   #
   ###############################################################
 
-  # rasterStack <- crop(rasterStack, extent(rasterStack)/5)
-  # cell <- rast1[800000]
-
   # Split data into 4 separate stack rasters
   xmin <- extent(rasterStack)[1]
   xmax <- extent(rasterStack)[2]
@@ -81,7 +77,6 @@ dendro <- function(landscape){
     cellID25 <- cell[5]
 
     if(sum(is.na(cell)) == 0 & dgtot > 0 & batot > 0){
-      # i <- 205157 # i = 205157 = plotid 4740 with 5sp = 2C + 3D:
       # deciduous - coniferous level -------------------------------------------------
       # calculate deciduous and coniferous ba (LIDAR)
       bad <- batot * dprop
@@ -103,11 +98,7 @@ dendro <- function(landscape){
       dgc <- as.numeric(unique(tree[tree$idp == id & tree$spType == 'C', 'Dgdc']))
 
       # calculate alpha correction coef for deciduous and coniferous
-      alphadc <- dgtot * sqrt( sum(bad/dgd^2, bac/dgc^2, na.rm = TRUE) / batot)
-
-      # assigne corrected dg to coniferous and deciduous
-      dgdcorrec <- dgd * alphadc
-      dgccorrec <- dgc * alphadc
+      alpha <- dgtot * sqrt( sum(bad/dgd^2, bac/dgc^2, na.rm = TRUE) / batot)
 
       # sp level ---------------------------------------------------------------------
 
@@ -117,35 +108,22 @@ dendro <- function(landscape){
       NFIplot[NFIplot$spType == 'C', 'BAdclid'] <- bac
       NFIplot$BAsplid <- NFIplot$BAdclid * NFIplot$spPropdc
 
-      # assign a dg (LIDAR) to all deciduous species
-      if(nrow(NFIplot[NFIplot$spType == 'D',]) > 0){
-        NFIplot[NFIplot$spType == 'D', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'D', 'Dgsp'] * alphadc
-      }
-      # assign a dg (LIDAR) to all coniferous species
-      if(nrow(NFIplot[NFIplot$spType == 'C',]) > 0){
-        NFIplot[NFIplot$spType == 'C', 'Dgsplid'] <- NFIplot[NFIplot$spType == 'C', 'Dgsp'] * alphadc
-      }
-
-      # calculate Nsp (LIDAR)
-      NFIplot$Nsplid <- 40000/pi * ( NFIplot$BAsplid / NFIplot$Dgsplid^2 )
-
       # tree level -------------------------------------------------------------------
 
       # calculate tree ba (LIDAR) from NFI tree ba proportion
       dbh <- tree[tree$idp == id,]
-      dbh <- merge(dbh, NFIplot[, c('species_name', 'Nsplid', 'Dgsplid', 'BAsplid')], by = 'species_name')
+      dbh <- merge(dbh, NFIplot[, c('species_name', 'BAsplid')], by = 'species_name')
       dbh$BAtreelid <- dbh$BAsplid * dbh$treePropsp
-      dbh[dbh$Nsplid > 0, 'alphatree'] <- alphadc
 
       # assign a DBH (LIDAR) to all trees
-      dbh$DBHlid <- dbh$DBH * dbh$alphatree
+      dbh$DBHlid <- dbh$DBH * alpha
 
       # assign weight to each tree
       dbh$wlid <- 40000 / pi * dbh$BAtreelid / dbh$DBHlid^2
 
       # calculate round(weight) for a 25*25m pixel
       # and set min weight to 1
-      dbh$w25m <- apply(as.data.frame(dbh[, 'wlid']), 1, function(x) max(1, round(x/16)))
+      dbh$w25m <- apply(as.data.frame(dbh[, 'wlid']), 1, function(x) max(1, round(x/16))) # changer système d'arrondi
 
       # assign new dbh to trees while keeping BAtreelid
       dbh$dbhlid25m <-sqrt(40000/pi * (dbh$BAtreelid/16) / dbh$w25m)
@@ -181,18 +159,6 @@ dendro <- function(landscape){
   end <- Sys.time()
   end - start
 
-  # results <- data.frame()
-  # for (i in 1:nrow(rast1[])){
-  #   results <- rbind(results, assignDendro(rast1[i], i, tree, NFIsp))
-  # }
-  # start <- Sys.time()
-  # cl <- makeCluster(8)
-  # registerDoParallel(cl)
-  # results <- foreach(i = 1:nrow(rast4[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast4[i], i = i, tree, NFIsp)}
-  # stopCluster(cl)
-  # end <- Sys.time()
-  # end - start
-
   # assemble results into one dataframe
   results1 <- as.data.frame(results[1])
   results2 <- as.data.frame(results[2])
@@ -219,3 +185,31 @@ dendro <- function(landscape){
   saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid', 'i')], file = paste0(tempPath, '/trees.rds'))
 
 }
+
+
+
+
+#
+#
+# a1 <- tree %>% filter(idp == id) %>%
+#                dplyr::select(species_name, DBH) %>%
+#                rename(dbh = DBH, sp = species_name) %>%
+#                mutate(src = 'NFI')
+# a2 <- df %>% dplyr::select(sp, dbh) %>%
+#              mutate(src = 'transformed')
+# a3 <- rbind(a1, a2)
+#
+# ggplot() +
+# geom_histogram(data = a3, aes(dbh, fill = sp), position = 'identity', alpha = 0.5) +
+# facet_wrap(~src) +
+# theme_bw()
+#
+# # valeurs LiDAR
+# round(batot, 2)
+# round(dgtot, 2)
+#
+# # valeurs NFI
+# round(unique(tree[tree$idp == id, c('BAtot')]), 2)
+# round(unique(tree[tree$idp == id, c('Dgtot')]), 2)
+#
+#
