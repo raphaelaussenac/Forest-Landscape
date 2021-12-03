@@ -11,6 +11,7 @@ managTable <- function(landscape){
   require(raster)
   require(ggplot2)
   require(stringr)
+  require(sf)
 
   # load environmental data
   env <- read.csv(paste0(landPath, '/cell25.csv'))
@@ -35,6 +36,8 @@ managTable <- function(landscape){
   } else if(landscape == 'milicz'){
     # load protected areas
     protect <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_protected_area', encoding = 'UTF-8', use_iconv = TRUE)
+    # load fertility map
+    fert <- sf::st_read('./data/milicz/GEO/Milicz_stands.shp')
   }
 
   # load cellID100 raster
@@ -342,15 +345,32 @@ managTable <- function(landscape){
 
   } else if(landscape == 'milicz'){
     df$density <- NA
-    df$manag <- as.character(df$structure)
+    # assign fertility
+    # convert fertility into raster
+    fert$fertility <- factor(fert$fertility)
+    fert <- raster::rasterize(fert, cellID100, field = "fertility")
+    names(fert) <- 'fertility'
+    # stack with cellID100
+    fert <- stack(cellID100, fert)
+    # convert into dataframe
+    fert <- as.data.frame(fert)
+    # add to df
+    df <- merge(df, fert, by = 'cellID100')
+    # define missing fertility values as the most abundant fertility class (2)
+    df <- df %>% mutate(fertility = case_when(!is.na(BA) & is.na(fertility) ~ 2, !is.na(BA) & !is.na(fertility) ~ fertility))
+    df$manag <- df$fertility
+    df$manag <- paste(df$compoType, '-', df$manag)
   }
-
 
   ###############################################################
   # define 'no management' areas
   ###############################################################
 
   df[(df$access == 0 | df$protect == 1) & !is.na(df$forestCellsPerHa), 'manag'] <- 'no manag'
+
+  if(landscape == 'milicz'){
+    df <- df %>% mutate(manag = case_when(manag == 'no manag' ~ paste(manag, '-', fertility), manag != 'no manag' ~ manag))
+  }
 
 
   ###############################################################
