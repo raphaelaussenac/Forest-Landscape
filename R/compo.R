@@ -153,7 +153,7 @@ compo <- function(landscape){
   # parallel calculation on raster cells (one raster after the other)
   clustCalc <- function(rast, assignCompo, NFI){
     # set cluster
-    cl <- makeCluster(8)
+    cl <- makeCluster(5)
     registerDoParallel(cl)
     results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignCompo(cell = rast[i], i = i, NFI)}
     stopCluster(cl)

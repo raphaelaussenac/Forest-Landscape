@@ -348,7 +348,7 @@ managTable <- function(landscape){
     # assign fertility
     # convert fertility into raster
     fert$fertility <- factor(fert$fertility)
-    fert <- raster::rasterize(fert, cellID100, field = "fertility")
+    fert <- raster::rasterize(fert, cellID100, field = 'fertility')
     names(fert) <- 'fertility'
     # stack with cellID100
     fert <- stack(cellID100, fert)

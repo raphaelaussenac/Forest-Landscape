@@ -33,16 +33,18 @@ evalDendro <- function(){
   pl1 <- ggplot()+
   geom_histogram(data = Ncell, aes(x = Ndiff), bins = 50, col = 'black', fill = 'white', alpha = 0.5) +
   theme_bw() +
+  geom_vline(xintercept = 0, linetype = 'dashed', color = 'red') +
   xlab('N diff at the cell level (negative values = overestimation)')
   pl1
   ggsave(file = paste0(evalPath, '/NdiffCell.pdf'), plot = pl1, width = 10, height = 10)
 
   # distribution of differences between rounded and non-rounded number of trees
   # at the cell level depending on dbh classes
-  sp <- results %>% group_by(cellID25, sp) %>% summarise(SpMeanDBH = sum(n * dbh) / sum(n), SpNDiff = sum(wlid) - sum(n))
-  sp$meanDBHclass <- cut(sp$SpMeanDBH, 0:120)
+  Ncelldbh <- results %>% group_by(cellID25) %>% summarise(meanDBH = sum(n * dbh) / sum(n), NDiff = sum(wlid) - sum(n))
+  Ncelldbh$meanDBHclass <- cut(Ncelldbh$meanDBH, 0:150)
   pl2 <- ggplot() +
-  geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
+  geom_boxplot(data = Ncelldbh, aes(x = meanDBHclass, y = NDiff), alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'red') +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   xlab('mean dbh in cells') +
@@ -52,8 +54,11 @@ evalDendro <- function(){
 
   # distribution of differences between rounded and non-rounded number of trees per species
   # at the cell level depending on dbh classes separately for each species
+  sp <- results %>% group_by(cellID25, sp) %>% summarise(SpMeanDBH = sum(n * dbh) / sum(n), SpNDiff = sum(wlid) - sum(n))
+  sp$meanDBHclass <- cut(sp$SpMeanDBH, 0:150)
   pl3 <- ggplot() +
   geom_boxplot(data = sp, aes(x = meanDBHclass, y = SpNDiff), alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = 'dashed', color = 'red') +
   facet_wrap(~ sp) +
   theme_bw() +
   theme(panel.grid.minor = element_blank(),

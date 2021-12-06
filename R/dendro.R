@@ -8,7 +8,6 @@ dendro <- function(landscape){
   require(dplyr)
   require(raster)
   require(doParallel)
-  require(ggplot2)
   require(tidyr)
 
   # load composition ID
@@ -66,6 +65,10 @@ dendro <- function(landscape){
   rast3 <- crop(rasterStack, c(xmin, xmax, ymin[2], ymax[2]))
   rast4 <- crop(rasterStack, c(xmin, xmax, ymin[1], ymax[1]))
 
+  # i <- 37150
+  # cell <- rast3[i]
+  # cell
+
   # function to assign n trees and their dbh to each cell
   assignDendro <- function(cell, i, tree, NFIsp){
 
@@ -121,19 +124,41 @@ dendro <- function(landscape){
       # assign weight to each tree
       dbh$wlid <- 40000 / pi * dbh$BAtreelid / dbh$DBHlid^2
 
+      # add i and cellID now ------
+      dbh$i <- i
+      dbh$cellID25 <- cellID25
+      # ---------------------------
+
       # calculate round(weight) for a 25*25m pixel
-      # and set min weight to 1
-      dbh$w25m <- apply(as.data.frame(dbh[, 'wlid']), 1, function(x) max(1, round(x/16))) # changer système d'arrondi
+      # and set min weight to 1 or 0
+      # dbh$w25m <- apply(as.data.frame(dbh[, 'wlid']), 1, function(x) max(1, round(x/16)))
+
+      # calculate weight for a 25*25m pixel
+      dbh$w25m <- dbh$wlid / 16
+      # if weight > 0.5 --> round(weight)
+      dbh[dbh$w25m > 0.5, 'w25m'] <- round(dbh[dbh$w25m > 0.5, 'w25m'])
+      # if weight <= 0.5 --> set weight to 0 or 1 depending on weight
+      # (stochastic process)
+      dbh$random <- runif(nrow(dbh), min = 0, max = 0.5)
+      dbh$randSmallerThanw25m <- dbh$random < dbh$w25m
+      dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == TRUE, 'w25m'] <- 1
+      dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == FALSE, 'w25m'] <- 0
+
+      # remove trees with w25m = 0
+      dbh <- dbh[dbh$w25m > 0,]
 
       # assign new dbh to trees while keeping BAtreelid
       dbh$dbhlid25m <-sqrt(40000/pi * (dbh$BAtreelid/16) / dbh$w25m)
 
       # return
-      df <- dbh[, c('species_name', 'wlid', 'w25m', 'dbhlid25m')]
+      df <- dbh[, c('species_name', 'wlid', 'w25m', 'dbhlid25m', 'i', 'cellID25')]
       df$wlid <- df$wlid/16
-      df$i <- i
-      df$cellID25 <- cellID25
       colnames(df) <- c('sp', 'wlid', 'n', 'dbh', 'i', 'cellID25')
+      # if all trees are removed because of their small weights
+      # an empty df must be created
+      if(nrow(df) == 0){
+        df <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = i, cellID25 = cellID25)
+      }
 
     } else{
       df <- data.frame(sp = NA, wlid = NA, n = NA, dbh = NA, i = i, cellID25 = cellID25)
@@ -146,7 +171,7 @@ dendro <- function(landscape){
   # parallel calculation on raster cells (one raster after the other)
   clustCalc <- function(rast, assignDendro, tree, NFIsp){
     # set cluster
-    cl <- makeCluster(8)
+    cl <- makeCluster(5)
     registerDoParallel(cl)
     results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
     stopCluster(cl)
@@ -185,31 +210,3 @@ dendro <- function(landscape){
   saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid', 'i')], file = paste0(tempPath, '/trees.rds'))
 
 }
-
-
-
-
-#
-#
-# a1 <- tree %>% filter(idp == id) %>%
-#                dplyr::select(species_name, DBH) %>%
-#                rename(dbh = DBH, sp = species_name) %>%
-#                mutate(src = 'NFI')
-# a2 <- df %>% dplyr::select(sp, dbh) %>%
-#              mutate(src = 'transformed')
-# a3 <- rbind(a1, a2)
-#
-# ggplot() +
-# geom_histogram(data = a3, aes(dbh, fill = sp), position = 'identity', alpha = 0.5) +
-# facet_wrap(~src) +
-# theme_bw()
-#
-# # valeurs LiDAR
-# round(batot, 2)
-# round(dgtot, 2)
-#
-# # valeurs NFI
-# round(unique(tree[tree$idp == id, c('BAtot')]), 2)
-# round(unique(tree[tree$idp == id, c('Dgtot')]), 2)
-#
-#
