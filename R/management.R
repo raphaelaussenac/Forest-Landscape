@@ -36,8 +36,6 @@ managTable <- function(landscape){
   } else if(landscape == 'milicz'){
     # load protected areas
     protect <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_protected_area', encoding = 'UTF-8', use_iconv = TRUE)
-    # load fertility map
-    # fert <- sf::st_read('./data/milicz/GEO/Milicz_stands.shp')
   }
 
   # load cellID100 raster
@@ -171,7 +169,13 @@ managTable <- function(landscape){
                               summarise(BA = sum((pi * (dbh/200)^2) * n)) %>%
                               group_by(cellID100) %>% arrange(cellID100, -BA) %>%
                               filter(BA == max(BA)) %>% rename(compoType = sp)
-    #
+    # list of managed species
+    spList <- c('Pinus sylvestris', 'Picea abies', 'Larix decidua',
+                'Quercus robur', 'Fagus sylvatica', 'Betula pendula',
+                'Alnus glutinosa')
+    # if not managed species --> 'other sp'
+    mainSp <- mainSp %>% mutate(compoType = case_when(compoType %in% spList ~ compoType, !(compoType %in% spList) ~ 'other sp'))
+
   }
 
   # add to df
@@ -241,8 +245,6 @@ managTable <- function(landscape){
   } else if(landscape == 'milicz'){
     df$access <- 1
   }
-
-
 
   ###############################################################
   # number of forest 25*25m cells in 100*100m cells
@@ -320,7 +322,6 @@ managTable <- function(landscape){
     df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'medium'
     df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.65, 'density'] <- 'high'
 
-
     ###############################################################
     # add 'final cut' management based on BA, rdi, Dg
     ###############################################################
@@ -344,23 +345,9 @@ managTable <- function(landscape){
     df[df$structure == 'even' & !is.na(df$structure) & df$Dg <= 20 & df$compoType == 'D' & !is.na(df$compoType) & df$sub == 2, 'manag'] <- 'coppice'
 
   } else if(landscape == 'milicz'){
-    df$density <- NA
-    df$manag <- paste(df$compoType)
-    # # assign fertility
-    # # convert fertility into raster
-    # fert$fertility <- factor(fert$fertility)
-    # fert <- raster::rasterize(fert, cellID100, field = 'fertility')
-    # names(fert) <- 'fertility'
-    # # stack with cellID100
-    # fert <- stack(cellID100, fert)
-    # # convert into dataframe
-    # fert <- as.data.frame(fert)
-    # # add to df
-    # df <- merge(df, fert, by = 'cellID100')
-    # # define missing fertility values as the most abundant fertility class (2)
-    # df <- df %>% mutate(fertility = case_when(!is.na(BA) & is.na(fertility) ~ 2, !is.na(BA) & !is.na(fertility) ~ fertility))
-    # df$manag <- df$fertility
-    # df$manag <- paste(df$compoType, '-', df$manag)
+    df <- df %>% mutate(density = NA,
+                        manag = case_when(compoType != 'other sp'~ compoType, compoType == 'other sp'~ 'no manag'))
+
   }
 
   ###############################################################
@@ -368,11 +355,6 @@ managTable <- function(landscape){
   ###############################################################
 
   df[(df$access == 0 | df$protect == 1) & !is.na(df$forestCellsPerHa), 'manag'] <- 'no manag'
-
-  # if(landscape == 'milicz'){
-  #   df <- df %>% mutate(manag = case_when(manag == 'no manag' ~ paste(manag, '-', fertility), manag != 'no manag' ~ manag))
-  # }
-
 
   ###############################################################
   # save
