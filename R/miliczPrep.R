@@ -20,15 +20,17 @@ prepMilicz <- function(){
   ###############################################################
 
   # elevation (m a.s.l.)
-  load('./data/milicz/GEO/altitude.rda')
+  load('./data/milicz/GEO/topography.Milicz.rda')
   elevation <- altitude
   names(elevation) <- 'elev'
 
-  # slope (degree)
-  slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
+  # aspect (degrees)
+  aspect <- expo_deg
+  names(aspect) <- 'aspect'
 
-  # aspect (degree)
-  aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
+  # slope (degrees)
+  slope <- slope_deg
+  names(slope) <- 'slope'
 
   # case study area extent ('park' layer)
   # retrieve from lidar slope map
