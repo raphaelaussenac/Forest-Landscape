@@ -169,6 +169,20 @@ managSynth <- function(landscape){
 
     write.csv(tab, paste0(evalPath, '/managSyn.csv'), row.names = F)
 
+  } else if(landscape == 'milicz'){
+    tab <- df %>% group_by(manag, compoType) %>% summarise(surf = n()) %>%
+                  filter(!is.na(compoType))
+    tab1 <- tab %>% filter(manag == 'no manag') %>% pivot_wider(names_from = compoType, values_from = surf)
+    missingCol <- unique(tab$compoType)[!(unique(tab$compoType) %in% names(tab1))]
+    tab1[, missingCol] <-  0
+    tab2 <- tab %>% filter(manag != 'no manag') %>%
+                    mutate(manag = 'even') %>% pivot_wider(names_from = compoType, values_from = surf)
+    missingCol <- unique(tab$compoType)[!(unique(tab$compoType) %in% names(tab2))]
+    tab2[, missingCol] <-  0
+    tab3 <- rbind(tab1[, names(tab2)], tab2)
+
+    write.csv(tab3, paste0(evalPath, '/managSyn.csv'), row.names = F)
+
   }
 
 
