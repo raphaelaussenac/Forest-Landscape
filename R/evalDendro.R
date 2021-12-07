@@ -76,15 +76,17 @@ evalDendro <- function(){
   sum(Ncell$Ndiff, na.rm = TRUE)
   # relative to the total number of trees (in %)
   sum(Ncell$Ndiff, na.rm = TRUE) * 100 /sum(results$n, na.rm = TRUE)
+  # quantiles of Ndiff
+  quantile(Ncell$Ndiff)
 
   ################################################################################
   # check whether BAlidar = sum of BA of trees at each cell
   ################################################################################
 
-  BAinit <- results %>% group_by(cellID25) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n * 16)) %>% arrange(cellID25)
+  BAinit <- results %>% group_by(cellID25) %>% summarise(BAtot = sum((pi * (dbh/200)^2) * n)) %>% arrange(cellID25)
   df <- merge(df, BAinit, by = 'cellID25', all.x = TRUE)
-  df$BAdiff25m <- (df$BA / 16)  - (df$BAtot /16)
-  df$BAreldiff25m <- 100 - ( (df$BAtot /16) * 100 / (df$BA / 16) )
+  df$BAdiff25m <- (df$BA / 16) - df$BAtot
+  df$BAreldiff25m <- 100 - ( df$BAtot * 100 / (df$BA / 16) )
 
   # difference should be as close to zero as possible
   pdf(file = paste0(evalPath, '/BAdiff25m.pdf'))

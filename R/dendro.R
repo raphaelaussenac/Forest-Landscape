@@ -65,7 +65,7 @@ dendro <- function(landscape){
   rast3 <- crop(rasterStack, c(xmin, xmax, ymin[2], ymax[2]))
   rast4 <- crop(rasterStack, c(xmin, xmax, ymin[1], ymax[1]))
 
-  # i <- 37150
+  # i <- 37150 # milicz
   # cell <- rast3[i]
   # cell
 
@@ -129,20 +129,33 @@ dendro <- function(landscape){
       dbh$cellID25 <- cellID25
       # ---------------------------
 
-      # calculate round(weight) for a 25*25m pixel
+      # calculate round(weight) for a 25*25m pixel --------------------------------------------- method 1
       # and set min weight to 1 or 0
       # dbh$w25m <- apply(as.data.frame(dbh[, 'wlid']), 1, function(x) max(1, round(x/16)))
 
-      # calculate weight for a 25*25m pixel
+      # # calculate weight for a 25*25m pixel (with stochastic process for w <= 0.5) ----------- method 2
+      # dbh$w25m <- dbh$wlid / 16
+      # # if weight > 0.5 --> round(weight)
+      # dbh[dbh$w25m > 0.5, 'w25m'] <- round(dbh[dbh$w25m > 0.5, 'w25m'])
+      # # if weight <= 0.5 --> set weight to 0 or 1 depending on weight
+      # # (stochastic process)
+      # dbh$random <- runif(nrow(dbh), min = 0, max = 0.5)
+      # dbh$randSmallerThanw25m <- dbh$random < dbh$w25m
+      # dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == TRUE, 'w25m'] <- 1
+      # dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == FALSE, 'w25m'] <- 0
+
+      # # calculate weight for a 25*25m pixel with a Poisson distribution ---------------------- method 3
+      # dbh$w25m <- dbh$wlid / 16
+      # dbh$w25m <- rpois(nrow(dbh), dbh$w25m)
+
+      # calculate weight for a 25*25m pixel depending on decimal of wlid ----------------------- method 4
       dbh$w25m <- dbh$wlid / 16
-      # if weight > 0.5 --> round(weight)
-      dbh[dbh$w25m > 0.5, 'w25m'] <- round(dbh[dbh$w25m > 0.5, 'w25m'])
-      # if weight <= 0.5 --> set weight to 0 or 1 depending on weight
-      # (stochastic process)
-      dbh$random <- runif(nrow(dbh), min = 0, max = 0.5)
-      dbh$randSmallerThanw25m <- dbh$random < dbh$w25m
-      dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == TRUE, 'w25m'] <- 1
-      dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == FALSE, 'w25m'] <- 0
+      dbh$decimal <- dbh$w25m - floor(dbh$w25m)
+      dbh$random <- runif(nrow(dbh), min = 0, max = 1)
+      dbh$randSmallerThanw25m <- dbh$random < dbh$decimal
+      dbh[dbh$randSmallerThanw25m == TRUE, 'add'] <- 1
+      dbh[dbh$randSmallerThanw25m == FALSE, 'add'] <- 0
+      dbh$w25m <- floor(dbh$w25m) + dbh$add
 
       # remove trees with w25m = 0
       dbh <- dbh[dbh$w25m > 0,]
