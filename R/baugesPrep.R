@@ -10,7 +10,7 @@ prepBauges <- function(){
   # rasterize is faster with velox but package is
   # not yet compatible with R 4.0.4
   # require(velox)
-  require(gdalUtils)
+  # require(gdalUtils)
   require(sf)
   require(ggplot2)
 
@@ -22,18 +22,17 @@ prepBauges <- function(){
   park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
 
   # elevation (m a.s.l.)
-  elevation <- raster('./data/bauges/GEO/MNT_all_5m.tif')
-  # set projection
-  crs(elevation) <- crs(park)
-  # set resolution to 25*25 instead of 5*5
-  elevation <- aggregate(elevation, fact = 5)
+  load('./data/bauges/GEO/topography.Bauges.rda')
+  elevation <- altitude
   names(elevation) <- 'elev'
 
-  # slope (degree)
-  slope <- terrain(elevation, opt = 'slope', unit = 'degrees', neighbors = 8)
+  # aspect (degrees)
+  aspect <- expo_deg
+  names(aspect) <- 'aspect'
 
-  # aspect (degree)
-  aspect <- terrain(elevation, opt = 'aspect', unit = 'degrees', neighbors = 8)
+  # slope (degrees)
+  slope <- slope_deg
+  names(slope) <- 'slope'
 
   # convert park into raster and set extent + resolution
   ext <- extent(elevation)
@@ -41,7 +40,7 @@ prepBauges <- function(){
   park$ID <- as.factor(park$ID)
   parkRaster <- rasterize(park, r, field = 'ID')
   # set projection
-  crs(parkRaster) <- crs(park)
+  crs(parkRaster) <- crs(elevation)
   # convert NA into 0
   isBecomes <- cbind(c(1, NA),
                      c(1, 0))
@@ -60,19 +59,18 @@ prepBauges <- function(){
   names(pH) <- 'pH'
 
   # Quadratic diameter (cm) [0, 80]
-  dg <- raster('./data/bauges/GEO/rastDg75error.clean.tif')
-  crs(dg) <- crs(park)
+  dg <- raster('./data/bauges/GEO/map.DBH.stratified.tif')
+  crs(dg) <- crs(elevation)
   dg <- resample(dg, elevation)
 
   # basal area (m2) [0, 120]
-  BA <- raster('./data/bauges/GEO/rastG75error.clean.tif')
-  crs(BA) <- crs(park)
+  BA <- raster('./data/bauges/GEO/map.Basal_area.stratified.tif')
+  crs(BA) <- crs(elevation)
   BA <- resample(BA, elevation)
 
   # Deciduous proportion (% of total BA)
-  Dprop <- raster('./data/bauges/GEO/propGR_ONF_25filled.tif')
-  Dprop <- 100 - Dprop
-  crs(Dprop) <- crs(park)
+  Dprop <- raster('./data/bauges/GEO/map.Deciduous_proportion.stratified.tif')
+  crs(Dprop) <- crs(elevation)
   Dprop <- resample(Dprop, elevation)
 
   # create cell ID raster
@@ -86,7 +84,7 @@ prepBauges <- function(){
   # convert into a raster
   greco$CODEGRECO <- as.factor(greco$CODEGRECO)
   grecoRaster <- rasterize(greco, cellID25, field='CODEGRECO')
-  crs(grecoRaster) <- crs(park)
+  crs(grecoRaster) <- crs(elevation)
   names(grecoRaster) <- 'GRECO'
 
   ###############################################################

@@ -10,7 +10,7 @@ prepMilicz <- function(){
   # rasterize is faster with velox but package is
   # not yet compatible with R 4.0.4
   # require(velox)
-  require(gdalUtils)
+  # require(gdalUtils)
   require(sf)
   require(stringr)
   require(dplyr)
