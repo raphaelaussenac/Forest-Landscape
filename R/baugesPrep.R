@@ -13,6 +13,10 @@ prepBauges <- function(){
   # require(gdalUtils)
   require(sf)
   require(ggplot2)
+  require(dplyr)
+
+  # load NFI tree data
+  tree <- read.csv('./data/bauges/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
 
   ###############################################################
   # load/create data and set extent and resolution
@@ -20,6 +24,7 @@ prepBauges <- function(){
 
   # park
   park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
+  park <- park[, 'ID']
 
   # elevation (m a.s.l.)
   load('./data/bauges/GEO/topography.Bauges.rda')
@@ -38,7 +43,7 @@ prepBauges <- function(){
   ext <- extent(elevation)
   r <- raster(ext, res=res(elevation))
   park$ID <- as.factor(park$ID)
-  parkRaster <- rasterize(park, r, field = 'ID')
+  parkRaster <- rasterize(park, r)
   # set projection
   crs(parkRaster) <- crs(elevation)
   # convert NA into 0
@@ -58,20 +63,33 @@ prepBauges <- function(){
   pH <- resample(pH, elevation)
   names(pH) <- 'pH'
 
+  # get range of Dg and Ba values
+  df <- tree %>% group_by(idp) %>% mutate(DBH = c13 / pi) %>%
+               summarise(Dg = sqrt(sum(DBH^2 * w)/sum(w)),
+                         BA = sum((pi * (DBH/200)^2) * w))
+  #
+
   # Quadratic diameter (cm) [0, 80]
   dg <- raster('./data/bauges/GEO/map.DBH.stratified.tif')
+  # limit values to range in inventory data
+  dg[dg > max(df$Dg)] <- max(df$Dg)
   crs(dg) <- crs(elevation)
   dg <- resample(dg, elevation)
+  names(dg) <- 'Dg'
 
   # basal area (m2) [0, 120]
   BA <- raster('./data/bauges/GEO/map.Basal_area.stratified.tif')
+  # limit values to range in inventory data
+  BA[BA > max(df$BA)] <- max(df$BA)
   crs(BA) <- crs(elevation)
   BA <- resample(BA, elevation)
+  names(BA) <- 'BA'
 
   # Deciduous proportion (% of total BA)
   Dprop <- raster('./data/bauges/GEO/map.Deciduous_proportion.stratified.tif')
   crs(Dprop) <- crs(elevation)
   Dprop <- resample(Dprop, elevation)
+  names(Dprop) <- 'Dprop'
 
   # create cell ID raster
   ext <- extent(elevation)
@@ -98,9 +116,9 @@ prepBauges <- function(){
   writeRaster(swhc, filename = paste0(landPath, '/swhc.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(pH, filename = paste0(landPath, '/pH.asc'), format = 'ascii', overwrite = TRUE)
   writeRaster(cellID25, filename = paste0(landPath, '/cellID25.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(dg, filename = paste0(tempPath, '/dg.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(BA, filename = paste0(tempPath, '/BA.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(Dprop, filename = paste0(tempPath, '/Dprop.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(dg, filename = paste0(tempPath, '/dg.grd'), format = 'raster', overwrite = TRUE)
+  writeRaster(BA, filename = paste0(tempPath, '/BA.grd'), format = 'raster', overwrite = TRUE)
+  writeRaster(Dprop, filename = paste0(tempPath, '/Dprop.grd'), format = 'raster', overwrite = TRUE)
   writeRaster(grecoRaster, filename = paste0(tempPath, '/greco.asc'), format = 'ascii', overwrite = TRUE)
 
   ###############################################################
@@ -164,13 +182,11 @@ prepBauges <- function(){
 
 
   ###############################################################
-  # load tree data and vegetation type data
+  # load vegetation type data
   ###############################################################
 
   # load TFV spatial data
   bd <- readOGR(dsn = './data/bauges/GEO', layer = 'BD_Foret_V2_PNRfilled_Foret_2014', encoding = 'UTF-8', use_iconv = TRUE)
-  # load NFI tree data
-  tree <- read.csv('./data/bauges/NFI/arbres_Bauges_2020_10_15.csv', sep = ';')
   # load correspondence between NFI plots and TFV types
   crpdTFV <- read.csv('./data/bauges/NFI/codeTFV_Bauges_2020_10_15.csv', sep = ';')
 

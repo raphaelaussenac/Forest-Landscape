@@ -14,12 +14,9 @@ dendro <- function(landscape){
   compo <- raster(paste0(tempPath, '/compoID.asc'))
 
   # load lidar data
-  Dg <- raster(paste0(tempPath, '/dg.asc'))
-  Dg <- setMinMax(Dg)
-  BA <- raster(paste0(tempPath, '/BA.asc'))
-  BA <- setMinMax(BA)
-  Dprop <- raster(paste0(tempPath, '/Dprop.asc'))
-  Dprop <- setMinMax(Dprop)
+  Dg <- raster(paste0(tempPath, '/dg.grd'))
+  BA <- raster(paste0(tempPath, '/BA.grd'))
+  Dprop <- raster(paste0(tempPath, '/Dprop.grd'))
   cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
 
   # create raster stack

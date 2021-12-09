@@ -13,12 +13,9 @@ compo <- function(landscape){
   require(doParallel)
 
   # load LIDAR rasters
-  Dg <- raster(paste0(tempPath, '/dg.asc'))
-  Dg <- setMinMax(Dg)
-  BA <- raster(paste0(tempPath, '/BA.asc'))
-  BA <- setMinMax(BA)
-  Dprop <- raster(paste0(tempPath, '/Dprop.asc'))
-  Dprop <- setMinMax(Dprop)
+  Dg <- raster(paste0(tempPath, '/dg.grd'))
+  BA <- raster(paste0(tempPath, '/BA.grd'))
+  Dprop <- raster(paste0(tempPath, '/Dprop.grd'))
   if(landscape == 'bauges'){
     TFVraster <- raster(paste0(tempPath, '/tfv.asc'))
     names(TFVraster) <- 'CODE_TFV'
