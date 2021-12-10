@@ -16,92 +16,10 @@ prepMilicz <- function(){
   require(dplyr)
 
   ###############################################################
-  # load/create data and set extent and resolution
-  ###############################################################
-
-  # elevation (m a.s.l.)
-  load('./data/milicz/GEO/topography.Milicz.rda')
-  elevation <- altitude
-  names(elevation) <- 'elev'
-
-  # aspect (degrees)
-  aspect <- expo_deg
-  names(aspect) <- 'aspect'
-
-  # slope (degrees)
-  slope <- slope_deg
-  names(slope) <- 'slope'
-
-  # case study area extent ('park' layer)
-  # retrieve from lidar slope map
-  parkRaster <- slope
-  # convert non NA values in 1
-  parkRaster[!is.na(parkRaster)] <- 1
-  # convert NA into 0
-  isBecomes <- cbind(c(1, NA),
-                     c(1, 0))
-  parkRaster <- reclassify(parkRaster, rcl = isBecomes)
-  names(parkRaster) <- 'park'
-
-  # Quadratic diameter (cm)
-  dg <- raster('./data/milicz/GEO/map.DBH.stratified.tif')
-  crs(dg) <- crs(parkRaster)
-  dg <- resample(dg, elevation)
-
-  # basal area (m2)
-  BA <- raster('./data/milicz/GEO/map.BA.stratified.tif')
-  crs(BA) <- crs(parkRaster)
-  BA <- resample(BA, elevation)
-
-  # Deciduous proportion
-  Dprop <- raster('./data/milicz/GEO/map.DP.stratified.tif')
-  crs(Dprop) <- crs(parkRaster)
-  Dprop <- resample(Dprop, elevation)
-
-  # create cell ID raster
-  ext <- extent(elevation)
-  cellID25 <- raster(ext, res = res(elevation))
-  cellID25$cellID25 <- c(1:(nrow(cellID25) * ncol(cellID25)))
-  cellID25 <- cellID25$cellID25
-
-  ###############################################################
-  # save ascii
-  ###############################################################
-
-  writeRaster(parkRaster, filename = paste0(landPath, '/parkMask.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(elevation, filename = paste0(landPath, '/elev.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(slope, filename = paste0(landPath, '/slope.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(aspect, filename = paste0(landPath, '/aspect.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(cellID25, filename = paste0(landPath, '/cellID25.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(dg, filename = paste0(tempPath, '/dg.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(BA, filename = paste0(tempPath, '/BA.asc'), format = 'ascii', overwrite = TRUE)
-  writeRaster(Dprop, filename = paste0(tempPath, '/Dprop.asc'), format = 'ascii', overwrite = TRUE)
-
-  ###############################################################
-  # save data frame
-  ###############################################################
-
-  # create raster stack
-  rasterStack <- stack(cellID25, parkRaster, elevation, slope,
-                       aspect)
-  plot(rasterStack)
-
-  # convert into data frame
-  envdf <- as.data.frame(rasterStack)
-
-  # save
-  envdf$cellID25 <- as.integer(envdf$cellID25)
-  envdf$park <- as.integer(envdf$park)
-  envdf$elev <- round(envdf$elev, 2)
-  envdf$slope <- round(envdf$slope, 2)
-  envdf$aspect <- round(envdf$aspect, 2)
-  saveRDS(envdf, file = paste0(tempPath, '/envVariablesTemp.rds'))
-
-  ###############################################################
   # load tree data
   ###############################################################
 
-  # load NFI tree data
+  # load tree inventory data
   tree <- read.csv('./data/milicz/inventory/Milicz_trees.csv', sep = ';')
 
   # function to replace commas by dots and transform character vectors
@@ -140,5 +58,101 @@ prepMilicz <- function(){
 
   # save tree file
   saveRDS(tree, file = paste0(tempPath, '/treeTemp.rds'))
+
+  ###############################################################
+  # load/create data and set extent and resolution
+  ###############################################################
+
+  # elevation (m a.s.l.)
+  load('./data/milicz/GEO/topography.Milicz.rda')
+  elevation <- altitude
+  names(elevation) <- 'elev'
+
+  # aspect (degrees)
+  aspect <- expo_deg
+  names(aspect) <- 'aspect'
+
+  # slope (degrees)
+  slope <- slope_deg
+  names(slope) <- 'slope'
+
+  # case study area extent ('park' layer)
+  # retrieve from lidar slope map
+  parkRaster <- slope
+  # convert non NA values in 1
+  parkRaster[!is.na(parkRaster)] <- 1
+  # convert NA into 0
+  isBecomes <- cbind(c(1, NA),
+                     c(1, 0))
+  parkRaster <- reclassify(parkRaster, rcl = isBecomes)
+  names(parkRaster) <- 'park'
+
+  # get range of Dg and Ba values
+  df <- tree %>% group_by(idp) %>%
+                 summarise(Dg = sqrt(sum(DBH^2 * w)/sum(w)),
+                           BA = sum((pi * (DBH/200)^2) * w))
+  #
+
+  # Quadratic diameter (cm)
+  dg <- raster('./data/milicz/GEO/map.DBH.stratified.tif')
+  # limit values to range in inventory data
+  dg[dg > max(df$Dg)] <- max(df$Dg)
+  crs(dg) <- crs(parkRaster)
+  dg <- resample(dg, elevation)
+  names(dg) <- 'Dg'
+
+  # basal area (m2)
+  BA <- raster('./data/milicz/GEO/map.BA.stratified.tif')
+  # limit values to range in inventory data
+  BA[BA > max(df$BA)] <- max(df$BA)
+  crs(BA) <- crs(parkRaster)
+  BA <- resample(BA, elevation)
+  names(BA) <- 'BA'
+
+  # Deciduous proportion
+  Dprop <- raster('./data/milicz/GEO/map.DP.stratified.tif')
+  crs(Dprop) <- crs(parkRaster)
+  Dprop <- resample(Dprop, elevation)
+  names(Dprop) <- 'Dprop'
+
+  # create cell ID raster
+  ext <- extent(elevation)
+  cellID25 <- raster(ext, res = res(elevation))
+  cellID25$cellID25 <- c(1:(nrow(cellID25) * ncol(cellID25)))
+  cellID25 <- cellID25$cellID25
+
+  ###############################################################
+  # save ascii
+  ###############################################################
+
+  writeRaster(parkRaster, filename = paste0(landPath, '/parkMask.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(elevation, filename = paste0(landPath, '/elev.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(slope, filename = paste0(landPath, '/slope.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(aspect, filename = paste0(landPath, '/aspect.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(cellID25, filename = paste0(landPath, '/cellID25.asc'), format = 'ascii', overwrite = TRUE)
+  writeRaster(dg, filename = paste0(tempPath, '/dg.grd'), format = 'raster', overwrite = TRUE)
+  writeRaster(BA, filename = paste0(tempPath, '/BA.grd'), format = 'raster', overwrite = TRUE)
+  writeRaster(Dprop, filename = paste0(tempPath, '/Dprop.grd'), format = 'raster', overwrite = TRUE)
+
+  ###############################################################
+  # save data frame
+  ###############################################################
+
+  # create raster stack
+  rasterStack <- stack(cellID25, parkRaster, elevation, slope,
+                       aspect)
+  plot(rasterStack)
+
+  # convert into data frame
+  envdf <- as.data.frame(rasterStack)
+
+  # save
+  envdf$cellID25 <- as.integer(envdf$cellID25)
+  envdf$park <- as.integer(envdf$park)
+  envdf$elev <- round(envdf$elev, 2)
+  envdf$slope <- round(envdf$slope, 2)
+  envdf$aspect <- round(envdf$aspect, 2)
+  saveRDS(envdf, file = paste0(tempPath, '/envVariablesTemp.rds'))
+
 
 }
