@@ -26,6 +26,39 @@ saveLandscape <- function(landscape){
   }
 
   ################################################################################
+  # after splitting landscapes into strips (in dendro.R)
+  # check whether all cells are present only once
+  # check whether there is no missing cell
+  ################################################################################
+
+  # ensure cells are only present once (only in one raster strip)
+  # get cellID25 of all strips
+  getCellID <- function(df){
+    cells <- unique(df$cellID25)
+    return(cells)
+  }
+  cells <- lapply(results, getCellID)
+  # are there duplicated cells
+  cellList <- do.call(c, cells)
+  dup <- sum(duplicated(cellList))
+
+  # print error message if cells are duplicated
+  if(dup > 0){
+    stop("When splitting rasters into strips (in dendro.R) some cells are duplicated. Try to split ratser in a different number of strips")
+  }
+  # print error message if cells are missing
+  if(length(cellList) != (nrow(cellID25) * ncol(cellID25))){
+    stop("When splitting rasters into strips (in dendro.R) some cells are lost. Try to split ratser in a different number of strips")
+  }
+
+  ################################################################################
+  # format tree data
+  ################################################################################
+
+  # gather all strips into one data frame
+  results <- do.call(rbind.data.frame, results)
+
+  ################################################################################
   # remove trees with dbh < min dbh of tree-level inventory data
   ################################################################################
 
