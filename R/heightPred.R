@@ -20,6 +20,7 @@ heightPred <- function(landscape){
 
   # load correspondence between NFI species code and latin Names
   spCor <- read.csv('./data/spCodeCorrespond.csv', sep = ',')
+  spCor <- spCor %>% dplyr::select('latinName', 'franceCode') %>% rename(espar = franceCode)
 
   ###############################################################
   # prepare tree data for predictions
@@ -27,8 +28,7 @@ heightPred <- function(landscape){
 
   # adapt species names for height models
   if(landscape == 'bauges'){
-    tree <- merge(tree, spCor[, c('latinName', 'franceCode')], by.x = 'sp', by.y = 'latinName', all.x = TRUE)
-    tree <- tree %>% rename(espar = franceCode)
+    tree <- left_join(x = tree, y = spCor, by = c('sp' = 'latinName'))
   } else if(landscape == 'milicz'){
     tree$espar <- NA
     tree[tree$sp == 'Pinus sylvestris', 'espar'] <- 'Pisy'
