@@ -21,6 +21,9 @@ compo <- function(landscape){
     names(TFVraster) <- 'CODE_TFV'
   }
 
+  # load cellID raster
+  cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
+
   # load tree data and vegetation type data
   tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
 
@@ -100,26 +103,37 @@ compo <- function(landscape){
 
 
   ###############################################################
-  # claculate distance between forest cells values and NFI values
-  # and assign composition of nearest NFI plot
+  # Split raster into horizontal strips (speed-up calculation)
   ###############################################################
 
   # Split data into two separate stack rasters
-  compoRaster <- stack(TFVraster, Dprop, Dg01, BA01, compo)
+  compoRaster <- stack(TFVraster, Dprop, Dg01, BA01, compo, cellID25)
 
-  # rast1 <- crop(compoRaster, extent(compoRaster)/10)
-  # rast2 <- crop(compoRaster, extent(compoRaster)/20)
+  # gest compoRaster coordinates
+  xmin <- xmin(compoRaster)
+  xmax <- xmax(compoRaster)
+  ymin <- ymin(compoRaster)
+  ymax <- ymax(compoRaster)
 
-  rast1 <- crop(compoRaster, c(extent(compoRaster)[1],
-                                    extent(compoRaster)[1] + round( (extent(compoRaster)[2] - extent(compoRaster)[1]) / 2),
-                                    extent(compoRaster)[3],
-                                    extent(compoRaster)[4]))
-  #
-  rast2 <- crop(compoRaster, c(extent(compoRaster)[1] + round( (extent(compoRaster)[2] - extent(compoRaster)[1]) / 2),
-                                    extent(compoRaster)[2],
-                                    extent(compoRaster)[3],
-                                    extent(compoRaster)[4]))
-  #
+  # nb of horizontal strips
+  nbS <- 20
+
+  # define ymin and ymax of horizontal strips
+  ystep <- seq(from = ymin, to = ymax, by = (ymax - ymin) / nbS)
+
+  strips <- list()
+  # create nbS rasters
+  for (i in 1:nbS){
+    stripX <- crop(compoRaster, c(xmin, xmax, ystep[i], ystep[i+1]))
+    # assign(paste0('strip', i), temp)
+    strips <- c(strips, stripX)
+  }
+
+
+  ###############################################################
+  # claculate distance between forest cells values and NFI values
+  # and assign composition of nearest NFI plot
+  ###############################################################
 
   # function to assign composition
   assignCompo <- function(cell, i, NFI){
@@ -150,7 +164,7 @@ compo <- function(landscape){
   # parallel calculation on raster cells (one raster after the other)
   clustCalc <- function(rast, assignCompo, NFI){
     # set cluster
-    cl <- makeCluster(5)
+    cl <- makeCluster(6)
     registerDoParallel(cl)
     results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignCompo(cell = rast[i], i = i, NFI)}
     stopCluster(cl)
@@ -159,22 +173,59 @@ compo <- function(landscape){
     colnames(results) <- c('i', 'id')
     results <- results %>% arrange(i)
     rast$compo <- results[,2]
-    plot(rast)
+    plot(rast$Dprop)
     return(rast)
   }
 
   # run calculation
   start <- Sys.time()
-  rasts <- lapply(c(rast1, rast2), clustCalc, assignCompo, NFI)
+  rasts <- lapply(strips, clustCalc, assignCompo, NFI)
   end <- Sys.time()
   end - start
 
-  # merge back rasters
-  rast1 <- rasts[[1]]
-  rast2 <- rasts[[2]]
-  rast3 <- raster::merge(rast1, rast2, overlap = FALSE)
-  names(rast3) <- names(compoRaster)
+  ################################################################################
+  # after splitting landscapes into strips (in dendro.R)
+  # check whether all cells are present only once
+  # check whether there is no missing cell
+  ################################################################################
+
+  # ensure cells are only present once (only in one raster strip)
+  # get cellID25 of all strips
+  getCellID <- function(raster){
+    df <- as.data.frame(raster)
+    cells <- unique(df$cellID25)
+    return(cells)
+  }
+  cells <- lapply(rasts, getCellID)
+  # are there duplicated cells
+  cellList <- do.call(c, cells)
+  dup <- sum(duplicated(cellList))
+
+  # print error message if cells are duplicated
+  if(dup > 0){
+    stop("When splitting rasters into strips (in dendro.R) some cells are duplicated. Try to split ratser in a different number of strips")
+  }
+  # print error message if cells are missing
+  if(length(cellList) != (nrow(cellID25) * ncol(cellID25))){
+    stop("When splitting rasters into strips (in dendro.R) some cells are lost. Try to split ratser in a different number of strips")
+  }
+
+  ################################################################################
+  # format and save compo raster
+  ################################################################################
+
+  # keep only compo in strips
+  keepCompo <- function(raster){
+    raster <- raster$compo
+    return(raster)
+  }
+  compo <- lapply(rasts, keepCompo)
+
+  # merge strips
+  compo <- do.call(merge, compo)
+  names(compo) <- 'compo'
+
   # save
-  writeRaster(rast3$compo, paste0(tempPath, '/compoID.asc'), overwrite = TRUE)
+  writeRaster(compo, paste0(tempPath, '/compoID.asc'), overwrite = TRUE)
 
 }

@@ -13,10 +13,8 @@ evalDendro <- function(){
   results <- readRDS(paste0(tempPath, '/trees75.rds'))
 
   # load lidar data
-  Dg <- raster(paste0(tempPath, '/dg.asc'))
-  Dg <- setMinMax(Dg)
-  BA <- raster(paste0(tempPath, '/BA.asc'))
-  BA <- setMinMax(BA)
+  Dg <- raster(paste0(tempPath, '/dg.grd'))
+  BA <- raster(paste0(tempPath, '/BA.grd'))
   cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
   rasterStack <- stack(Dg, BA, cellID25)
   df <- as.data.frame(rasterStack)
@@ -104,8 +102,8 @@ evalDendro <- function(){
 
   Dginit <- results %>% group_by(cellID25) %>% summarise(Dgtot = sqrt(sum(dbh^2 * n)/sum(n))) %>% arrange(cellID25)
   df <- merge(df, Dginit, by = 'cellID25', all.x = TRUE)
-  df$Dgdiff <- df$dg - df$Dgtot
-  df$Dgreldiff <- 100 - (df$Dgtot * 100 /df$dg)
+  df$Dgdiff <- df$Dg - df$Dgtot
+  df$Dgreldiff <- 100 - (df$Dgtot * 100 /df$Dg)
 
   # difference should be as close to zero as possible but it necessarily
   # fluctuates because we had to change the trees dbh to reach the BA

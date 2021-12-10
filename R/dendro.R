@@ -47,22 +47,35 @@ dendro <- function(landscape){
   NFIsp <- tree %>% group_by(idp, species_name, BAsp, Dgsp, spType, spPropdc) %>% summarise()
 
   ###############################################################
-  #
+  # Split raster into horizontal strips (speed-up calculation)
   ###############################################################
 
-  # Split data into 4 separate stack rasters
-  xmin <- extent(rasterStack)[1]
-  xmax <- extent(rasterStack)[2]
-  ystep <- round((extent(rasterStack)[4] - extent(rasterStack)[3]) / 4)
-  ymin <- c(extent(rasterStack)[3], extent(rasterStack)[3] + ystep, extent(rasterStack)[3] + ystep * 2 , extent(rasterStack)[3] + ystep *3)
-  ymax <- c(extent(rasterStack)[3] + ystep, extent(rasterStack)[3] + ystep * 2 , extent(rasterStack)[3] + ystep * 3, extent(rasterStack)[4])
+  # gest rasterStack coordinates
+  xmin <- xmin(rasterStack)
+  xmax <- xmax(rasterStack)
+  ymin <- ymin(rasterStack)
+  ymax <- ymax(rasterStack)
 
-  rast1 <- crop(rasterStack, c(xmin, xmax, ymin[4], ymax[4]))
-  rast2 <- crop(rasterStack, c(xmin, xmax, ymin[3], ymax[3]))
-  rast3 <- crop(rasterStack, c(xmin, xmax, ymin[2], ymax[2]))
-  rast4 <- crop(rasterStack, c(xmin, xmax, ymin[1], ymax[1]))
+  # nb of horizontal strips
+  nbS <- 20
+
+  # define ymin and ymax of horizontal strips
+  ystep <- seq(from = ymin, to = ymax, by = (ymax - ymin) / nbS)
+
+  strips <- list()
+  # create nbS rasters
+  for (i in 1:nbS){
+    stripX <- crop(rasterStack, c(xmin, xmax, ystep[i], ystep[i+1]))
+    # assign(paste0('strip', i), temp)
+    strips <- c(strips, stripX)
+  }
+
+  ###############################################################
+  # calculation
+  ###############################################################
 
   # i <- 37150 # milicz
+  # i <- 10000 # bauges
   # cell <- rast3[i]
   # cell
 
@@ -126,26 +139,8 @@ dendro <- function(landscape){
       dbh$cellID25 <- cellID25
       # ---------------------------
 
-      # calculate round(weight) for a 25*25m pixel --------------------------------------------- method 1
-      # and set min weight to 1 or 0
-      # dbh$w25m <- apply(as.data.frame(dbh[, 'wlid']), 1, function(x) max(1, round(x/16)))
-
-      # # calculate weight for a 25*25m pixel (with stochastic process for w <= 0.5) ----------- method 2
-      # dbh$w25m <- dbh$wlid / 16
-      # # if weight > 0.5 --> round(weight)
-      # dbh[dbh$w25m > 0.5, 'w25m'] <- round(dbh[dbh$w25m > 0.5, 'w25m'])
-      # # if weight <= 0.5 --> set weight to 0 or 1 depending on weight
-      # # (stochastic process)
-      # dbh$random <- runif(nrow(dbh), min = 0, max = 0.5)
-      # dbh$randSmallerThanw25m <- dbh$random < dbh$w25m
-      # dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == TRUE, 'w25m'] <- 1
-      # dbh[dbh$w25m <= 0.5 & dbh$randSmallerThanw25m == FALSE, 'w25m'] <- 0
-
-      # # calculate weight for a 25*25m pixel with a Poisson distribution ---------------------- method 3
-      # dbh$w25m <- dbh$wlid / 16
-      # dbh$w25m <- rpois(nrow(dbh), dbh$w25m)
-
-      # calculate weight for a 25*25m pixel depending on decimal of wlid ----------------------- method 4
+      # calculate weight for a 25*25m pixel depending on decimal of wlid
+      # TODO:could be simplified by using a Bernoulli draw
       dbh$w25m <- dbh$wlid / 16
       dbh$decimal <- dbh$w25m - floor(dbh$w25m)
       dbh$random <- runif(nrow(dbh), min = 0, max = 1)
@@ -181,42 +176,21 @@ dendro <- function(landscape){
   # parallel calculation on raster cells (one raster after the other)
   clustCalc <- function(rast, assignDendro, tree, NFIsp){
     # set cluster
-    cl <- makeCluster(5)
+    cl <- makeCluster(6)
     registerDoParallel(cl)
     results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
     stopCluster(cl)
+    plot(rast$Dprop)
     return(results)
   }
 
   # run calculation
   start <- Sys.time()
-  results <- lapply(c(rast1, rast2, rast3, rast4), clustCalc, assignDendro, tree, NFIsp)
+  results <- lapply(strips, clustCalc, assignDendro, tree, NFIsp)
   end <- Sys.time()
   end - start
 
-  # assemble results into one dataframe
-  results1 <- as.data.frame(results[1])
-  results2 <- as.data.frame(results[2])
-  results3 <- as.data.frame(results[3])
-  results4 <- as.data.frame(results[4])
-  results2$i <- results2$i + max(results1$i)
-  results3$i <- results3$i + max(results2$i)
-  results4$i <- results4$i + max(results3$i)
-  results <- rbind(results1, results2, results3, results4)
-
-  # remove trees with sp = XXXX and n = dbh = NA
-  # but only if it does not remove the cell
-  # these 'strange' trees are created because they are deci or coni on cells
-  # with dprop = 0 or 1
-  # first count number of cells with composition = XXXX and with all trees dbh = NA
-  df2 <- results %>% filter(!is.na(sp)) %>% group_by(cellID25) %>% summarise(N = sum(n, na.rm = TRUE))
-  nrow(df2[df2$N == 0,]) # if equal 0, then no cells are removed only deci or coni trees in cells where dprop = 1 or 0
-  # second delete trees with dbh = n = NA if it does not remove the cell
-  if (nrow(df2[df2$N == 0,]) == 0){
-    results[is.na(results$dbh), 'sp'] <- NA
-  }
-
-  # save
-  saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid', 'i')], file = paste0(tempPath, '/trees.rds'))
+  #  save
+  saveRDS(results, file = paste0(tempPath, '/trees.rds'))
 
 }
