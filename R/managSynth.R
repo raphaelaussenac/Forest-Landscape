@@ -127,8 +127,8 @@ managSynth <- function(landscape){
     # in order to rbind them
     fillTab <- function(tab){
       # create table structure
-      structureTab <- data.frame(matrix(ncol = 8, nrow = nrow(tab)))
-      names(structureTab) <- c('access', 'owner', 'structure', 'density', 'beech with fir and or spruce', 'D', 'fir and or spruce', 'fir and or spruce with DC')
+      structureTab <- data.frame(matrix(ncol = 9, nrow = nrow(tab)))
+      names(structureTab) <- c('access', 'owner', 'structure', 'density', 'beech with fir and or spruce', 'D', 'fir and or spruce', 'fir and or spruce with DC', 'other compo')
       # fill the table
       for (i in names(tab)){
         structureTab[, i] <- tab[, i]
@@ -144,13 +144,13 @@ managSynth <- function(landscape){
     tab2 <- eus %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
     tab2 <- fillTab(tab2)
      # [cop]pice stands
-    cop <- standType %>% filter(!is.na(compoType), manag == 'coppice') %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
+    cop <- standType %>% filter(!is.na(compoType), manag == 'coppice') %>% group_by(access, compoType, owner, structure) %>% summarise(surf = n()) %>% ungroup()
     tab3 <- cop %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
     tab3$structure <- 'coppice'
     tab3$density <- NA
     tab3 <- fillTab(tab3)
      # [fin]al cut stands
-    fin <- standType %>% filter(!is.na(compoType), manag == 'final cut') %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
+    fin <- standType %>% filter(!is.na(compoType), manag == 'final cut') %>% group_by(access, compoType, owner) %>% summarise(surf = n()) %>% ungroup()
     tab4 <- fin %>% filter(access == 1) %>% pivot_wider(names_from = compoType, values_from = surf)
     tab4$structure <- 'final cut'
     tab4$density <- NA
@@ -196,7 +196,7 @@ managSynth <- function(landscape){
     stand[stand$access == 0 | stand$protect == 1, 'structure'] <- 'inacc&protec'
     stand <- stand %>% group_by(compoType, structure) %>% summarise(surf = n()) %>% arrange(-surf)
     stand$structure <- factor(stand$structure, levels = c('uneven', 'inacc&protec', 'even', 'final cut', 'coppice'))
-    stand$compoType <- factor(stand$compoType, levels = c('fir and or spruce with DC', 'D with fir and or spruce', 'beech with fir and or spruce', 'fir and or spruce', 'D', 'DC with fir and or spruce', 'beech', 'C with fir and or spruce', 'DC'))
+    stand$compoType <- factor(stand$compoType, levels = c('fir and or spruce with DC', 'D with fir and or spruce', 'beech with fir and or spruce', 'fir and or spruce', 'D', 'DC with fir and or spruce', 'beech', 'C with fir and or spruce', 'DC', 'other compo'))
   } else if(landscape == 'milicz'){
     stand <- df %>% filter(!is.na(forestCellsPerHa))
     stand[stand$access == 0 | stand$protect == 1, 'structure'] <- 'inacc&protec'
@@ -223,7 +223,7 @@ managSynth <- function(landscape){
     stand1[stand1$protect == 1 & !is.na(stand1$protect), 'access'] <- 0
     stand1[stand1$manag %in% c('coppice', 'final cut'), 'structure'] <- stand1[stand1$manag %in% c('coppice', 'final cut'), 'manag']
     stand1 <- stand1 %>% filter(!is.na(compoType)) %>% group_by(access, compoType, owner, structure, density) %>% summarise(surf = n()) %>% ungroup()
-    stand1$compoType <- factor(stand1$compoType, levels = c('fir and or spruce with DC', 'D with fir and or spruce', 'beech with fir and or spruce', 'fir and or spruce', 'D', 'DC with fir and or spruce', 'beech', 'C with fir and or spruce', 'DC'))
+    stand1$compoType <- factor(stand1$compoType, levels = c('fir and or spruce with DC', 'D with fir and or spruce', 'beech with fir and or spruce', 'fir and or spruce', 'D', 'DC with fir and or spruce', 'beech', 'C with fir and or spruce', 'DC', 'other compo'))
     stand1$compoType <- droplevels(stand1$compoType)
     stand1$structure <- as.character(stand1$structure)
     stand1[stand1$access == 0, 'structure'] <- 'inacc/protect'

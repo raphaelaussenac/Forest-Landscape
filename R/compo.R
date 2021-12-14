@@ -125,7 +125,6 @@ compo <- function(landscape){
   # create nbS rasters
   for (i in 1:nbS){
     stripX <- crop(compoRaster, c(xmin, xmax, ystep[i], ystep[i+1]))
-    # assign(paste0('strip', i), temp)
     strips <- c(strips, stripX)
   }
 

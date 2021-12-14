@@ -66,7 +66,6 @@ dendro <- function(landscape){
   # create nbS rasters
   for (i in 1:nbS){
     stripX <- crop(rasterStack, c(xmin, xmax, ystep[i], ystep[i+1]))
-    # assign(paste0('strip', i), temp)
     strips <- c(strips, stripX)
   }
 
@@ -140,7 +139,7 @@ dendro <- function(landscape){
       # ---------------------------
 
       # calculate weight for a 25*25m pixel depending on decimal of wlid
-      # TODO:could be simplified by using a Bernoulli draw
+      # could be simplified by using a Bernoulli draw
       dbh$w25m <- dbh$wlid / 16
       dbh$decimal <- dbh$w25m - floor(dbh$w25m)
       dbh$random <- runif(nrow(dbh), min = 0, max = 1)

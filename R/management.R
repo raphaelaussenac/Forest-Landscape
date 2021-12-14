@@ -54,10 +54,6 @@ managTable <- function(landscape){
   ###############################################################
 
   if(landscape == 'bauges'){
-    # set shp extent (not necessary since we use intersect just below
-    # but fixes a bugue in package raster when rasterizing afterwards...)
-    rb <- crop(rb, cellID100)
-    rn <- crop(rn, cellID100)
     # keep only 'réserve biologique intégrale'
     # and exclude 'réserve biologique dirigée'
     rb <- rb[rb$code_r_enp == 'I',]
@@ -67,16 +63,11 @@ managTable <- function(landscape){
     # select protected areas only in study area
     protect <- raster::intersect(protect, park)
 
-  } else if(landscape == 'milicz'){
-    # set shp extent (not necessary since we use intersect just below
-    # but fixes a bugue in package raster when rasterizing afterwards...)
-    protect <- crop(protect, cellID100)
-
   }
 
   # convert into raster
   # use getCover to define proportion of each 100*100m cell covered by polygon
-  testAntiBugue <- rasterize(protect, cellID100, getCover = TRUE)
+  XXX <- rasterize(protect, cellID100) # first rasterize with getCover triggers bugue -> rasterize without getCover
   protect <- rasterize(protect, cellID100, getCover = TRUE)
   names(protect) <- 'protect'
 
@@ -161,7 +152,8 @@ managTable <- function(landscape){
     mainSp[mainSp$compoType %in% c('DC', 'C with fir and or spruce', 'DC with fir and or spruce', 'D with fir and or spruce'), 'compoType'] <- 'fir and or spruce with DC'
     # beech ------> D
     mainSp[mainSp$compoType == 'beech', 'compoType'] <- 'D'
-    # ---------
+    # --------- take into account other compo
+    mainSp[!(mainSp$compoType %in% c('beech with fir and or spruce', 'D', 'fir and or spruce', 'fir and or spruce with DC')), 'compoType'] <- 'other compo'
 
   } else if(landscape == 'milicz'){
     # retrieve dominant species
@@ -192,7 +184,7 @@ managTable <- function(landscape){
 
     # convert into raster
     # use getCover to define proportion of each 100*100m cell covered by polygon
-    own <- rasterize(own, cellID100, getCover = TRUE) #TODO: attention avec getcover?
+    own <- rasterize(own, cellID100, getCover = TRUE)
     names(own) <- 'public'
 
     # stack with cellID100
@@ -222,6 +214,10 @@ managTable <- function(landscape){
   ###############################################################
 
   if(landscape == 'bauges'){
+
+    # set shp extent
+    access <- crop(access, cellID100)
+
     # aggregate access value from 5*5m to 100*100m
     access <- aggregate(access, fact = 20, fun = 'mean', na.rm = TRUE)
 
@@ -322,10 +318,8 @@ managTable <- function(landscape){
     df[df$structure == 'even' & !is.na(df$structure) & df$rdi < 0.65, 'density'] <- 'medium'
     df[df$structure == 'even' & !is.na(df$structure) & df$rdi >= 0.65, 'density'] <- 'high'
 
-    ###############################################################
+    #---------------------------------------------------
     # add 'final cut' management based on BA, rdi, Dg
-    ###############################################################
-
     df$manag <- paste(df$structure, '-', df$density)
 
     # uneven-aged stands
@@ -343,6 +337,11 @@ managTable <- function(landscape){
     # create column with integer for subsetting those stands
     df$sub <- rep(x = c(1,2), length.out = nrow(df)) # change x to change size of subset
     df[df$structure == 'even' & !is.na(df$structure) & df$Dg <= 20 & df$compoType == 'D' & !is.na(df$compoType) & df$sub == 2, 'manag'] <- 'coppice'
+
+    #---------------------------------------------------
+    # other compo -> no manag & inaccessible
+    df[!is.na(df$compoType) & df$compoType == 'other compo', 'manag'] <- 'no manag'
+    df[!is.na(df$compoType) & df$compoType == 'other compo', 'access'] <- 0
 
   } else if(landscape == 'milicz'){
     df <- df %>% mutate(density = NA,
