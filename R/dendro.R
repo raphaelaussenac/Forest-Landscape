@@ -1,4 +1,4 @@
-dendro <- function(landscape){
+dendro <- function(){
 
   ###############################################################
   # initialisation

@@ -172,7 +172,7 @@ compo <- function(landscape){
     colnames(results) <- c('i', 'id')
     results <- results %>% arrange(i)
     rast$compo <- results[,2]
-    plot(rast$Dprop)
+    plot(rast$compo)
     return(rast)
   }
 

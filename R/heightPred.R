@@ -44,6 +44,12 @@ heightPred <- function(landscape){
     tree[tree$sp == 'Acer pseudoplatanus', 'espar'] <- 'Acps'
     tree[tree$sp == 'Prunus serotina', 'espar'] <- 'Prse'
     tree[is.na(tree$espar), 'espar'] <- 'OtherSp'
+  } else if(landscape == 'sneznik'){
+    tree$espar <- NA
+    tree[tree$sp == 'Abies alba', 'espar'] <- 'Abal'
+    tree[tree$sp == 'Fagus sylvatica', 'espar'] <- 'Fasy'
+    tree[tree$sp == 'Picea abies', 'espar'] <- 'Piab'
+    tree[is.na(tree$espar), 'espar'] <- 'OtherSp'
   }
 
   # calculate stand Dg (in 25*25m cells)

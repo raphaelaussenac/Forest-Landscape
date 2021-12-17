@@ -67,7 +67,7 @@ compo(landscape)
 evalCompo()
 
 # assign individual trees to all 25*25m cells
-dendro(landscape)
+dendro()
 
 # produce landscape tree and environmental data
 saveLandscape(landscape)
