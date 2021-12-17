@@ -124,7 +124,7 @@ saveLandscape <- function(landscape){
                      c(1, 0))
   compo <- reclassify(compo, rcl = isBecomes)
 
-  if(landscape == 'bauges'){
+  if(landscape != 'milicz'){
     # union of park and compo
     compoUpark <- park + compo
     # convert values

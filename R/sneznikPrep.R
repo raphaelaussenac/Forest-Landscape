@@ -106,15 +106,30 @@ prepSneznik <- function(){
 
   # case study area extent ('park' layer)
   # retrieve from lidar dg map
-  parkRaster <- dg
+  parkRaster <- dg # TODO reboucher les trous comme park des bauges les trous sont dans le csa
   # exclude area
   parkRaster <- mask(parkRaster, bufferMountain, inverse = TRUE)
   # convert non NA values in 1
-  parkRaster[!is.na(parkRaster)] <- 1
+  parkRaster[!is.na(parkRaster)] <- as.factor(1)
+  names(parkRaster) <- 'park'
+  # fill holes in case study area
+  # convert raster to SpatRaster
+  rasterra <- terra::rast(parkRaster)
+  # polygonise
+  poly <- terra::as.polygons(rasterra)
+  # , trunc=TRUE, dissolve=TRUE, values=TRUE, na.rm=TRUE, extent=FALSE)
+  # fill holes
+  polyfull <- terra::fillHoles(poly, inverse=FALSE)
+  # dissolve smaller polygons into larger ones
+  polyagg <- terra::aggregate(polyfull)
+  plot(polyagg)
+  # convert back to raster
+  parkRaster <- terra::rasterize(polyagg, rasterra)
   # convert NA into 0
   isBecomes <- cbind(c(1, NA),
                      c(1, 0))
-  parkRaster <- reclassify(parkRaster, rcl = isBecomes)
+  parkRaster <- terra::classify(parkRaster, rcl = isBecomes)
+  parkRaster <- raster(parkRaster)
   names(parkRaster) <- 'park'
 
   # create cell ID raster
