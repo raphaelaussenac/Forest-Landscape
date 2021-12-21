@@ -30,7 +30,7 @@ source('./R/managSynth.R')
 # select landscape (bauges, milicz)
 ###############################################################
 
-landscape <- 'sneznik'
+landscape <- 'bauges'
 
 ###############################################################
 # create virtual landscape
@@ -40,8 +40,8 @@ landscape <- 'sneznik'
 start_time <- Sys.time()
 
 # define folder structure
-tempPath <- paste0('./data/temp/', landscape)
-landPath <- paste0('./', landscape, 'Landscape')
+tempPath <- paste0('./temp/', landscape)
+landPath <- paste0('./', landscape)
 evalPath <- paste0(landPath, '/evaluation')
 miniPath <- paste0(landPath, '/minimap')
 

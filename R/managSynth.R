@@ -59,7 +59,6 @@ managSynth <- function(landscape){
     hist(even[even$density == 'medium', 'rdi'], breaks = seq(0, 2, 0.05), main = 'even except deciduous', xlab = 'rdi (red line = after logging target, dark green = abandonned)')
     hist(even[even$density == 'high', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'orange')
     hist(even[even$manag == 'final cut', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'green3')
-    hist(even[even$manag == 'coppice', 'rdi'], breaks = seq(0, 2, 0.05), add = TRUE, col = 'red')
     abline(v = c(0.55, 0.65), lwd = 2, col = 'red')
 
     # even deciduous
