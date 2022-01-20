@@ -24,9 +24,9 @@ prepSneznik <- function(){
 
   # rename undefined species
   tree$SPECIES <- as.factor(tree$SPECIES)
-  tree$SPECIES <- recode_factor(tree$SPECIES, 'Tilia sp.' = 'Tilia cordata',
-                                              'Salix sp.' = 'Salix alba',
-                                              'Pinus sp.' = 'Pinus sylvestris') # TODO: ask Sneznik for proper subsitution
+  tree$SPECIES <- recode_factor(tree$SPECIES, 'Tilia sp.' = 'Tilia platyphyllos',
+                                              'Salix sp.' = 'Salix caprea',
+                                              'Pinus sp.' = 'Pinus sylvestris')
 
   # add missing columns remove useless columns
   tree <- tree %>% dplyr::select(PLOTID, DBH, SPECIES) %>%
@@ -106,7 +106,7 @@ prepSneznik <- function(){
 
   # case study area extent ('park' layer)
   # retrieve from lidar dg map
-  parkRaster <- dg # TODO reboucher les trous comme park des bauges les trous sont dans le csa
+  parkRaster <- dg
   # exclude area
   parkRaster <- mask(parkRaster, bufferMountain, inverse = TRUE)
   # convert non NA values in 1
