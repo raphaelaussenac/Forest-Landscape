@@ -6,7 +6,7 @@
 rm(list = ls())
 
 # set work directory
-setwd('C:/Users/raphael.aussenac/Documents/GitHub/LandscapeInit')
+setwd('./Documents/github/Forest-Landscape')
 
 # load source (all R files in R folder)
 # file.sources = list.files('./R', pattern = '*.R', full.names = TRUE)

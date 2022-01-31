@@ -10,14 +10,14 @@ prepSneznik <- function(){
   require(sf)
   require(stringr)
   require(dplyr)
-  require(xlsx)
+  require(readxl)
 
   ###############################################################
   # load tree data
   ###############################################################
 
   # load tree inventory data
-  tree <- read.xlsx('./data/sneznik/inventory/Sneznik_tree_data.xlsx', sheetIndex = 1)
+  tree <- read_excel('./data/sneznik/inventory/Sneznik_tree_data.xlsx', sheet = 1)
 
   # replace plot id with letters by numeric ids
   tree$PLOTID <- as.numeric(as.factor(tree$PLOTID))

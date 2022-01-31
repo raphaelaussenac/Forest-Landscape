@@ -197,6 +197,6 @@ saveLandscape <- function(landscape){
   results$dbh <- round(results$dbh, 2)
 
   # save
-  saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, './trees75.rds'))
+  saveRDS(results[, c('cellID25', 'sp', 'n', 'dbh', 'wlid')], file = paste0(tempPath, '/trees75.rds'))
 
 }
