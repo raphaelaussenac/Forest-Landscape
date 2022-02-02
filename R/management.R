@@ -36,6 +36,9 @@ managTable <- function(landscape){
   } else if(landscape == 'milicz'){
     # load protected areas
     protect <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_protected_area', encoding = 'UTF-8', use_iconv = TRUE)
+  } else if(landscape == 'sneznik'){
+    elev <- raster(paste0(landPath, '/elev.asc'))
+    managType <- readOGR(dsn = './data/sneznik/GEO', layer = 'Sneznik_forest_stands2017_species_type', encoding = 'UTF-8', use_iconv = TRUE)
   }
 
   # load cellID100 raster
@@ -65,22 +68,27 @@ managTable <- function(landscape){
 
   }
 
-  # convert into raster
-  # use getCover to define proportion of each 100*100m cell covered by polygon
-  XXX <- rasterize(protect, cellID100) # first rasterize with getCover triggers bugue -> rasterize without getCover
-  protect <- rasterize(protect, cellID100, getCover = TRUE)
-  names(protect) <- 'protect'
+  if(landscape == 'bauges' | landscape == 'milicz' ){
+    # convert into raster
+    # use getCover to define proportion of each 100*100m cell covered by polygon
+    XXX <- rasterize(protect, cellID100) # first rasterize with getCover triggers bugue -> rasterize without getCover
+    protect <- rasterize(protect, cellID100, getCover = TRUE)
+    names(protect) <- 'protect'
 
-  # stack with cellID100
-  protect <- stack(cellID100, protect)
+    # stack with cellID100
+    protect <- stack(cellID100, protect)
 
-  # convert into dataframe
-  protect <- as.data.frame(protect)
+    # convert into dataframe
+    protect <- as.data.frame(protect)
 
-  # if protect >= 0.5 then most of the cell is covered by protected
-  # area --> replace by 1. if protect < 0.5 --> replace by 0.
-  df <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
+    # if protect >= 0.5 then most of the cell is covered by protected
+    # area --> replace by 1. if protect < 0.5 --> replace by 0.
+    df <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
+  }
 
+  if(landscape == 'sneznik'){
+    df <- as.data.frame(cellID100) %>% mutate(protect = 0)
+  }
 
   ###############################################################
   # calculate Gini index on 1ha cells and define stand type
@@ -103,19 +111,21 @@ managTable <- function(landscape){
   # define composition type
   ###############################################################
 
+  if(landscape == 'bauges' | landscape == 'sneznik'){
+    # set threshold to identify mainSp
+    # thresh = 0.8 means you will get the species making up for >= 80% of
+    # the stand BA
+    thresh = 0.75
+    # retrieve main species
+    mainSp <- tree %>% group_by(cellID100, sp) %>%
+                              summarise(BA = sum((pi * (dbh/200)^2) * n)) %>%
+                              group_by(cellID100) %>% arrange(cellID100, -BA) %>%
+                              mutate(BAtot = sum(BA), BAprop = BA/BAtot, cumulProp = cumsum(BAprop), HigherThanthresh = case_when(
+                                cumulProp >= thresh ~ cumulProp), minCompo = min(HigherThanthresh, na.rm = TRUE)) %>%
+                              filter(cumulProp <= minCompo) %>% summarise(mainSp = paste(sp, collapse=' - '))
+  }
+
   if(landscape == 'bauges'){
-  # set threshold to identify mainSp
-  # thresh = 0.8 means you will get the species making up for >= 80% of
-  # the stand BA
-  thresh = 0.75
-  # retrieve main species
-  mainSp <- tree %>% group_by(cellID100, sp) %>%
-                            summarise(BA = sum((pi * (dbh/200)^2) * n)) %>%
-                            group_by(cellID100) %>% arrange(cellID100, -BA) %>%
-                            mutate(BAtot = sum(BA), BAprop = BA/BAtot, cumulProp = cumsum(BAprop), HigherThanthresh = case_when(
-                              cumulProp >= thresh ~ cumulProp), minCompo = min(HigherThanthresh, na.rm = TRUE)) %>%
-                            filter(cumulProp <= minCompo) %>% summarise(mainSp = paste(sp, collapse=' - '))
-  #
   # identify deciduous and coniferous stands
   mainSp <- mainSp %>% group_by(cellID100) %>% mutate(D = sum(str_detect(mainSp, deciduousSp)),
                                                       C = sum(str_detect(mainSp, coniferousSp)),
@@ -155,7 +165,9 @@ managTable <- function(landscape){
     # --------- take into account other compo
     mainSp[!(mainSp$compoType %in% c('beech with fir and or spruce', 'D', 'fir and or spruce', 'fir and or spruce with DC')), 'compoType'] <- 'other compo'
 
-  } else if(landscape == 'milicz'){
+  }
+
+  if(landscape == 'milicz'){
     # retrieve dominant species
     mainSp <- tree %>% group_by(cellID100, sp) %>%
                               summarise(BA = sum((pi * (dbh/200)^2) * n)) %>%
@@ -167,6 +179,41 @@ managTable <- function(landscape){
                 'Alnus glutinosa')
     # if not managed species --> 'other sp'
     mainSp <- mainSp %>% mutate(compoType = case_when(compoType %in% spList ~ compoType, !(compoType %in% spList) ~ 'other sp'))
+
+  }
+
+  if(landscape == 'sneznik'){
+    # add elevation
+    elev100 <- aggregate(elev, 4, mean)
+    elev100 <- stack(cellID100, elev100)
+    elev100 <- as.data.frame(elev100)
+    mainSp <- left_join(mainSp, elev100, by = 'cellID100')
+    mainSp <- mainSp %>% mutate(elev = case_when(elev >= 1100 ~ 'HA', elev < 1100 ~ 'LA'))
+
+    # create composition types
+    mainSp$compoType <- NA
+
+    # beech dominated stands (beech is the most abundant species) + elevation
+    mainSp[str_starts(mainSp$mainSp, 'Fagus sylvatica'), 'compoType'] <- 'beech dominated'
+    mainSp[str_starts(mainSp$mainSp, 'Fagus sylvatica'), 'compoType'] <- apply(mainSp[str_starts(mainSp$mainSp, 'Fagus sylvatica'), c('compoType', 'elev')] , 1 , paste , collapse = "-" )
+
+    # fir or spruce dominated stands (fir OR spruce most abundant species)
+    mainSp[str_starts(mainSp$mainSp, 'Abies alba'), 'compoType'] <- 'fir or spruce dominated'
+    mainSp[str_starts(mainSp$mainSp, 'Picea abies'), 'compoType'] <- 'fir or spruce dominated'
+
+    # fir-beech-spruce mixed stands
+    mainSp[str_detect(mainSp$mainSp, 'Abies alba'), 'fir'] <- 1
+    mainSp[str_detect(mainSp$mainSp, 'Fagus sylvatica'), 'beech'] <- 1
+    mainSp[str_detect(mainSp$mainSp, 'Picea abies'), 'spruce'] <- 1
+    # # fir AND beech are most abundant species
+    # mainSp$mixfb <- apply(mainSp[, c('fir', 'beech')], 1, sum, na.rm = TRUE)
+    # mainSp[mainSp$mixfb == 2, 'compoType'] <- 'mixed'
+    # # spruce AND beech are most abundant species
+    # mainSp$mixsb <- apply(mainSp[, c('beech', 'spruce')], 1, sum, na.rm = TRUE)
+    # mainSp[mainSp$mixsb == 2, 'compoType'] <- 'mixed'
+    # fir AND beech AND spruce are most abundant species
+    mainSp$mixfbs <- apply(mainSp[, c('fir', 'beech', 'spruce')], 1, sum, na.rm = TRUE)
+    mainSp[mainSp$mixfbs == 3, 'compoType'] <- 'mixed'
 
   }
 
@@ -200,12 +247,19 @@ managTable <- function(landscape){
     # add to df
     df <- merge(df, own[, c('cellID100', 'owner')], by = 'cellID100')
 
-  } else if(landscape == 'milicz'){
+  }
 
+  if(landscape == 'milicz'){
     # we only consider public forests in milicz as defined in saveLandscape
     # --> set ownership to public wherever there's forest
     df <- df %>% mutate(owner = ifelse(!is.na(BA), 'public', NA))
 
+  }
+
+  if(landscape == 'sneznik'){
+    # management does not depend on ownership
+    # --> set ownership to NA
+    df$owner <- NA
   }
 
 
@@ -238,7 +292,9 @@ managTable <- function(landscape){
     # add to df
     df <- merge(df, access, by = 'cellID100')
 
-  } else if(landscape == 'milicz'){
+  }
+
+  if(landscape == 'milicz' | landscape == 'sneznik'){
     df$access <- 1
   }
 
@@ -343,9 +399,32 @@ managTable <- function(landscape){
     df[!is.na(df$compoType) & df$compoType == 'other compo', 'manag'] <- 'no manag'
     df[!is.na(df$compoType) & df$compoType == 'other compo', 'access'] <- 0
 
-  } else if(landscape == 'milicz'){
+  }
+
+  if(landscape == 'milicz'){
     df <- df %>% mutate(density = NA,
                         manag = case_when(compoType != 'other sp'~ compoType, compoType == 'other sp'~ 'no manag'))
+
+  }
+
+  if(landscape == 'sneznik'){
+    df <- df %>% mutate(density = NA)
+    # assign management type
+    manag <- raster::rasterize(managType, cellID100, fun = function(x,...) max(x, na.rm = TRUE), field = 'StandType')
+    names(manag) <- 'manag'
+    manag <- stack(cellID100, manag)
+    manag <- as.data.frame(manag)
+    # if manag > 1 --> uneven
+    # if manag <=1 --> even
+    manag <- manag %>% mutate(manag = case_when(manag > 1 ~ 'uneven', manag <= 1 ~ 'even'))
+    df <- left_join(df, manag, by = 'cellID100')
+    # assign most common manag type to cells with trees but manag = NA
+    df[!is.na(df$BA) & is.na(df$manag), 'manag'] <- 'even'
+    # remove manag type for cells with no trees
+    df[is.na(df$BA), 'manag'] <- NA
+    # assign only manag type 'even' for compoType == 'beech dominated'
+    types <- c('beech dominated-LA', 'beech dominated-HA')
+    df[df$compoType %in% types & !is.na(df$compoType), 'manag'] <- 'even'
 
   }
 

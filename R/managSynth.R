@@ -70,7 +70,7 @@ managSynth <- function(landscape){
     par(mfrow = c(1,1))
     dev.off()
 
-  } else if(landscape == 'milicz'){
+  } else if(landscape == 'milicz' | landscape == 'sneznik'){
 
     # BA_ha distribution
     plotBA <- ggplot(data = df %>% filter(!is.na(compoType))) +
@@ -108,7 +108,7 @@ managSynth <- function(landscape){
   geom_text(aes(x = compoType, y = surface, label = paste(round(relSurf, 2), '%') ), vjust = -0.3, size = 5, col = 'orange') +
   geom_text(aes(x = compoType, y = surface, label = paste(round(surface, 2), 'ha') ), vjust = +1.2, size = 5, col = 'orange') +
   theme_light() +
-  xlab('main species') +
+  xlab('composition') +
   ylab('surface (ha)') +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
        plot.title = element_text(hjust = 0.5))
@@ -182,6 +182,9 @@ managSynth <- function(landscape){
 
     write.csv(tab3, paste0(evalPath, '/managSyn.csv'), row.names = F)
 
+  } else if(landscape == 'sneznik'){
+    tab <- table(df$manag, df$compoType)
+    write.csv(tab, paste0(evalPath, '/managSyn.csv'), row.names = F)
   }
 
 
@@ -196,7 +199,7 @@ managSynth <- function(landscape){
     stand <- stand %>% group_by(compoType, structure) %>% summarise(surf = n()) %>% arrange(-surf)
     stand$structure <- factor(stand$structure, levels = c('uneven', 'inacc&protec', 'even', 'final cut', 'coppice'))
     stand$compoType <- factor(stand$compoType, levels = c('fir and or spruce with DC', 'D with fir and or spruce', 'beech with fir and or spruce', 'fir and or spruce', 'D', 'DC with fir and or spruce', 'beech', 'C with fir and or spruce', 'DC', 'other compo'))
-  } else if(landscape == 'milicz'){
+  } else if(landscape == 'milicz' | landscape == 'sneznik'){
     stand <- df %>% filter(!is.na(forestCellsPerHa))
     stand[stand$access == 0 | stand$protect == 1, 'structure'] <- 'inacc&protec'
     stand <- stand %>% group_by(compoType, structure) %>% summarise(surf = n()) %>% arrange(-surf)
@@ -248,8 +251,20 @@ managSynth <- function(landscape){
     PieDonut(donut, aes(compoType, manag, count = surf), showPieName = FALSE, start = pi/2, title = 'even / protect OR no manag')
     dev.off()
 
-  }
+  } else if(landscape == 'sneznik'){
 
+    stand1 <- df
+    stand1 <- stand1 %>% filter(!is.na(compoType)) %>% group_by(compoType, manag) %>% summarise(surf = n()) %>% ungroup()
+    stand1$compoType <- fct_reorder(stand1$compoType, stand1$surf, max, .desc = TRUE)
+    donut <- stand1 %>% group_by(compoType, manag) %>% summarise(surf = sum(surf)) %>% ungroup() %>%
+                      arrange(compoType, manag, -surf) %>% mutate(ymax = cumsum(surf),
+                                                ymin = lag(ymax, default = 0))
+    #
+    pdf(paste0(evalPath, '/managSurf2.pdf'), width = 10, height = 10)
+    PieDonut(donut, aes(compoType, manag, count = surf), showPieName = FALSE, start = pi/2, title = 'even / uneven')
+    dev.off()
+
+  }
 
 
   ###############################################################

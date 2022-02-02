@@ -30,7 +30,7 @@ source('./R/managSynth.R')
 # select landscape (bauges, milicz)
 ###############################################################
 
-landscape <- 'bauges'
+landscape <- 'sneznik'
 
 ###############################################################
 # create virtual landscape
