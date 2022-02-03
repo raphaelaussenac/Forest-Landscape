@@ -25,6 +25,7 @@ source('./R/minimap.R')
 source('./R/heightPred.R')
 source('./R/management.R')
 source('./R/managSynth.R')
+source('./R/LiDARh.R')
 
 ###############################################################
 # select landscape (bauges, milicz)
@@ -77,6 +78,9 @@ evalDendro()
 
 # model tree height
 heightPred(landscape)
+
+# compare tree heights against LiDAR heights
+LiDARh(landscape)
 
 # create management table
 managTable(landscape)
