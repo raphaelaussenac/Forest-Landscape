@@ -25,7 +25,7 @@ source('./R/minimap.R')
 source('./R/heightPred.R')
 source('./R/management.R')
 source('./R/managSynth.R')
-source('./R/LiDARh.R')
+source('./R/evalHeight.R')
 
 ###############################################################
 # select landscape (bauges, milicz)
@@ -45,12 +45,14 @@ tempPath <- paste0('./temp/', landscape)
 landPath <- paste0('./', landscape)
 evalPath <- paste0(landPath, '/evaluation')
 miniPath <- paste0(landPath, '/minimap')
+evalHeightPath <- './evalHeight'
 
-# create temp, landscape and evaluation folders
+# create folders
 if (!(dir.exists(tempPath))) {dir.create(tempPath, recursive = TRUE)}
 if (!(dir.exists(landPath))) {dir.create(landPath, recursive = TRUE)}
 if (!(dir.exists(evalPath))) {dir.create(evalPath, recursive = TRUE)}
 if (!(dir.exists(miniPath))) {dir.create(miniPath, recursive = TRUE)}
+if (!(dir.exists(evalHeightPath))) {dir.create(evalHeightPath, recursive = TRUE)}
 
 # Prepare landscape data
 if(landscape == 'bauges'){
@@ -80,7 +82,7 @@ evalDendro()
 heightPred(landscape)
 
 # compare tree heights against LiDAR heights
-LiDARh(landscape)
+evalHeight(landscape)
 
 # create management table
 managTable(landscape)

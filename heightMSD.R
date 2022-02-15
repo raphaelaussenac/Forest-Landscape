@@ -6,17 +6,16 @@
 rm(list = ls())
 
 # set work directory
-setwd('./Documents/github/Forest-Landscape/temp')
-# TODO: no wd --> directly from evalPath
+setwd('./Documents/github/Forest-Landscape/evalHeight')
 
 # load library
 library(ggplot2)
 library(dplyr)
 
 # load msd data
-bauges <- read.csv('msd_bauges.csv')
-milicz <- read.csv('msd_milicz.csv')
-sneznik <- read.csv('msd_sneznik.csv')
+bauges <- read.csv('bauges_msd.csv')
+milicz <- read.csv('milicz_msd.csv')
+sneznik <- read.csv('sneznik_msd.csv')
 
 # merge data
 df <- bind_rows(bauges, milicz, sneznik) %>% filter(var != 'msd')
@@ -29,4 +28,16 @@ ylab('mean square deviation') +
 theme_bw() +
 theme(legend.position = 'bottom') +
 guides(fill = guide_legend(title="MSD components"))
-ggsave(file = '../heightMSD.pdf', plot = pl1, width = 5, height = 10)
+ggsave(file = './msd.pdf', plot = pl1, width = 5, height = 10)
+
+# plot relative msd
+dfFreq <- df %>% group_by(landscape, var) %>%
+                 summarise(msd = sum(components)) %>%
+                 mutate(freq = msd / sum(msd))
+#
+pl2 <- ggplot(dfFreq) +
+geom_bar(aes(x = landscape, y = freq, fill = var), stat = 'identity', position = 'stack') +
+ylab('mean square deviation') +
+theme_bw() +
+theme(legend.position = 'bottom') +
+guides(fill = guide_legend(title="MSD components"))

@@ -1,4 +1,4 @@
-LiDARh <- function(landscape){
+evalHeight <- function(landscape){
 
   ###############################################################
   # initialisation
@@ -38,27 +38,35 @@ LiDARh <- function(landscape){
                       summarise(h = mean(h), hlid = unique(get(paste0('Hm', nbTrees))))
   }
   heights <- compareH(6, tree)
-  mod <- lm(h~hlid, data = heights)
+  mod <- lm(hlid~h, data = heights)
   summary(mod)
 
+  # create classes for h --> bowplot
+  heights <- heights %>% mutate(bin=cut_width(h, width = 1, center = 0)) %>%
+                         group_by(bin) %>% mutate(class = round(mean(h))) %>% ungroup()
+  # heights <- heights %>% mutate(bin=cut(h, 40, labels = FALSE))
+
   # plot
-  pl1 <- ggplot(heights) +
-  geom_point(aes(x = hlid, y = h), alpha = 0.2) +
+  pl1 <- ggplot(heights, aes(x = h, y = hlid)) +
+  geom_point(alpha = 0.5, size = 0.5, col = 'grey', pch = 16) +
   xlim(5, 45) +
   ylim(5, 45) +
   coord_fixed() +
-  geom_abline(intercept = 0, slope = 1, color = "grey", linetype = 2, size = 1) +
-  geom_abline(intercept = mod$coef[1], slope = mod$coef[2], color = "red", linetype = 1, size = 1) +
   annotate(geom = 'text', x = 10, y = 40, label = paste('r² = ', round(summary(mod)$r.squared,2)), col = 'red', size = 10) +
+  ggtitle(landscape) +
+  geom_boxplot(aes(x = class, y = hlid, group = class), alpha = 0.8) +
+  geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
+  geom_abline(intercept = mod$coef[1], slope = mod$coef[2], color = "red", linetype = 1, size = 1) +
   theme_bw()
   pl1
-  ggsave(file = paste0(evalPath, '/heightEval.pdf'), plot = pl1, width = 10, height = 10)
+  ggsave(file = paste0(evalHeightPath, '/', landscape, '_evalHeight.jpg'), plot = pl1, width = 10, height = 10)
 
-  # TODO: why missing values?
+  # TODO: JMM a mis des limites min de diametre ????
+  # TODO: ajouter nb/proportion de cellules sur le territoire (ou hlid & h > 6)
+
   ###############################################################
   # mean square deviation
   ###############################################################
-  # TODO which one is obs/pred? --> check overleaf doc
 
   # Y (observations)
   colnames(heights)[colnames(heights) == 'hlid'] <- 'Y'
@@ -66,7 +74,7 @@ LiDARh <- function(landscape){
   colnames(heights)[colnames(heights) == 'h'] <- 'X'
 
   # MSD calculation
-  heights <- heights %>% mutate(x = X - mean(X, na.rm = TRUE),
+  heights <- heights %>% select(-bin, -class) %>% mutate(x = X - mean(X, na.rm = TRUE),
                                 y = Y - mean(Y, na.rm = TRUE),
                                 xy = x * y)
   MSD <- heights %>%  dplyr::summarise(MSD = sum( (X - Y) ^2, na.rm = TRUE) / length(X))
@@ -90,15 +98,13 @@ LiDARh <- function(landscape){
   msd$var <- rownames(msd)
   msd$landscape <- landscape
   # save for cross landscape comparisons
-  write.csv(msd, paste0('./temp/msd_', landscape, '.csv'), row.names = F)
-  # TODO: save csv in evalPath
-  
+  write.csv(msd, paste0(evalHeightPath, '/', landscape, '_msd.csv'), row.names = F)
 
   # # plot msd
-  # pl2 <- ggplot(msd %>% filter(var != 'msd')) +
-  # geom_bar(aes(y = components, x = var, fill = var), stat = 'identity') +
-  # theme_bw()
-  # pl2
+  pl2 <- ggplot(msd %>% filter(var != 'msd')) +
+  geom_bar(aes(y = components, x = var, fill = var), stat = 'identity') +
+  theme_bw()
+  pl2
 
 
 }
