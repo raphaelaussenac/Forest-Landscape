@@ -13,6 +13,16 @@ heightPred <- function(landscape){
   hmodPath <- paste0('./data/', landscape, '/hmodels/')
   roFile <- list.files(path = hmodPath, pattern = '\\.ro$')
   load(paste0(hmodPath, roFile))
+  # if landscape == sneznik, also load bauges model to predict
+  # height of secondary species
+  if(landscape == 'sneznik'){
+    saveMod <- mod_nlme
+    hmodPath <- paste0('./data/', 'bauges', '/hmodels/')
+    roFile <- list.files(path = hmodPath, pattern = '\\.ro$')
+    load(paste0(hmodPath, roFile))
+    baugesMod <- mod_nlme
+    mod_nlme <- saveMod
+  }
 
   # load virtual tree data
   tree <- readRDS(paste0(tempPath, '/trees75.rds'))
@@ -45,6 +55,7 @@ heightPred <- function(landscape){
     tree[tree$sp == 'Prunus serotina', 'espar'] <- 'Prse'
     tree[is.na(tree$espar), 'espar'] <- 'OtherSp'
   } else if(landscape == 'sneznik'){
+    tree <- left_join(x = tree, y = spCor, by = c('sp' = 'latinName')) %>% rename('esparBauges' = 'espar')
     tree$espar <- NA
     tree[tree$sp == 'Abies alba', 'espar'] <- 'Abal'
     tree[tree$sp == 'Fagus sylvatica', 'espar'] <- 'Fasy'
@@ -63,14 +74,26 @@ heightPred <- function(landscape){
   # predict
   ###############################################################
 
-  # predict
-  tree$pred <- round(predict(mod_nlme, newdata = tree, level = 0), 2)
+  # at sneznik: split into 2 data sets
+  # main sp predicted from sneznik h model
+  # secondary sp predicted from bauges model
+  if(landscape == 'sneznik'){
+    # split data
+    main <- tree %>% filter(espar != 'OtherSp') %>% select(-esparBauges)
+    second <- tree %>% filter(espar == 'OtherSp') %>%
+                        select(-espar) %>%
+                        rename('espar' = 'esparBauges')
+    # predict
+    main$pred <- round(predict(mod_nlme, newdata = main, level = 0), 2)
+    second$pred <- round(predict(baugesMod, newdata = second, level = 0), 2)
+    # reassemble data
+    tree <- bind_rows(main, second)
 
-  # plot
-  ggplot(data = tree[1:10000,], aes(x = dbh, y = pred, col = sp)) +
-  geom_point(alpha = 0.5) +
-  ylab('h') +
-  theme_light()
+  } else if(landscape != 'sneznik'){
+    # predict
+    tree$pred <- round(predict(mod_nlme, newdata = tree, level = 0), 2)
+
+  }
 
   # save
   tree <- tree %>% dplyr::select('cellID25', 'sp', 'n', 'dbh', 'pred') %>%
@@ -78,5 +101,11 @@ heightPred <- function(landscape){
             arrange(sp, dbh, .by_group = TRUE) %>%
             mutate(across(c(dbh, h), round, 4)) %>% ungroup()
   write.csv(tree, paste0(landPath, '/trees.csv'), row.names = F)
+
+  # plot
+  ggplot(data = tree[1:30000,], aes(x = dbh, y = h, col = sp)) +
+  geom_point(alpha = 0.5) +
+  ylab('h') +
+  theme_light()
 
 }

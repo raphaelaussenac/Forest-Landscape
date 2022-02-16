@@ -62,6 +62,7 @@ evalHeight <- function(landscape){
   ggsave(file = paste0(evalHeightPath, '/', landscape, '_evalHeight.jpg'), plot = pl1, width = 10, height = 10)
 
   # TODO: JMM a mis des limites min de diametre ????
+  # TODO: inclure toutes les cellules = comparaison de hdom de max 6 arbres
   # TODO: ajouter nb/proportion de cellules sur le territoire (ou hlid & h > 6)
 
   ###############################################################
@@ -74,7 +75,7 @@ evalHeight <- function(landscape){
   colnames(heights)[colnames(heights) == 'h'] <- 'X'
 
   # MSD calculation
-  heights <- heights %>% select(-bin, -class) %>% mutate(x = X - mean(X, na.rm = TRUE),
+  heights <- heights %>% dplyr::select(-bin, -class) %>% mutate(x = X - mean(X, na.rm = TRUE),
                                 y = Y - mean(Y, na.rm = TRUE),
                                 xy = x * y)
   MSD <- heights %>%  dplyr::summarise(MSD = sum( (X - Y) ^2, na.rm = TRUE) / length(X))
