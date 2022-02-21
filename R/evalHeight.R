@@ -34,17 +34,17 @@ evalHeight <- function(landscape){
   # calculate mean height of n highest trees
   compareH <- function(nbTrees, tree){
     compH <- tree %>% group_by(cellID25) %>% arrange(-cellID25, -h) %>% slice(1:nbTrees) %>%
-                      mutate(nh = n()) %>% filter(N>=nbTrees, nh == nbTrees) %>%
+                      mutate(nh = n()) %>%
                       summarise(h = mean(h), hlid = unique(get(paste0('Hm', nbTrees))))
+    return(compH)
   }
   heights <- compareH(6, tree)
   mod <- lm(hlid~h, data = heights)
   summary(mod)
 
-  # create classes for h --> bowplot
+  # create classes for h --> boxplot
   heights <- heights %>% mutate(bin=cut_width(h, width = 1, center = 0)) %>%
                          group_by(bin) %>% mutate(class = round(mean(h))) %>% ungroup()
-  # heights <- heights %>% mutate(bin=cut(h, 40, labels = FALSE))
 
   # plot
   pl1 <- ggplot(heights, aes(x = h, y = hlid)) +
@@ -54,16 +54,13 @@ evalHeight <- function(landscape){
   coord_fixed() +
   annotate(geom = 'text', x = 10, y = 40, label = paste('r² = ', round(summary(mod)$r.squared,2)), col = 'red', size = 10) +
   ggtitle(landscape) +
-  geom_boxplot(aes(x = class, y = hlid, group = class), alpha = 0.8) +
+  # geom_boxplot(aes(x = class, y = hlid, group = class), alpha = 0.8) +
   geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
   geom_abline(intercept = mod$coef[1], slope = mod$coef[2], color = "red", linetype = 1, size = 1) +
   theme_bw()
   pl1
   ggsave(file = paste0(evalHeightPath, '/', landscape, '_evalHeight.jpg'), plot = pl1, width = 10, height = 10)
 
-  # TODO: JMM a mis des limites min de diametre ????
-  # TODO: inclure toutes les cellules = comparaison de hdom de max 6 arbres
-  # TODO: ajouter nb/proportion de cellules sur le territoire (ou hlid & h > 6)
 
   ###############################################################
   # mean square deviation
