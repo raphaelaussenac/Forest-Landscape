@@ -10,9 +10,9 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * cellID25.asc: 25m*25m cell ID
 * cellID100.asc: 100m*100m cell ID
 * elev.asc: elevation (m a.s.l)
-* parkMask.asc: Bauges Geopark extent
-  + 0 = outside park
-  + 1 = inside park
+* parkMask.asc: case study area extent
+  + 0 = outside case study area
+  + 1 = inside case study area
 * forestMask: forest cells to be simulated
   + 0 = not simulated (no trees at the initial state or outside the simulated area)
   + 1 = simulated (presence of trees at the initial state and inside the simulated area)
@@ -32,9 +32,9 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 ## cell25.csv
 * cellID25: 25m*25m cell ID
 * cellID100: 100m*100m cell ID
-* park: Bauges Geopark extent
-  + 0 = outside park
-  + 1 = inside park
+* park: case study area extent
+  + 0 = outside case study area
+  + 1 = inside case study area
 * forest: forest cells to be simulated
   + 0 = not simulated (no trees at the initial state or outside the simulated area)
   + 1 = simulated (presence of trees at the initial state and inside the simulated area)

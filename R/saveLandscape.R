@@ -17,7 +17,6 @@ saveLandscape <- function(landscape){
 
   # load rasters
   cellID25 <- raster(paste0(landPath, '/cellID25.asc'))
-  compo <- raster(paste0(tempPath, '/compoID.asc'))
   park <- raster(paste0(landPath, '/parkMask.asc'))
   # only consider public forests at milicz
   if(landscape == 'milicz'){
@@ -114,26 +113,16 @@ saveLandscape <- function(landscape){
 
 
   ################################################################################
-  # create forest extent raster:
+  # create forest column in cell25.csv, forestMask raster and make sure
+  # it corresponds to the tree data
   ################################################################################
 
-  # wherever there's a compoID inside the case study area (= park)
-  compo[!is.na(compo)] <- 1
-  # convert NA into 0
-  isBecomes <- cbind(c(1, NA),
-                     c(1, 0))
-  compo <- reclassify(compo, rcl = isBecomes)
+  # remove cells with no trees in tree data set
+  results <- results[!is.na(results$dbh),]
 
-  if(landscape != 'milicz'){
-    # union of park and compo
-    compoUpark <- park + compo
-    # convert values
-    isBecomes <- cbind(c(0, 1, 2),
-                       c(0, 0, 1))
-    forest <- reclassify(compoUpark, rcl = isBecomes)
-    names(forest) <- 'forest'
-
-  }
+  # remove trees outside park
+  results <- left_join(results, envdf %>% dplyr::select(cellID25, park), by = 'cellID25') %>%
+             filter(park == 1) %>% dplyr::select(-park)
 
   # only consider public forests at milicz
   if(landscape == 'milicz'){
@@ -145,32 +134,24 @@ saveLandscape <- function(landscape){
                        c(1, 0, 0))
     own <- reclassify(own, rcl = isBecomes)
     names(own) <- 'public'
-
-    # union of own + compo
-    compoUown <- own + compo
-    # convert values
-    isBecomes <- cbind(c(0, 1, 2),
-                       c(0, 0, 1))
-    forest <- reclassify(compoUown, rcl = isBecomes)
-    names(forest) <- 'forest'
-
+    # stack with cellID25
+    own <- stack(cellID25, own)
+    # convert into dataframe
+    own <- as.data.frame(own)
+    # remove trees outside public forests
+    results <- left_join(results, own, by = 'cellID25') %>% filter(public == 1) %>% dplyr::select(-public)
   }
 
-  # add forest to cell data
-  cellID <- stack(cellID25, cellID100, forest)
-  plot(cellID)
-  writeRaster(cellID$forest, filename = paste0(landPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
+  # add cellID100 to envdf
+  cellID <- stack(cellID25, cellID100)
+  cellID <- as.data.frame(values(cellID))
+  envdf <- full_join(envdf, cellID, by = 'cellID25')
 
-  # add cellID100 and forest extent to env data
-  cellIDforest <- as.data.frame(values(cellID))
-  envdf <- merge(envdf, cellIDforest, by = 'cellID25')
-
-  ################################################################################
-  # save
-  ################################################################################
-
-  # remove cells with no trees in tree data set
-  results <- results[!is.na(results$dbh),]
+  # add forest cells to envdf
+  listForestCells <- unique(results$cellID25)
+  envdf$forest <- NA
+  envdf[envdf$cellID25 %in% listForestCells, 'forest'] <- 1
+  envdf[!(envdf$cellID25 %in% listForestCells), 'forest'] <- 0
 
   # reduce table size in memory
   envdf$cellID100 <- as.integer(envdf$cellID100)
@@ -183,14 +164,14 @@ saveLandscape <- function(landscape){
   # format
   envdf <- envdf %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID25, cellID100) %>%
                      mutate(across(c('elev','slope','aspect'), round, 4))
-  # define forest = 0 if there's no tree
-  envdf[!(envdf$cellID25 %in% unique(results$cellID25)), 'forest'] <- 0
   # save
   write.csv(envdf, file = paste0(landPath, '/cell25.csv'), row.names = FALSE)
 
-  # remove trees not in forest cells
-  forestCells <- envdf[envdf$forest == 1, 'cellID25']
-  results <- results %>% filter(cellID25 %in% forestCells)
+  # save forestMask raster
+  cellID25$forest <- envdf$forest
+  forestMask <- cellID25$forest
+  writeRaster(forestMask, filename = paste0(landPath, '/forestMask.asc'), format = 'ascii', overwrite = TRUE)
+
   # reduce table size in memory
   results$cellID25 <- as.integer(results$cellID25)
   results$n <- as.integer(results$n)
