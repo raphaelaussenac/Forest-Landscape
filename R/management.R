@@ -36,6 +36,7 @@ managTable <- function(landscape){
   } else if(landscape == 'sneznik'){
     elev <- rast(paste0(landPath, '/elev.asc'))
     managType <- vect('./data/sneznik/GEO/Sneznik_forest_stands2017_species_type.shp')
+    protect <- vect('./data/sneznik/GEO/Sneznik_forest_reserves.shp')
   }
 
   # load cellID100 raster
@@ -65,26 +66,21 @@ managTable <- function(landscape){
 
   }
 
-  if(landscape == 'bauges' | landscape == 'milicz' ){
-    # convert into raster
-    # use cover to get proportion of each 100*100m cell covered by polygon
-    protect <- rasterize(protect, cellID100, cover = TRUE, background = 0)
-    names(protect) <- 'protect'
+  # convert into raster
+  # use cover to get proportion of each 100*100m cell covered by polygon
+  protect <- rasterize(protect, cellID100, cover = TRUE, background = 0)
+  names(protect) <- 'protect'
 
-    # stack with cellID100
-    protect <- c(cellID100, protect)
+  # stack with cellID100
+  protect <- c(cellID100, protect)
 
-    # convert into dataframe
-    protect <- as.data.frame(protect)
+  # convert into dataframe
+  protect <- as.data.frame(protect)
 
-    # if protect >= 0.5 then most of the cell is covered by protected
-    # area --> replace by 1. if protect < 0.5 --> replace by 0.
-    df <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
-  }
+  # if protect >= 0.5 then most of the cell is covered by protected
+  # area --> replace by 1. if protect < 0.5 --> replace by 0.
+  df <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
 
-  if(landscape == 'sneznik'){
-    df <- as.data.frame(cellID100) %>% mutate(protect = 0)
-  }
 
   ###############################################################
   # calculate Gini index on 1ha cells and define stand type
