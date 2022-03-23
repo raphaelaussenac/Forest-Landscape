@@ -8,6 +8,7 @@ evalHeight <- function(landscape){
   require(raster)
   require(dplyr)
   require(ggplot2)
+  require(ggExtra)
 
   # load LiDAR heights
   lidH <- list.files(paste0('./data/', landscape, '/LiDARh'), pattern = '.rda')
@@ -48,16 +49,18 @@ evalHeight <- function(landscape){
 
   # plot
   pl1 <- ggplot(heights, aes(x = h, y = hlid)) +
-  geom_point(alpha = 0.5, size = 0.5, col = 'grey', pch = 16) +
+  geom_point(alpha = 0, size = 0.5, col = 'grey', pch = 16) +
   xlim(5, 45) +
   ylim(5, 45) +
   coord_fixed() +
   annotate(geom = 'text', x = 10, y = 40, label = paste('r² = ', round(summary(mod)$r.squared,2)), col = 'red', size = 10) +
   ggtitle(landscape) +
-  # geom_boxplot(aes(x = class, y = hlid, group = class), alpha = 0.8) +
+  geom_boxplot(aes(x = class, y = hlid, group = class), alpha = 0.8) +
   geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
   geom_abline(intercept = mod$coef[1], slope = mod$coef[2], color = "red", linetype = 1, size = 1) +
-  theme_bw()
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+  pl1 <- ggMarginal(pl1, type = 'histogram', margin = 'x', size = 7, xparams = list(fill = "grey", bins = 100))
   pl1
   ggsave(file = paste0(evalHeightPath, '/', landscape, '_evalHeight.jpg'), plot = pl1, width = 10, height = 10)
 
