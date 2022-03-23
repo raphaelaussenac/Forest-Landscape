@@ -79,9 +79,9 @@ heightPred <- function(landscape){
   # secondary sp predicted from bauges model
   if(landscape == 'sneznik'){
     # split data
-    main <- tree %>% filter(espar != 'OtherSp') %>% select(-esparBauges)
+    main <- tree %>% filter(espar != 'OtherSp') %>% dplyr::select(-esparBauges)
     second <- tree %>% filter(espar == 'OtherSp') %>%
-                        select(-espar) %>%
+                        dplyr::select(-espar) %>%
                         rename('espar' = 'esparBauges')
     # predict
     main$pred <- round(predict(mod_nlme, newdata = main, level = 0), 2)

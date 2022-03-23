@@ -7,11 +7,9 @@ managTable <- function(landscape){
   # load packages
   require(reldist)
   require(dplyr)
-  require(rgdal)
-  require(raster)
   require(ggplot2)
   require(stringr)
-  require(sf)
+  require(terra)
 
   # load environmental data
   env <- read.csv(paste0(landPath, '/cell25.csv'))
@@ -24,25 +22,24 @@ managTable <- function(landscape){
 
   if(landscape == 'bauges'){
     # load protected areas
-    rb <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_biologiques', encoding = 'UTF-8', use_iconv = TRUE)
-    rn <- readOGR(dsn = './data/bauges/GEO', layer = 'reserves_naturelles', encoding = 'UTF-8', use_iconv = TRUE)
+    rb <- vect('./data/bauges/GEO/reserves_biologiques.shp')
+    rn <- vect('./data/bauges/GEO/reserves_naturelles.shp')
     # load park limits
-    park <- readOGR(dsn = './data/bauges/GEO', layer = 'park', encoding = 'UTF-8', use_iconv = TRUE)
+    park <- vect('./data/bauges/GEO/park.shp')
     # load ownership
-    own <- readOGR(dsn = './data/bauges/GEO', layer = 'Foret_publique_dep73-74_2814_dissolve', encoding = 'UTF-8', use_iconv = TRUE)
+    own <- vect('./data/bauges/GEO/Foret_publique_dep73-74_2814_dissolve.shp')
     # load accessibility
-    access <- raster('./data/bauges/GEO/PNRfilled_F.distance.tif')
-    access[access > 100000] <- 0 # correct values>100000m
+    access <- rast('./data/bauges/GEO/PNRfilled_F.distance.tif')
   } else if(landscape == 'milicz'){
     # load protected areas
-    protect <- readOGR(dsn = './data/milicz/GEO', layer = 'Milicz_protected_area', encoding = 'UTF-8', use_iconv = TRUE)
+    protect <- vect('./data/milicz/GEO/Milicz_protected_area.shp')
   } else if(landscape == 'sneznik'){
-    elev <- raster(paste0(landPath, '/elev.asc'))
-    managType <- readOGR(dsn = './data/sneznik/GEO', layer = 'Sneznik_forest_stands2017_species_type', encoding = 'UTF-8', use_iconv = TRUE)
+    elev <- rast(paste0(landPath, '/elev.asc'))
+    managType <- vect('./data/sneznik/GEO/Sneznik_forest_stands2017_species_type.shp')
   }
 
   # load cellID100 raster
-  cellID100 <- raster(paste0(landPath, '/cellID100.asc'))
+  cellID100 <- rast(paste0(landPath, '/cellID100.asc'))
 
   # load species self-thinning boundary parameters
   rdiParam <- read.table('./data/valeursCoefficientsRdi.txt', header = T)
@@ -61,22 +58,21 @@ managTable <- function(landscape){
     # and exclude 'réserve biologique dirigée'
     rb <- rb[rb$code_r_enp == 'I',]
     # merge protected areas
-    protect <- raster::union(rb, rn)
+    protect <- terra::union(rb, rn)
     protect$protection <- 1
     # select protected areas only in study area
-    protect <- raster::intersect(protect, park)
+    protect <- terra::intersect(protect, park) # TODO: different crs...
 
   }
 
   if(landscape == 'bauges' | landscape == 'milicz' ){
     # convert into raster
-    # use getCover to define proportion of each 100*100m cell covered by polygon
-    XXX <- rasterize(protect, cellID100) # first rasterize with getCover triggers bugue -> rasterize without getCover
-    protect <- rasterize(protect, cellID100, getCover = TRUE)
+    # use cover to get proportion of each 100*100m cell covered by polygon
+    protect <- rasterize(protect, cellID100, cover = TRUE, background = 0)
     names(protect) <- 'protect'
 
     # stack with cellID100
-    protect <- stack(cellID100, protect)
+    protect <- c(cellID100, protect)
 
     # convert into dataframe
     protect <- as.data.frame(protect)
@@ -185,7 +181,7 @@ managTable <- function(landscape){
   if(landscape == 'sneznik'){
     # add elevation
     elev100 <- aggregate(elev, 4, mean)
-    elev100 <- stack(cellID100, elev100)
+    elev100 <- c(cellID100, elev100)
     elev100 <- as.data.frame(elev100)
     mainSp <- left_join(mainSp, elev100, by = 'cellID100')
     mainSp <- mainSp %>% mutate(elev = case_when(elev >= 1100 ~ 'HA', elev < 1100 ~ 'LA'))
@@ -227,25 +223,24 @@ managTable <- function(landscape){
 
   # retrieve ownership in study area
   if(landscape == 'bauges'){
-    own <- raster::intersect(own, park)
-
     # convert into raster
-    # use getCover to define proportion of each 100*100m cell covered by polygon
-    own <- rasterize(own, cellID100, getCover = TRUE)
+    # use cover to get proportion of each 100*100m cell covered by polygon
+    own <- crop(own, park)
+    own <- terra::rasterize(own, cellID100, cover = TRUE, background = 0)
     names(own) <- 'public'
 
     # stack with cellID100
-    own <- stack(cellID100, own)
+    own <- c(cellID100, own)
 
     # convert into dataframe
-    own <- as.data.frame(own)
+    own <- terra::as.data.frame(own)
 
     # if public >= 0.5 then most of the cell is public --> replace by public.
     # if public < 0.5 --> replace by private.
     own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
 
     # add to df
-    df <- merge(df, own[, c('cellID100', 'owner')], by = 'cellID100')
+    df <- left_join(df, own[, c('cellID100', 'owner')], by = 'cellID100')
 
   }
 
@@ -273,24 +268,24 @@ managTable <- function(landscape){
     access <- crop(access, cellID100)
 
     # aggregate access value from 5*5m to 100*100m
-    access <- aggregate(access, fact = 20, fun = 'mean', na.rm = TRUE)
+    access <- terra::aggregate(access, fact = 20, fun = 'mean', na.rm = TRUE)
 
     # stack with cellID100
-    access <- stack(cellID100, access)
+    access <- c(cellID100, access)
 
     # convert into dataframe
-    access <- as.data.frame(access)
+    access <- terra::as.data.frame(access)
     names(access) <- c('cellID100', 'dist')
 
     # if access > 2km --> not accessible
     access <- access %>% mutate(access = if_else(dist <= 2000, 1, 0)) %>%
                          dplyr::select(-dist)
-    access[is.na(access$access), 'access'] <- 0
     # access = 1 --> accessible
     # access = 0 --> inaccessible
 
     # add to df
-    df <- merge(df, access, by = 'cellID100')
+    df <- left_join(df, access, by = 'cellID100')
+    df[is.na(df$access), 'access'] <- 0
 
   }
 
@@ -412,7 +407,7 @@ managTable <- function(landscape){
     # assign management type
     manag <- raster::rasterize(managType, cellID100, fun = function(x,...) max(x, na.rm = TRUE), field = 'StandType')
     names(manag) <- 'manag'
-    manag <- stack(cellID100, manag)
+    manag <- c(cellID100, manag)
     manag <- as.data.frame(manag)
     # if manag > 1 --> uneven
     # if manag <=1 --> even
@@ -432,7 +427,7 @@ managTable <- function(landscape){
   # define 'no management' areas
   ###############################################################
 
-  df[(df$access == 0 | df$protect == 1) & !is.na(df$forestCellsPerHa), 'manag'] <- 'no manag'
+  df[(df$access == 0 | df$protect == 1) & !is.na(df$forestCellsPerHa) & !is.na(df$access) & !is.na(df$protect), 'manag'] <- 'no manag'
 
   ###############################################################
   # save
