@@ -1,4 +1,4 @@
-managTable <- function(landscape){
+managTable <- function(landscape, propProtecLand){
 
   ###############################################################
   # initialisation
@@ -10,6 +10,8 @@ managTable <- function(landscape){
   require(ggplot2)
   require(stringr)
   require(terra)
+
+  # TODO: alternative scenario for the Bauges (change skidding distance)
 
   # load environmental data
   env <- read.csv(paste0(landPath, '/cell25.csv'))
@@ -31,12 +33,17 @@ managTable <- function(landscape){
     # load accessibility
     access <- rast('./data/bauges/GEO/PNRfilled_F.distance.tif')
   } else if(landscape == 'milicz'){
-    # load protected areas
     protect <- vect('./data/milicz/GEO/Milicz_protected_area.shp')
+    allProtect <- protect
+    forest <- rast(paste0(landPath, '/forestMask.asc'))
+    # park <- rast(paste0(landPath, '/parkMask.asc'))
   } else if(landscape == 'sneznik'){
     elev <- rast(paste0(landPath, '/elev.asc'))
     managType <- vect('./data/sneznik/GEO/Sneznik_forest_stands2017_species_type.shp')
     protect <- vect('./data/sneznik/GEO/Sneznik_forest_reserves.shp')
+    protect <- aggregate(protect, dissolve = TRUE)
+    allProtect <- protect
+    forest <- rast(paste0(landPath, '/forestMask.asc'))
   }
 
   # load cellID100 raster
@@ -65,22 +72,80 @@ managTable <- function(landscape){
     protect <- project(protect, park)
     # select protected areas only in study area
     protect <- terra::intersect(protect, park)
+  } else if(landscape %in% c('sneznik', 'milicz')){
+    # get forest polygon
+    forest[forest==0] <- NA
+    forest <- as.polygons(forest, trunc = TRUE, dissolve = TRUE, na.rm = TRUE)
+    crs(forest) <- crs(protect)
+    # select protected areas only in study area
+    protectVec <- terra::intersect(protect, forest)
   }
 
   # convert into raster
   # use cover to get proportion of each 100*100m cell covered by polygon
-  protect <- rasterize(protect, cellID100, cover = TRUE, background = 0)
-  names(protect) <- 'protect'
+  protectRas <- rasterize(protectVec, cellID100, cover = TRUE, background = 0)
+  names(protectRas) <- 'protect'
+  # if protect >= 0.5 then most of the cell is covered by protected
+  # area --> replace by 1. if protect < 0.5 --> replace by 0.
+  protectRas[protectRas < 0.5] <- 0
+  protectRas[protectRas >= 0.5] <- 1
 
   # stack with cellID100
-  protect <- c(cellID100, protect)
+  protect <- c(cellID100, protectRas)
 
   # convert into dataframe
   protect <- as.data.frame(protect)
 
-  # if protect >= 0.5 then most of the cell is covered by protected
-  # area --> replace by 1. if protect < 0.5 --> replace by 0.
-  df <- protect %>% mutate(protect = if_else(protect >= 0.5, 1, 0))
+  # 'measure' protected surface (ha)
+  protecSurf <- sum(protect$protect)
+
+  ################################ increase / decrease surface of protected area
+
+  # if protecSurf < targetSurf --> increase size of protected area
+  if(propProtecLand == 0.2 & landscape %in% c('sneznik', 'milicz')){
+
+    # get total forest surface (ha)
+    totSurf <- sum(expanse(forest))/10000
+    # define target surface
+    targetSurf <- totSurf * propProtecLand
+
+    # expand buffer to reach target surface
+    w <- 1
+    while(protecSurf < targetSurf){
+      # expand surface by w meters
+      protectExpand <- buffer(allProtect, width = w)
+      # keep protected areas only in study area
+      protectExpand <- terra::intersect(protectExpand, forest)
+      # use cover to get proportion of each 100*100m cell covered by polygon
+      protectExpand <- rasterize(protectExpand, cellID100, cover = TRUE, background = 0)
+      names(protectExpand) <- 'protect'
+      # if protect >= 0.5 then most of the cell is covered by protected
+      # area --> replace by 1. if protect < 0.5 --> replace by 0.
+      protectExpand[protectExpand < 0.5] <- 0
+      protectExpand[protectExpand >= 0.5] <- 1
+      # stack with cellID100
+      protectExpandstack <- c(cellID100, protectExpand)
+      # convert into dataframe
+      protectExpanddf <- as.data.frame(protectExpandstack)
+      # calculate protected surface
+      protecSurf <- sum(protectExpanddf$protect)
+      w <- w + 1
+    }
+    df <- protectExpanddf
+    plot(protectExpand)
+    plot(forest, add = TRUE)
+    plot(protectVec, add = TRUE, col = 'orange')
+
+  } else if(propProtecLand == 0 & landscape %in% c('sneznik', 'milicz')){
+    # remove all proected areas
+    df <- protect
+    df$protect <- 0
+
+  } else if(propProtecLand == 'baseline' & landscape %in% c('sneznik', 'milicz')){
+    df <- protect
+  }
+
+  ################################ increase / decrease surface of protected area
 
 
   ###############################################################
