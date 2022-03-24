@@ -61,9 +61,10 @@ managTable <- function(landscape){
     # merge protected areas
     protect <- terra::union(rb, rn)
     protect$protection <- 1
+    # change protect projection to match the park layer projection
+    protect <- project(protect, park)
     # select protected areas only in study area
-    protect <- terra::intersect(protect, park) # TODO: different crs...
-
+    protect <- terra::intersect(protect, park)
   }
 
   # convert into raster
