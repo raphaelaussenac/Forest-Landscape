@@ -26,14 +26,6 @@ managSynth <- function(landscape){
   # load cellID100 raster
   cellID100 <- rast(paste0(landPath, '/cellID100.asc'))
 
-
-# TODO: prendre en compte forestcellsperha pour travailler sur les bonnes surfaces?
-# --> Sneznik ok
-# --> Milicz ok
-# --> Bauges ok
-# TODO: scenarios sneznik
-
-
   ###############################################################
   # plot stand density
   ###############################################################
@@ -199,7 +191,7 @@ managSynth <- function(landscape){
     write.csv(tab3, paste0(evalPath, '/managSyn.csv'), row.names = F)
 
   } else if(landscape == 'sneznik'){
-    tab <- table(df$manag, df$compoType)/16
+    tab <- df %>% group_by(manag, compoType) %>% summarise(surf = n()*surfCell) %>% pivot_wider(names_from = compoType, values_from = surf)
     write.csv(tab, paste0(evalPath, '/managSyn.csv'), row.names = F)
   }
 
