@@ -286,8 +286,7 @@ managSynth <- function(landscape){
   cellID100$manag <- as.numeric(dfMaps$manag)
   plot(cellID100$manag)
   # convert raster into polygon
-  # managPoly <- rasterToPolygons(cellID100$manag, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
-  managPoly <- as.polygons(cellID100$manag, trunc = TRUE, dissolve = TRUE, na.rm = TRUE)
+  managPoly <- terra::as.polygons(cellID100$manag, trunc = TRUE, dissolve = TRUE, na.rm = TRUE)
   # assign management name to polygons (insted of intergers codes)
   corr <- data.frame(level = c(1:length(levels(dfMaps$manag))), levels(dfMaps$manag))
   managPoly <- merge(managPoly, corr, by.x = 'manag', by.y = 'level')
@@ -303,8 +302,7 @@ managSynth <- function(landscape){
   cellID100$compoType <- as.numeric(dfMaps$compoType)
   plot(cellID100$compoType)
   # convert raster into polygon
-  compoTypePoly <- as.polygons(cellID100$compoType, trunc = TRUE, dissolve = TRUE, na.rm = TRUE)
-  # compoTypePoly <- rasterToPolygons(cellID100$compoType, n = 4, na.rm = TRUE, digits=12, dissolve = TRUE)
+  compoTypePoly <- terra::as.polygons(cellID100$compoType, trunc = TRUE, dissolve = TRUE, na.rm = TRUE)
   # assign management name to polygons (insted of intergers codes)
   corr <- data.frame(level = c(1:length(levels(dfMaps$compoType))), levels(dfMaps$compoType))
   compoTypePoly <- merge(compoTypePoly, corr, by.x = 'compoType', by.y = 'level')

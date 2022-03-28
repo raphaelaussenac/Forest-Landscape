@@ -1,17 +1,14 @@
-managTable <- function(landscape, propProtecLand){
+managTable <- function(landscape, sce){
 
   ###############################################################
   # initialisation
   ###############################################################
 
   # load packages
-  require(reldist)
   require(dplyr)
   require(ggplot2)
   require(stringr)
   require(terra)
-
-  # TODO: alternative scenario for the Bauges (change skidding distance)
 
   # load environmental data
   env <- read.csv(paste0(landPath, '/cell25.csv'))
@@ -35,16 +32,16 @@ managTable <- function(landscape, propProtecLand){
   } else if(landscape == 'milicz'){
     protect <- vect('./data/milicz/GEO/Milicz_protected_area.shp')
     allProtect <- protect
-    forest <- rast(paste0(landPath, '/forestMask.asc'))
-    # park <- rast(paste0(landPath, '/parkMask.asc'))
   } else if(landscape == 'sneznik'){
     elev <- rast(paste0(landPath, '/elev.asc'))
     managType <- vect('./data/sneznik/GEO/Sneznik_forest_stands2017_species_type.shp')
     protect <- vect('./data/sneznik/GEO/Sneznik_forest_reserves.shp')
     protect <- aggregate(protect, dissolve = TRUE)
     allProtect <- protect
-    forest <- rast(paste0(landPath, '/forestMask.asc'))
   }
+
+  # load forest extent
+  forest <- rast(paste0(landPath, '/forestMask.asc'))
 
   # load cellID100 raster
   cellID100 <- rast(paste0(landPath, '/cellID100.asc'))
@@ -72,14 +69,15 @@ managTable <- function(landscape, propProtecLand){
     protect <- project(protect, park)
     # select protected areas only in study area
     protect <- terra::intersect(protect, park)
-  } else if(landscape %in% c('sneznik', 'milicz')){
-    # get forest polygon
-    forest[forest==0] <- NA
-    forest <- as.polygons(forest, trunc = TRUE, dissolve = TRUE, na.rm = TRUE)
-    crs(forest) <- crs(protect)
-    # select protected areas only in study area
-    protectVec <- terra::intersect(protect, forest)
   }
+
+  # get forest polygon
+  forest[forest==0] <- NA
+  forest <- as.polygons(forest, trunc = TRUE, dissolve = TRUE, na.rm = TRUE)
+  crs(forest) <- crs(protect)
+
+  # keep protected areas only in forest area
+  protectVec <- terra::intersect(protect, forest)
 
   # convert into raster
   # use cover to get proportion of each 100*100m cell covered by polygon
@@ -102,12 +100,12 @@ managTable <- function(landscape, propProtecLand){
   ################################ increase / decrease surface of protected area
 
   # if protecSurf < targetSurf --> increase size of protected area
-  if(propProtecLand == 0.2 & landscape %in% c('sneznik', 'milicz')){
+  if('E' %in% sce & landscape %in% c('sneznik', 'milicz')){
 
     # get total forest surface (ha)
     totSurf <- sum(expanse(forest))/10000
     # define target surface
-    targetSurf <- totSurf * propProtecLand
+    targetSurf <- totSurf * 0.2
 
     # expand buffer to reach target surface
     w <- 1
@@ -136,34 +134,16 @@ managTable <- function(landscape, propProtecLand){
     plot(forest, add = TRUE)
     plot(protectVec, add = TRUE, col = 'orange')
 
-  } else if(propProtecLand == 0 & landscape %in% c('sneznik', 'milicz')){
-    # remove all proected areas
+  } else if('I' %in% sce & landscape %in% c('sneznik', 'milicz')){
+    # remove all protected areas
     df <- protect
     df$protect <- 0
 
-  } else if(propProtecLand == 'baseline' & landscape %in% c('sneznik', 'milicz')){
+  } else if('B' %in% sce | landscape == 'bauges'){
     df <- protect
   }
 
   ################################ increase / decrease surface of protected area
-
-
-  ###############################################################
-  # calculate Gini index on 1ha cells and define stand type
-  # (evenaged / unevenaged)
-  ###############################################################
-
-  # if gini<0.45 --> evenaged stand, else --> unevenaged stand
-  gini <- tree %>% group_by(cellID100) %>% mutate(ba = pi * dbh^2 / 4) %>%
-                   summarise(gini = gini(x = ba, weights = n),
-                             BA = sum((pi * (dbh/200)^2) * n),
-                             Dg = sqrt(sum(dbh^2 * n)/sum(n)),
-                             meanH = sum(h * n) /sum(n)) %>%
-                   mutate(structure = if_else(gini < 0.45, 'even', 'uneven'))
-  gini$structure <- as.factor(gini$structure)
-
-  # add non-forest cells
-  df <- merge(df, gini, by = 'cellID100', all.x = TRUE)
 
   ###############################################################
   # define composition type
@@ -321,6 +301,17 @@ managTable <- function(landscape, propProtecLand){
 
 
   ###############################################################
+  # number of forest 25*25m cells in 100*100m cells
+  ###############################################################
+
+  # nb of forest cells per ha
+  forCel <- tree %>% group_by(cellID100) %>% summarise(forestCellsPerHa = length(unique(cellID25)))
+
+  # add to df
+  df <- merge(df, forCel, by = 'cellID100', all.x = TRUE)
+
+
+  ###############################################################
   # access
   ###############################################################
 
@@ -332,6 +323,9 @@ managTable <- function(landscape, propProtecLand){
     # aggregate access value from 5*5m to 100*100m
     access <- terra::aggregate(access, fact = 20, fun = 'mean', na.rm = TRUE)
 
+    # set max values to 8000
+    access[access > 10000] <- 6221
+
     # stack with cellID100
     access <- c(cellID100, access)
 
@@ -339,31 +333,97 @@ managTable <- function(landscape, propProtecLand){
     access <- terra::as.data.frame(access)
     names(access) <- c('cellID100', 'dist')
 
-    # if access > 2km --> not accessible
-    access <- access %>% mutate(access = if_else(dist <= 2000, 1, 0)) %>%
-                         dplyr::select(-dist)
-    # access = 1 --> accessible
-    # access = 0 --> inaccessible
+    if('B' %in% sce){
+
+      # if access > 2km --> not accessible
+      access <- access %>% mutate(access = if_else(dist <= 1500, 1, 0)) %>%
+                           dplyr::select(-dist)
+      # access = 1 --> accessible
+      # access = 0 --> inaccessible
+
+    } else if('E' %in% sce){
+
+      # managed surface
+      managSurf <- 0
+      # forest surface
+      forSurf <- sum(expanse(forest)) / 10000
+      # target managed surface
+      targManag <- forSurf * 0.45 # to reach 46% of managed forest at the end
+      # skidding distance
+      skid <- 500
+
+      # increase skid untill reach targManag
+      while(managSurf < targManag & skid < 6221){
+
+        tab <- access %>% mutate(access = if_else(dist <= skid, 1, 0)) %>%
+                             dplyr::select(-dist)
+        # add to df
+        tab <- left_join(df, tab, by = 'cellID100')
+        tab[is.na(tab$access), 'access'] <- 0
+        tab[is.na(tab$forestCellsPerHa), 'forestCellsPerHa'] <- 0
+        tab$cells25access <- tab$access * tab$forestCellsPerHa
+        managSurf <- sum(tab$cells25access) * 625 / 10000
+        skid <- skid + 100
+        print(c(skid, managSurf, targManag))
+
+      }
+
+      # if access > skid --> not accessible
+      access <- access %>% mutate(access = if_else(dist <= skid, 1, 0)) %>%
+                           dplyr::select(-dist)
+
+    } else if('I' %in% sce){
+
+      # managed surface
+      managSurf <- 0
+      # forest surface
+      forSurf <- sum(expanse(forest)) / 10000
+      # target managed surface
+      targManag <- forSurf * 0.66
+      # skidding distance
+      skid <- 500
+
+      # increase skid untill reach targManag
+      while(managSurf < targManag & skid < 6221){
+
+        tab <- access %>% mutate(access = if_else(dist <= skid, 1, 0)) %>%
+                             dplyr::select(-dist)
+        # add to df
+        tab <- left_join(df, tab, by = 'cellID100')
+        tab[is.na(tab$access), 'access'] <- 0
+        tab[is.na(tab$forestCellsPerHa), 'forestCellsPerHa'] <- 0
+        tab$cells25access <- tab$access * tab$forestCellsPerHa
+        managSurf <- sum(tab$cells25access) * 625 / 10000
+        skid <- skid + 100
+        print(c(skid, managSurf, targManag))
+
+      }
+
+      # if access > skid --> not accessible
+      access <- access %>% mutate(access = if_else(dist <= skid, 1, 0)) %>%
+                           dplyr::select(-dist)
+
+    }
 
     # add to df
     df <- left_join(df, access, by = 'cellID100')
     df[is.na(df$access), 'access'] <- 0
 
-  }
-
-  if(landscape == 'milicz' | landscape == 'sneznik'){
+  } else if(landscape == 'milicz' | landscape == 'sneznik'){
     df$access <- 1
   }
 
   ###############################################################
-  # number of forest 25*25m cells in 100*100m cells
+  # calculate Gini index on 1ha cells and define stand type
+  # (even-aged / uneven-aged)
   ###############################################################
 
-  # nb of forest cells per ha
-  forCel <- tree %>% group_by(cellID100) %>% summarise(forestCellsPerHa = length(unique(cellID25)))
+  # call gini function from source
+  gini <- giniClass(tree, df, sce)
 
-  # add to df
-  df <- merge(df, forCel, by = 'cellID100', all.x = TRUE)
+  # add gini to df
+  df <- left_join(df, gini, by = 'cellID100')
+
 
   ###############################################################
   # calculate rdi
