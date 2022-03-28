@@ -25,12 +25,13 @@ source('./R/heightPred.R')
 source('./R/management.R')
 source('./R/managSynth.R')
 source('./R/evalHeight.R')
+source('./R/gini.R')
 
 ###############################################################
 # select landscape (bauges, milicz)
 ###############################################################
 
-landscape <- 'sneznik'
+landscape <- 'bauges'
 
 ###############################################################
 # create virtual landscape
@@ -82,7 +83,9 @@ heightPred(landscape)
 evalHeight(landscape)
 
 # create management table
-managTable(landscape)
+managTable(landscape, sce = c('B', 'C'))
+# sce = c('I', 'E', 'B', 'C') or c('B', 'C')
+# for [I]ntensification / [E]xtensification / [B]aseline / working for [C]omplexity
 
 # synthesise management table
 managSynth(landscape)
