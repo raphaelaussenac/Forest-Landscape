@@ -3,7 +3,7 @@
 # (even-aged / uneven-aged)
 ###############################################################
 
-giniClass <- function(tree, df, sce){
+giniClass <- function(tree, df, sce, landscape){
 
   # load packages
   require(reldist)
@@ -27,11 +27,11 @@ giniClass <- function(tree, df, sce){
 
   # define G depending on scenario
   # if scenario is not working for complexity
-  if(!('C' %in% sce)){
+  if(!('C' %in% sce & landscape == 'bauges')){
     gini <- gin(tree, G = Gthresh)
 
   # if scenario is working for complexity
-  } else if('C' %in% sce){
+  } else if('C' %in% sce & landscape == 'bauges'){
 
     #  function to count number of even & uneven managed stands
     #  (only managed stands are considered == accessible and not protected)
@@ -46,21 +46,21 @@ giniClass <- function(tree, df, sce){
 
     # if there's more uneven than even stands
     if(nb[2] < nb[3]){
-      # increase G thrsehold untill changing the balance even / uneven
+      tab <- data.frame()
+      # increase G thrsehold untill reaching a balanced landscape even / uneven
       while(nb[2] < nb[3]){
         Gthresh <- Gthresh + 0.01
         nb <- countG(df, gin, Gthresh)
         print(nb)
+        tab <- rbind(tab, nb)
       }
-    # else if there's more even than uneven stands
-    } else if (nb[2] > nb[3]){
-      # decrease G thrsehold untill changing the balance even / uneven
-      while(nb[2] > nb[3]){
-        Gthresh <- Gthresh - 0.01
-        nb <- countG(df, gin, Gthresh)
-        print(nb)
-      }
+      colnames(tab) <- c('Gthresh', 'nbEven', 'nbUneven')
+      tab$diff <- tab$nbEven - tab$nbUneven
+      Gthresh <- tab[abs(tab$diff) == min(abs(tab$diff)), 'Gthresh']
+      print(Gthresh)
+
     }
+
     gini <- gin(tree, G = Gthresh)
 
   }
