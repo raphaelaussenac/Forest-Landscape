@@ -182,8 +182,7 @@ managSynth <- function(landscape){
     tab1 <- tab %>% filter(manag == 'no manag') %>% pivot_wider(names_from = compoType, values_from = surf)
     missingCol <- unique(tab$compoType)[!(unique(tab$compoType) %in% names(tab1))]
     tab1[, missingCol] <-  0
-    tab2 <- tab %>% filter(manag != 'no manag') %>%
-                    mutate(manag = 'even') %>% pivot_wider(names_from = compoType, values_from = surf)
+    tab2 <- tab %>% filter(manag != 'no manag') %>% pivot_wider(names_from = compoType, values_from = surf)
     missingCol <- unique(tab$compoType)[!(unique(tab$compoType) %in% names(tab2))]
     tab2[, missingCol] <-  0
     tab3 <- rbind(tab1[, names(tab2)], tab2) %>% ungroup()
@@ -245,21 +244,7 @@ managSynth <- function(landscape){
     pdf(paste0(evalPath, '/managSurf2.pdf'), width = 10, height = 10)
     PieDonut(donut, aes(compoType, structure, count = surf), showPieName = FALSE, start = pi/2, title = 'inacc/protect / uneven / even / final cut / coppice')
     dev.off()
-  } else if(landscape == 'milicz'){
-
-    stand1 <- df
-    stand1 <- stand1 %>% filter(!is.na(compoType)) %>% group_by(compoType, manag) %>% summarise(surf = n()*surfCell) %>% ungroup() %>%
-                         mutate(manag = case_when(manag == 'no manag' ~ manag, manag != 'no manag' ~ 'even'))
-    stand1$compoType <- fct_reorder(stand1$compoType, stand1$surf, max, .desc = TRUE)
-    donut <- stand1 %>% group_by(compoType, manag) %>% summarise(surf = sum(surf)) %>% ungroup() %>%
-                      arrange(compoType, manag, -surf) %>% mutate(ymax = cumsum(surf),
-                                                ymin = lag(ymax, default = 0))
-    #
-    pdf(paste0(evalPath, '/managSurf2.pdf'), width = 10, height = 10)
-    PieDonut(donut, aes(compoType, manag, count = surf), showPieName = FALSE, start = pi/2, title = 'even / protect OR no manag')
-    dev.off()
-
-  } else if(landscape == 'sneznik'){
+  } else if(landscape %in% c('milicz', 'sneznik')){
 
     stand1 <- df
     stand1 <- stand1 %>% filter(!is.na(compoType)) %>% group_by(compoType, manag) %>% summarise(surf = n()*surfCell) %>% ungroup()
@@ -270,7 +255,7 @@ managSynth <- function(landscape){
                                                 ymin = lag(ymax, default = 0))
     #
     pdf(paste0(evalPath, '/managSurf2.pdf'), width = 10, height = 10)
-    PieDonut(donut, aes(compoType, manag, count = surf), showPieName = FALSE, start = pi/2, title = 'even / uneven / no manag')
+    PieDonut(donut, aes(compoType, manag, count = surf), showPieName = FALSE, start = pi/2, title = 'even - uneven / protect OR no manag')
     dev.off()
 
   }
