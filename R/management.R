@@ -127,7 +127,7 @@ managTable <- function(landscape, sce){
       protectExpanddf <- as.data.frame(protectExpandstack)
       # calculate protected surface
       protecSurf <- sum(protectExpanddf$protect)
-      w <- w + 1
+      w <- w + 10
     }
     df <- protectExpanddf
     plot(protectExpand)
@@ -260,47 +260,6 @@ managTable <- function(landscape, sce){
 
 
   ###############################################################
-  # ownership
-  ###############################################################
-
-  # retrieve ownership in study area
-  if(landscape == 'bauges'){
-    # convert into raster
-    # use cover to get proportion of each 100*100m cell covered by polygon
-    own <- crop(own, park)
-    own <- terra::rasterize(own, cellID100, cover = TRUE, background = 0)
-    names(own) <- 'public'
-
-    # stack with cellID100
-    own <- c(cellID100, own)
-
-    # convert into dataframe
-    own <- terra::as.data.frame(own)
-
-    # if public >= 0.5 then most of the cell is public --> replace by public.
-    # if public < 0.5 --> replace by private.
-    own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
-
-    # add to df
-    df <- left_join(df, own[, c('cellID100', 'owner')], by = 'cellID100')
-
-  }
-
-  if(landscape == 'milicz'){
-    # we only consider public forests in milicz as defined in saveLandscape
-    # --> set ownership to public wherever there's forest
-    df <- df %>% mutate(owner = ifelse(!is.na(BA), 'public', NA))
-
-  }
-
-  if(landscape == 'sneznik'){
-    # management does not depend on ownership
-    # --> set ownership to NA
-    df$owner <- NA
-  }
-
-
-  ###############################################################
   # number of forest 25*25m cells in 100*100m cells
   ###############################################################
 
@@ -419,10 +378,50 @@ managTable <- function(landscape, sce){
   ###############################################################
 
   # call gini function from source
-  gini <- giniClass(tree, df, sce)
+  gini <- giniClass(tree, df, sce, landscape)
 
   # add gini to df
   df <- left_join(df, gini, by = 'cellID100')
+
+  ###############################################################
+  # ownership
+  ###############################################################
+
+  # retrieve ownership in study area
+  if(landscape == 'bauges'){
+    # convert into raster
+    # use cover to get proportion of each 100*100m cell covered by polygon
+    own <- crop(own, park)
+    own <- terra::rasterize(own, cellID100, cover = TRUE, background = 0)
+    names(own) <- 'public'
+
+    # stack with cellID100
+    own <- c(cellID100, own)
+
+    # convert into dataframe
+    own <- terra::as.data.frame(own)
+
+    # if public >= 0.5 then most of the cell is public --> replace by public.
+    # if public < 0.5 --> replace by private.
+    own <- own %>% mutate(owner = if_else(public >= 0.5, 'public', 'private'))
+
+    # add to df
+    df <- left_join(df, own[, c('cellID100', 'owner')], by = 'cellID100')
+
+  }
+
+  if(landscape == 'milicz'){
+    # we only consider public forests in milicz as defined in saveLandscape
+    # --> set ownership to public wherever there's forest
+    df <- df %>% mutate(owner = ifelse(!is.na(BA), 'public', NA))
+
+  }
+
+  if(landscape == 'sneznik'){
+    # management does not depend on ownership
+    # --> set ownership to NA
+    df$owner <- NA
+  }
 
 
   ###############################################################
@@ -520,14 +519,19 @@ managTable <- function(landscape, sce){
 
   if(landscape == 'milicz'){
     df <- df %>% mutate(density = NA,
-                        manag = case_when(compoType != 'other sp'~ compoType, compoType == 'other sp'~ 'no manag'))
+                        manag = case_when(compoType != 'other sp'~ 'even', compoType == 'other sp'~ 'no manag'))
+    # if scenario is working for complexity
+    if('C' %in% sce){
+      # set all quercus and fagus stands as uneven-aged
+      df <- df %>% mutate(manag = case_when(compoType %in% c('Quercus robur', 'Fagus sylvatica') ~ 'uneven', !(compoType %in% c('Quercus robur', 'Fagus sylvatica')) ~ manag))
+    }
 
   }
 
   if(landscape == 'sneznik'){
     df <- df %>% mutate(density = NA)
     # assign management type
-    manag <- raster::rasterize(managType, cellID100, fun = function(x,...) max(x, na.rm = TRUE), field = 'StandType')
+    manag <- terra::rasterize(managType, cellID100, fun = function(x,...) max(x, na.rm = TRUE), field = 'StandType')
     names(manag) <- 'manag'
     manag <- c(cellID100, manag)
     manag <- as.data.frame(manag)
@@ -542,6 +546,31 @@ managTable <- function(landscape, sce){
     # assign only manag type 'even' for compoType == 'beech dominated'
     types <- c('beech dominated-LA', 'beech dominated-HA')
     df[df$compoType %in% types & !is.na(df$compoType), 'manag'] <- 'even'
+
+    # if scenario is working for complexity
+    if('C' %in% sce){
+      # set Gini threshold
+      Gthresh <- 0.8
+      nbEven <- 1
+      nbUneven <- 0
+      nb <- c(Gthresh, nbEven, nbUneven)
+      tab <- data.frame()
+      df2 <- df
+      # add uneven stand to reach a balanced landscape in term of even / uneven
+      while(nb[2] > nb[3]){
+        Gthresh <- Gthresh - 0.01
+        df2[df2$gini> Gthresh & !is.na(df2$gini) & df$protect == 0 & df$access == 1, 'manag'] <- 'uneven'
+        nbEven <- as.numeric(table(df2$manag)['even'])
+        nbUneven <- as.numeric(table(df2$manag)['uneven'])
+        nb <- c(Gthresh, nbEven, nbUneven)
+        print(nb)
+        tab <- rbind(tab, nb)
+      }
+      colnames(tab) <- c('Gthresh', 'nbEven', 'nbUneven')
+      tab$diff <- tab$nbEven - tab$nbUneven
+      Gthresh <- tab[tab$diff == min(abs(tab$diff)), 'Gthresh']
+      df[df$gini> Gthresh & !is.na(df$gini) & df$protect == 0 & df$access == 1, 'manag'] <- 'uneven'
+    }
 
   }
 
@@ -564,6 +593,6 @@ managTable <- function(landscape, sce){
   df <- df %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID100) %>%
                mutate(across(all_of(colRou), round, 4))
   #
-  write.csv(df, paste0(landPath, '/managTableCell100.csv'), row.names = F)
+  write.csv(df, paste0(landPath, '/managTableCell100_', sce, '.csv'), row.names = F)
 
 }

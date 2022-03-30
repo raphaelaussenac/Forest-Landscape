@@ -83,7 +83,7 @@ heightPred(landscape)
 evalHeight(landscape)
 
 # create management table
-managTable(landscape, sce = c('B', 'C'))
+managTable(landscape, sce = c('E', 'C'))
 # sce = c('I', 'E', 'B', 'C') or c('B', 'C')
 # for [I]ntensification / [E]xtensification / [B]aseline / working for [C]omplexity
 
