@@ -82,10 +82,8 @@ heightPred(landscape)
 # compare tree heights against LiDAR heights
 evalHeight(landscape)
 
-# create management table
-managTable(landscape, sce = c('E', 'C'))
-# sce = c('I', 'E', 'B', 'C') or c('B', 'C')
-# for [I]ntensification / [E]xtensification / [B]aseline / working for [C]omplexity
+# create all alternative management table
+altManagTable(landscape)
 
 # synthesise management table
 managSynth(landscape)

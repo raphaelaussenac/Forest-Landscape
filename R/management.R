@@ -593,6 +593,19 @@ managTable <- function(landscape, sce){
   df <- df %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID100) %>%
                mutate(across(all_of(colRou), round, 4))
   #
-  write.csv(df, paste0(landPath, '/managTableCell100_', sce, '.csv'), row.names = F)
-
+  if(length(sce) == 1){
+    write.csv(df, paste0(landPath, '/managTableCell100_', sce, '.csv'), row.names = F)
+  } else if(length(sce) == 2){
+    write.csv(df, paste0(landPath, '/managTableCell100_', paste0(sce[1], sce[2]), '.csv'), row.names = F)
+  }
 }
+
+# create all alternative management
+altManagTable <- function(landscape){
+  lapply(c('B', 'I', 'E'), managTable, landscape = landscape)
+  managTable(landscape, sce = c('B', 'C'))
+  managTable(landscape, sce = c('I', 'C'))
+  managTable(landscape, sce = c('E', 'C'))
+}
+# sce = c('I', 'E', 'B', 'C')
+# for [I]ntensification / [E]xtensification / [B]aseline / working for [C]omplexity
