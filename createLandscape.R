@@ -85,8 +85,8 @@ evalHeight(landscape)
 # create all alternative management table
 altManagTable(landscape)
 
-# synthesise management table
-managSynth(landscape)
+# synthesise management of all alternative scenarios
+altManagSynth(landscape)
 
 # running time
 end_time <- Sys.time()

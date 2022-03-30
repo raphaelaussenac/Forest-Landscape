@@ -1,4 +1,7 @@
-managSynth <- function(landscape){
+managSynth <- function(landscape, sce){
+
+
+  # TODO: for all alternative scenarios
 
   ###############################################################
   # initialisation
@@ -12,8 +15,12 @@ managSynth <- function(landscape){
   require(forcats)
   require(terra)
 
-  # load management table
-  df <- read.csv(paste0(landPath, '/managTableCell100.csv'))
+  # load management table depending on sce
+  if(length(sce) == 1){
+    df <- read.csv(paste0(landPath, '/managTableCell100_', sce, '.csv'))
+  } else if(length(sce) == 2){
+    df <- read.csv(paste0(landPath, '/managTableCell100_', paste0(sce[1], sce[2]), '.csv'))
+  }
   dfMaps <- df
   # load virtual tree data
   cell25 <- read.csv(paste0(landPath, '/cell25.csv'))
@@ -31,6 +38,12 @@ managSynth <- function(landscape){
   ###############################################################
 
   if(landscape == 'bauges'){
+
+    if(length(sce) == 1){
+      pdf(paste0(evalPath, '/densityManag_', sce, '.pdf'), width = 10, height = 10)
+    } else if(length(sce) == 2){
+      pdf(paste0(evalPath, '/densityManag_', paste0(sce[1], sce[2]), '.pdf'), width = 10, height = 10)
+    }
 
     pdf(paste0(evalPath, '/densityManag.pdf'), width = 10, height = 10)
     par(mfrow = c(3,2))
@@ -85,7 +98,11 @@ managSynth <- function(landscape){
     theme_bw() +
     ylab('nb of 25*25m cells')
     plotBA
-    ggsave(file = paste0(evalPath, '/densityBA.pdf'), plot = plotBA, width = 10, height = 10)
+    if(length(sce) == 1){
+      ggsave(file = paste0(evalPath, '/densityBA_', sce, '.pdf'), plot = plotBA, width = 10, height = 10)
+    } else if(length(sce) == 2){
+      ggsave(file = paste0(evalPath, '/densityBA_', paste0(sce[1], sce[2]), '.pdf'), plot = plotBA, width = 10, height = 10)
+    }
 
     # RDI distribution
     plotRDI <- ggplot(data = df %>% filter(!is.na(compoType))) +
@@ -94,8 +111,11 @@ managSynth <- function(landscape){
     theme_bw() +
     ylab('nb of 25*25m cells')
     plotRDI
-    ggsave(file = paste0(evalPath, '/densityRDI.pdf'), plot = plotRDI, width = 10, height = 10)
-
+    if(length(sce) == 1){
+      ggsave(file = paste0(evalPath, '/densityRDI_', sce, '.pdf'), plot = plotRDI, width = 10, height = 10)
+    } else if(length(sce) == 2){
+      ggsave(file = paste0(evalPath, '/densityRDI_', paste0(sce[1], sce[2]), '.pdf'), plot = plotRDI, width = 10, height = 10)
+    }
   }
 
 
@@ -121,8 +141,11 @@ managSynth <- function(landscape){
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
        plot.title = element_text(hjust = 0.5))
   pl1
-
-  ggsave(file = paste0(evalPath, '/compoType.pdf'), plot = pl1, width = 10, height = 10)
+  if(length(sce) == 1){
+    ggsave(file = paste0(evalPath, '/compoType_', sce, '.pdf'), plot = pl1, width = 10, height = 10)
+  } else if(length(sce) == 2){
+    ggsave(file = paste0(evalPath, '/compoType_', paste0(sce[1], sce[2]), '.pdf'), plot = pl1, width = 10, height = 10)
+  }
 
   ###############################################################
   # synthesise management type for each composition
@@ -169,12 +192,9 @@ managSynth <- function(landscape){
                       pivot_wider(names_from = compoType, values_from = surf) %>%
                       mutate(access = 0, structure = NA, density = NA)
     tab1 <- fillTab(tab1)
-
     # rbind tables
     tab <- rbind(tab1, tab3, tab4, tab2)
     tab <- tab %>% rename(accessProtec = access, manag = structure)
-
-    write.csv(tab, paste0(evalPath, '/managSyn.csv'), row.names = F)
 
   } else if(landscape == 'milicz'){
     tab <- df %>% group_by(manag, compoType) %>% summarise(surf = n()*surfCell) %>%
@@ -185,13 +205,15 @@ managSynth <- function(landscape){
     tab2 <- tab %>% filter(manag != 'no manag') %>% pivot_wider(names_from = compoType, values_from = surf)
     missingCol <- unique(tab$compoType)[!(unique(tab$compoType) %in% names(tab2))]
     tab2[, missingCol] <-  0
-    tab3 <- rbind(tab1[, names(tab2)], tab2) %>% ungroup()
-
-    write.csv(tab3, paste0(evalPath, '/managSyn.csv'), row.names = F)
-
+    tab <- rbind(tab1[, names(tab2)], tab2) %>% ungroup()
   } else if(landscape == 'sneznik'){
     tab <- df %>% group_by(manag, compoType) %>% summarise(surf = n()*surfCell) %>% pivot_wider(names_from = compoType, values_from = surf)
-    write.csv(tab, paste0(evalPath, '/managSyn.csv'), row.names = F)
+  }
+
+  if(length(sce) == 1){
+    write.csv(tab, paste0(evalPath, '/managSyn_', sce, '.csv'), row.names = F)
+  } else if(length(sce) == 2){
+    write.csv(tab, paste0(evalPath, '/managSyn_', paste0(sce[1], sce[2]), '.csv'), row.names = F)
   }
 
 
@@ -220,12 +242,21 @@ managSynth <- function(landscape){
   # scale_fill_manual(values = c('green4', 'orange4', 'green3', 'blue1', 'orange')) +
   theme_minimal()
   pl2
-
-  ggsave(file = paste0(evalPath, '/managSurf1.pdf'), plot = pl2, width = 15, height = 10)
+  if(length(sce) == 1){
+    ggsave(file = paste0(evalPath, '/managSurf1_', sce, '.pdf'), plot = pl2, width = 15, height = 10)
+  } else if(length(sce) == 2){
+    ggsave(file = paste0(evalPath, '/managSurf1_', paste0(sce[1], sce[2]), '.pdf'), plot = pl2, width = 15, height = 10)
+  }
 
   ###############################################################
   # piedonut of surface
   ###############################################################
+
+  if(length(sce) == 1){
+    pdf(paste0(evalPath, '/managSurf2_', sce, '.pdf'), width = 10, height = 10)
+  } else if(length(sce) == 2){
+    pdf(paste0(evalPath, '/managSurf2_', paste0(sce[1], sce[2]), '.pdf'), width = 10, height = 10)
+  }
 
   if(landscape == 'bauges'){
     stand1 <- df
@@ -241,9 +272,9 @@ managSynth <- function(landscape){
                       arrange(compoType, structure, -surf) %>% mutate(ymax = cumsum(surf),
                                                 ymin = lag(ymax, default = 0))
     #
-    pdf(paste0(evalPath, '/managSurf2.pdf'), width = 10, height = 10)
     PieDonut(donut, aes(compoType, structure, count = surf), showPieName = FALSE, start = pi/2, title = 'inacc/protect / uneven / even / final cut / coppice')
     dev.off()
+
   } else if(landscape %in% c('milicz', 'sneznik')){
 
     stand1 <- df
@@ -254,7 +285,6 @@ managSynth <- function(landscape){
                       arrange(compoType, manag, -surf) %>% mutate(ymax = cumsum(surf),
                                                 ymin = lag(ymax, default = 0))
     #
-    pdf(paste0(evalPath, '/managSurf2.pdf'), width = 10, height = 10)
     PieDonut(donut, aes(compoType, manag, count = surf), showPieName = FALSE, start = pi/2, title = 'even - uneven / protect OR no manag')
     dev.off()
 
@@ -277,10 +307,15 @@ managSynth <- function(landscape){
   managPoly <- merge(managPoly, corr, by.x = 'manag', by.y = 'level')
   managPoly$manag <- NULL
   names(managPoly) <- 'manag'
-  # plot(managPoly, col = as.factor(managPoly$manag), border = as.factor(managPoly$manag))
   # save
-  # writeOGR(managPoly, evalPath, 'managPoly', driver = 'ESRI Shapefile', overwrite = TRUE)
-  writeVector(managPoly, paste0(evalPath, '/managPoly.shp'), overwrite=TRUE)
+  if(length(sce) == 1){
+    writeVector(managPoly, paste0(evalPath, '/managPoly_', sce, '.shp'), overwrite=TRUE)
+  } else if(length(sce) == 2){
+    writeVector(managPoly, paste0(evalPath, '/managPoly_', paste0(sce[1], sce[2]), '.shp'), overwrite=TRUE)
+  }
+
+
+
 
   # composition type map
   dfMaps$compoType <- as.factor(dfMaps$compoType)
@@ -293,10 +328,23 @@ managSynth <- function(landscape){
   compoTypePoly <- merge(compoTypePoly, corr, by.x = 'compoType', by.y = 'level')
   compoTypePoly$compoType <- NULL
   names(compoTypePoly) <- 'compoType'
-  # plot(compoTypePoly, col = as.factor(compoTypePoly$compoType), border = as.factor(compoTypePoly$compoType))
   # save
-  # writeOGR(compoTypePoly, evalPath, 'compoTypePoly', driver = 'ESRI Shapefile', overwrite = TRUE)
-  writeVector(compoTypePoly, paste0(evalPath, '/compoTypePoly.shp'), overwrite=TRUE)
 
+  if(length(sce) == 1){
+    writeVector(compoTypePoly, paste0(evalPath, '/compoTypePoly_', sce, '.shp'), overwrite=TRUE)
+  } else if(length(sce) == 2){
+    writeVector(compoTypePoly, paste0(evalPath, '/compoTypePoly_', paste0(sce[1], sce[2]), '.shp'), overwrite=TRUE)
+  }
 
 }
+
+
+# create synthesis for all alternative managements
+altManagSynth <- function(landscape){
+  lapply(c('B', 'I', 'E'), managSynth, landscape = landscape)
+  managSynth(landscape, sce = c('B', 'C'))
+  managSynth(landscape, sce = c('I', 'C'))
+  managSynth(landscape, sce = c('E', 'C'))
+}
+# sce = c('I', 'E', 'B', 'C')
+# for [I]ntensification / [E]xtensification / [B]aseline / working for [C]omplexity

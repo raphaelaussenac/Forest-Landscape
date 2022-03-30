@@ -592,7 +592,8 @@ managTable <- function(landscape, sce){
   colRou <- c('gini', 'rdi', 'BA', 'BA_ha', 'Dg', 'meanH')
   df <- df %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID100) %>%
                mutate(across(all_of(colRou), round, 4))
-  #
+
+  # save
   if(length(sce) == 1){
     write.csv(df, paste0(landPath, '/managTableCell100_', sce, '.csv'), row.names = F)
   } else if(length(sce) == 2){
@@ -600,7 +601,7 @@ managTable <- function(landscape, sce){
   }
 }
 
-# create all alternative management
+# create all alternative managements
 altManagTable <- function(landscape){
   lapply(c('B', 'I', 'E'), managTable, landscape = landscape)
   managTable(landscape, sce = c('B', 'C'))
