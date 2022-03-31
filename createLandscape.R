@@ -26,12 +26,14 @@ source('./R/management.R')
 source('./R/managSynth.R')
 source('./R/evalHeight.R')
 source('./R/gini.R')
+source('./R/evalSce.R')
+
 
 ###############################################################
 # select landscape (bauges, milicz)
 ###############################################################
 
-landscape <- 'bauges'
+landscape <- 'milicz'
 
 ###############################################################
 # create virtual landscape
@@ -87,6 +89,9 @@ altManagTable(landscape)
 
 # synthesise management of all alternative scenarios
 altManagSynth(landscape)
+
+# evaluate scenarios
+evalSce(landscape)
 
 # running time
 end_time <- Sys.time()
