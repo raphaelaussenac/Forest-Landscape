@@ -580,6 +580,29 @@ managTable <- function(landscape, sce){
 
   df[(df$access == 0 | df$protect == 1) & !is.na(df$forestCellsPerHa) & !is.na(df$access) & !is.na(df$protect), 'manag'] <- 'no manag'
 
+
+  ###############################################################
+  # evenly assign +5/0/-5 to all compoType
+  # (only consider managed forest)
+  ###############################################################
+
+  # get number of managed stands for all compoType
+  third <- df %>% filter(!is.na(manag) & manag != 'no manag') %>% group_by(compoType) %>%
+                 summarise(count = n()) %>% mutate(third = floor(count/3), add = count - third *3 ) %>%
+                 ungroup() %>% filter(!is.na(compoType))
+  third <- as.data.frame(third)
+
+  # create dgModulation column
+  df$dgModul <- NA
+  dgModul <- c(-5, 0, 5)
+
+  # evenly assign +5/0/-5 to all compoType
+  for (i in third$compoType){
+    modul <- c(rep(dgModul, third[third$compoType == i, 'third']), rep(0, third[third$compoType == i, 'add']))
+    df[df$compoType == i & !is.na(df$compoType) & df$manag != 'no manag', 'dgModul'] <- modul
+  }
+
+
   ###############################################################
   # save
   ###############################################################
@@ -587,7 +610,7 @@ managTable <- function(landscape, sce){
   # reorder columns
   colOrd <- c('cellID100', 'owner', 'access', 'protect', 'forestCellsPerHa',
                'compoType', 'gini', 'rdi', 'BA', 'BA_ha', 'Dg', 'meanH',	'structure',
-               'density', 'manag')
+               'density', 'manag', 'dgModul')
   # round numbers
   colRou <- c('gini', 'rdi', 'BA', 'BA_ha', 'Dg', 'meanH')
   df <- df %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID100) %>%

@@ -70,3 +70,5 @@ Assign trees (specifying their species, diameter and height) to all 25m*25m fore
 * structure: even-aged or uneven-aged structure
 * density: density level (high, medium, low)
 * manag: stand management (management - density)
+
+<!-- TODO: add dg modul -->

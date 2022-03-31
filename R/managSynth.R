@@ -1,8 +1,5 @@
 managSynth <- function(landscape, sce){
 
-
-  # TODO: for all alternative scenarios
-
   ###############################################################
   # initialisation
   ###############################################################
@@ -21,6 +18,7 @@ managSynth <- function(landscape, sce){
   } else if(length(sce) == 2){
     df <- read.csv(paste0(landPath, '/managTableCell100_', paste0(sce[1], sce[2]), '.csv'))
   }
+  df <- df %>% select(-dgModul)
   dfMaps <- df
   # load virtual tree data
   cell25 <- read.csv(paste0(landPath, '/cell25.csv'))
