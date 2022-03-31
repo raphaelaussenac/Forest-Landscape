@@ -19,9 +19,21 @@ evalSce <- function(landscape){
   df <- lapply(managList, stackT)
   df <- do.call(rbind, df)
 
+  ###############################################################
+  # calculate surfaces
+  ###############################################################
+
+  if(landscape == 'bauges'){
+    df[is.na(df$manag), 'manag'] <- 'no manag'
+    sce <- df %>% dplyr::select(-accessProtec, -owner, -density) %>%
+                 mutate(manag = case_when(manag %in% c('coppice', 'final cut') ~ 'even', !(manag %in% c('coppice', 'final cut')) ~ manag)) %>%
+                 pivot_longer(!c(manag, sce), names_to = 'sp', values_to = 'count')
+  } else if(landscape != 'bauges'){
+    sce <- df %>% pivot_longer(!c(manag, sce), names_to = 'sp', values_to = 'count')
+  }
 
   # calculate surfaces
-  sce <- df %>% pivot_longer(!c(manag, sce), names_to = 'sp', values_to = 'count')
+
   tot <- sce %>% group_by(sce) %>% summarise(tot = sum(count, na.rm = TRUE))
   unman <- sce %>% group_by(sce, manag) %>% filter(manag == 'no manag') %>% summarise(unman = sum(count, na.rm = TRUE)) %>% dplyr::select(-manag)
   man <- sce %>% group_by(sce) %>% filter(manag != 'no manag') %>% summarise(man = sum(count, na.rm = TRUE))

@@ -33,7 +33,7 @@ source('./R/evalSce.R')
 # select landscape (bauges, milicz)
 ###############################################################
 
-landscape <- 'milicz'
+landscape <- 'bauges'
 
 ###############################################################
 # create virtual landscape
