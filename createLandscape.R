@@ -6,28 +6,11 @@
 rm(list = ls())
 
 # set work directory
-setwd('./Documents/github/Forest-Landscape')
+# setwd('./Documents/code/Forest-Landscape')
 
 # load source (all R files in R folder)
-# file.sources = list.files('./R', pattern = '*.R', full.names = TRUE)
-# sapply(file.sources, source, .GlobalEnv)
-source('./R/baugesPrep.R')
-source('./R/miliczPrep.R')
-source('./R/sneznikPrep.R')
-source('./R/salemSIpred.R')
-source('./R/compo.R')
-source('./R/spTransform.R')
-source('./R/evalCompo.R')
-source('./R/dendro.R')
-source('./R/saveLandscape.R')
-source('./R/evalDendro.R')
-source('./R/heightPred.R')
-source('./R/management.R')
-source('./R/managSynth.R')
-source('./R/evalHeight.R')
-source('./R/gini.R')
-source('./R/evalSce.R')
-
+file.sources = list.files('./R', pattern = '*.R', full.names = TRUE)
+sapply(file.sources, source, .GlobalEnv)
 
 ###############################################################
 # select landscape (bauges, milicz)
