@@ -323,7 +323,7 @@ managTable <- function(landscape, sce){
         tab$cells25access <- tab$access * tab$forestCellsPerHa
         managSurf <- sum(tab$cells25access) * 625 / 10000
         skid <- skid + 100
-        print(c(skid, managSurf, targManag))
+        print(c('Bauges extensification skidding distance: ', skid))
 
       }
 
@@ -354,7 +354,7 @@ managTable <- function(landscape, sce){
         tab$cells25access <- tab$access * tab$forestCellsPerHa
         managSurf <- sum(tab$cells25access) * 625 / 10000
         skid <- skid + 100
-        print(c(skid, managSurf, targManag))
+        print(c('Bauges Intensification skidding distance: ', skid, managSurf, targManag))
 
       }
 
@@ -563,7 +563,7 @@ managTable <- function(landscape, sce){
         nbEven <- as.numeric(table(df2$manag)['even'])
         nbUneven <- as.numeric(table(df2$manag)['uneven'])
         nb <- c(Gthresh, nbEven, nbUneven)
-        print(nb)
+        print(c('gini threshold:', nb))
         tab <- rbind(tab, nb)
       }
       colnames(tab) <- c('Gthresh', 'nbEven', 'nbUneven')

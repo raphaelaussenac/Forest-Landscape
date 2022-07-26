@@ -1,5 +1,5 @@
 # Goal
-Assign trees (specifying their species, diameter and height) to all 25m*25m forest cells over different landscapes from LIDAR and inventory data.
+Assign trees (specifying their species, diameter and height) to all 25m*25m forest cells over different landscapes using airborn LIDAR data and inventory data.
 
 
 
@@ -80,16 +80,16 @@ Alternative landscapes are created to simulate the alternative managements. Lett
 * I: intensification
 * IC: intensification + working for complexity
 
-Differences between the baseline landscapes and the alternative landscapes:
+## Differences between the baseline landscapes and the alternative landscapes:
 
 Bauges:
-* intensification: -8% of area to unmanaged<sup>*</sup>.
-* extensification: +8% of area to unmanaged<sup>*</sup>.
+* intensification: +8% of managed forests<sup>*</sup>.
+* extensification: -8% of managed forests<sup>*</sup>.
 * working for complexity:
-  + increase silvicultural system evenness in the landscape by increasing the Gini threshold defining the limit between even- and uneven-aged stands untill reaching a balanced landscape (in term of even- vs uneven-aged stands).
+  + increase silvicultural system evenness in the landscape by increasing the Gini threshold defining the limit between even- and uneven-aged stands untill reaching a balanced landscape (in term of even- vs uneven-aged stands in the managed forests). Gini threshold increased from 0.45 up to 0.52.
   + modulate prescribed Dg/Dharv values by adding -5, 0 or +5 cm to the prescribed Dg/Dharv values evenly across composition types (use dgModul column for that).
 
-<sup>*</sup> In the Bauges Landscape, one part of the forest cannot be managed (it is either not accessible and or on too steep slopes), the other part recieves a value of skidding distance (SkD). In the baseline landscape, stands with an associated SkD <= 1500m can be managed. In the intensification landscape, all stands with a SkD can be managed, which amounts to a reduction of the surface of unmanaged forests of about 8%. In the extensification landscape, we decreased the SkD threshold below which forests can be managed so as to get an increase of the surface of unmanaged forests of about 8% (SkD = 1000).
+<sup>*</sup> In the Bauges Landscape, one part of the forest cannot be managed (it is either not accessible and or on too steep slopes), the other part recieves a value of skidding distance (SkD). In the baseline landscape, stands with an associated SkD <= 1500m are managed. In the intensification landscape, all stands with a SkD are managed, which amounts to increasing the area of managed forest by about 8%. In the extensification landscape, we decreased the SkD threshold below which forests can be managed so as to decrease the surface of managed forests of about 8% (as compared to the baseline landscape). SkD decreased from 1500 down to 1000m by 100m steps.
 
 Milicz:
 * intensification: 0% of area to unmanaged.
@@ -102,5 +102,5 @@ Sneznik:
 * intensification: 0% of area to unmanaged.
 * extensification: 20% of area to unmanaged.
 * working for complexity:
-  + increase silvicultural system evenness in the landscape by decreasing the Gini threshold defining the limit between even- and uneven-aged stands untill reaching a balanced landscape (in term of even- vs uneven-aged stands).
+  + increase silvicultural system evenness in the landscape by classifying stands with high Gini index as uneven-aged, starting with those with the highest Gini index, untill reaching a balanced landscape (in term of even- vs uneven-aged stands in the managed forests). Gini threshold decreased from 0.8 down to 0.51 by 0.01 steps.
   + modulate prescribed Dg/Dharv values by adding -5, 0 or +5 cm to the prescribed Dg/Dharv values evenly across composition types (use dgModul column for that).

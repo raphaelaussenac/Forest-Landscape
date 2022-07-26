@@ -57,7 +57,6 @@ giniClass <- function(tree, df, sce, landscape){
       colnames(tab) <- c('Gthresh', 'nbEven', 'nbUneven')
       tab$diff <- tab$nbEven - tab$nbUneven
       Gthresh <- tab[abs(tab$diff) == min(abs(tab$diff)), 'Gthresh']
-      print(Gthresh)
 
     }
 
