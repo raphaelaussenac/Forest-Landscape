@@ -28,13 +28,10 @@ df$var <- factor(df$var, levels = c('LC', 'NU', 'SB'))
 df$landscape <- str_to_title(df$landscape)
 df$landscape <- factor(df$landscape, levels = c('Bauges', 'Sneznik', 'Milicz'))
 
-
 # plot
 pl1 <- ggplot(df) +
 geom_bar(aes(x = landscape, y = components, fill = var), stat = 'identity', position = 'stack') +
 scale_fill_grey(start = 0.2, end = 0.9) +
-# ylab('mean square deviation') +
-# xlab('') +
 theme_bw() +
 scale_y_continuous(expand = c(0, 0)) +
 scale_x_discrete(expand = c(0.25, 0)) +
