@@ -75,6 +75,8 @@ evalHeight <- function(landscape){
   # pl1
   ggsave(file = paste0(evalHeightPath, '/H', landscape, '.pdf'), plot = pl1, width = 7, height = 7)
 
+  # save ggplot object
+  saveRDS(pl1 , paste0('./evalHeight/heights', '_', landscape, '.rds'))
 
   ###############################################################
   # mean square deviation

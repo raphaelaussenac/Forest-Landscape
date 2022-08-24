@@ -12,6 +12,25 @@ setwd('./Documents/code/Forest-Landscape/evalHeight')
 library(ggplot2)
 library(dplyr)
 library(stringr)
+library(gridExtra)
+# library(ggplotify)
+
+###############################################################
+# plot obs/pred dominant heights
+###############################################################
+
+# load height plots
+bauges <- readRDS('heights_bauges.rds')
+milicz <- readRDS('heights_milicz.rds')
+sneznik <- readRDS('heights_sneznik.rds')
+
+# arrange plots together
+pl2 <- arrangeGrob(bauges, milicz, sneznik, ncol = 1, nrow = 3)
+ggsave(file = 'Hdom.pdf', plot = pl2, width = 6, height = 16)
+
+###############################################################
+# plot msd
+###############################################################
 
 # load msd data
 bauges <- read.csv('bauges_msd.csv')
