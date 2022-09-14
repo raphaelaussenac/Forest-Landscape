@@ -79,6 +79,7 @@ mainG <- mainG %>% mutate(sp1 = factor(sp, levels = sort(unique(mainG$sp), decre
 
 mainG2 <- mainG %>% mutate(label = (ymax - ymin) / 2,
                               sp = str_replace(sp, ' ', ' \n '))
+mainG2$sp1 <- fct_relevel(mainG2$sp1, "other")
 
 # main species donut
 pl1 <- ggplot(data = mainG2, aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = sp1)) +
@@ -145,6 +146,7 @@ dist <- dist %>% mutate(sp = factor(sp, levels = sort(unique(dist$sp), decreasin
 dist2 <- dist[rep(seq_along(dist$n), dist$n), ] # weigtht dbh distributions by n
 dist2 <- pivot_longer(data = dist2,
                      cols = c(dbh,h))
+dist2$sp <- fct_relevel(dist2$sp, "other")
 
 dist3 <- dist2 %>% group_by(site, sp, name) %>% summarise(dbh = mean(value))
 
