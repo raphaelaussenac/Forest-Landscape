@@ -204,3 +204,119 @@ ggsave(file = './synthesis/hmainsp.pdf', plot = pl3, width = 10, height = 10)
 # assemble plot
 pl4 <- grid.arrange(pl1, pl2, pl3, ncol = 3, nrow = 1, widths = c(0.25, 0.3, 0.3)) #, heights = c(1, 2))
 ggsave(file = './synthesis/synth.pdf', plot = pl4, width = 15, height = 12)
+
+
+###############################################################
+# plot lidar rasters
+###############################################################
+
+# load packages
+library(raster)
+library(ggplotify)
+
+# function to convert rasters into df (for ggplot)
+convert <- function(raster){
+  a <- as(raster, "SpatialPixelsDataFrame")
+  b <- as.data.frame(a)
+  colnames(b) <- c('value', "x", "y")
+  return(b)
+}
+
+
+# Bauges
+Dg_b <- raster('./temp/bauges/dg.grd')
+Dg_b <- convert(Dg_b)
+BA_b <- raster('./temp/bauges/BA.grd')
+BA_b <- convert(BA_b)
+Dprop_b <- raster('./temp/bauges/Dprop.grd')
+Dprop_b <- convert(Dprop_b)
+
+# Milicz
+Dg_m <- raster('./temp/milicz/dg.grd')
+Dg_m <- convert(Dg_m)
+BA_m <- raster('./temp/milicz/BA.grd')
+BA_m <- convert(BA_m)
+Dprop_m <- raster('./temp/milicz/Dprop.grd')
+Dprop_m <- convert(Dprop_m)
+
+# Sneznik
+Dg_s <- raster('./temp/sneznik/dg.grd')
+Dg_s <- convert(Dg_s)
+BA_s <- raster('./temp/sneznik/BA.grd')
+BA_s <- convert(BA_s)
+Dprop_s <- raster('./temp/sneznik/Dprop.grd')
+Dprop_s <- convert(Dprop_s)
+
+
+
+
+
+# 9 ggplot
+pl1 <- ggplot(data = Dg_b) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+
+pl2 <- ggplot(data = BA_b) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+
+pl3 <- ggplot(data = Dprop_b) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+
+
+pl4 <- ggplot(data = Dg_m) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+
+pl5 <- ggplot(data = BA_m) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+
+pl6 <- ggplot(data = Dprop_m) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+
+
+pl7 <- ggplot(data = Dg_s) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.8), axis.title = element_blank())
+
+pl8 <- ggplot(data = BA_s) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.8), axis.title = element_blank())
+
+pl9 <- ggplot(data = Dprop_s) +
+geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
+scale_fill_viridis() +
+coord_equal() +
+theme_bw() +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.8), axis.title = element_blank())
+
+# arrange all maps
+pl10 <- grid.arrange(pl1, pl2, pl3, pl4, pl5, pl6, pl7, pl8, pl9, ncol = 3, nrow = 3)
+ggsave(file = './synthesis/maps.jpg', plot = pl10, width = 15, height = 15)
