@@ -45,7 +45,7 @@ compo <- function(landscape){
 
   ###############################################################
   # normalise Dg and BA values to 0-1 range
-  # range defined on NFI values
+  # total range defined on NFI + LiDAR values
   ###############################################################
 
   # NFI plots

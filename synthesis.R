@@ -213,6 +213,7 @@ ggsave(file = './synthesis/synth.pdf', plot = pl4, width = 15, height = 12)
 # load packages
 library(raster)
 library(ggplotify)
+library(viridis)
 
 # function to convert rasters into df (for ggplot)
 convert <- function(raster){
@@ -257,6 +258,7 @@ geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
+annotate("text", x = Inf, y = Inf, label = expression(Bauges - Dg), hjust = 1.2, vjust = 2, size = 7) +
 theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
 
 pl2 <- ggplot(data = BA_b) +
@@ -264,6 +266,7 @@ geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
+annotate("text", x = Inf, y = Inf, label = expression(Bauges - BA), hjust = 1.2, vjust = 2, size = 7) +
 theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
 
 pl3 <- ggplot(data = Dprop_b) +
@@ -271,6 +274,7 @@ geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
+annotate("text", x = Inf, y = Inf, label = expression(Bauges - BA[b]), hjust = 1.2, vjust = 2, size = 7) +
 theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
 
 
@@ -279,21 +283,24 @@ geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
-theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+annotate("text", x = -Inf, y = Inf, label = expression(Milicz - Dg), hjust = -0.2, vjust = 2, size = 7) +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.3), axis.title = element_blank())
 
 pl5 <- ggplot(data = BA_m) +
 geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
-theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+annotate("text", x = -Inf, y = Inf, label = expression(Milicz - BA), hjust = -0.2, vjust = 2, size = 7) +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.3), axis.title = element_blank())
 
 pl6 <- ggplot(data = Dprop_m) +
 geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
-theme(legend.title = element_blank(), legend.position = c(0.85, 0.2), axis.title = element_blank())
+annotate("text", x = -Inf, y = Inf, label = expression(Milicz - BA[b]), hjust = -0.2, vjust = 2, size = 7) +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.3), axis.title = element_blank())
 
 
 pl7 <- ggplot(data = Dg_s) +
@@ -301,21 +308,24 @@ geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
-theme(legend.title = element_blank(), legend.position = c(0.85, 0.8), axis.title = element_blank())
+annotate("text", x = Inf, y = Inf, label = expression(Sneznik - Dg), hjust = 1.2, vjust = 2, size = 7) +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.65), axis.title = element_blank())
 
 pl8 <- ggplot(data = BA_s) +
 geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
-theme(legend.title = element_blank(), legend.position = c(0.85, 0.8), axis.title = element_blank())
+annotate("text", x = Inf, y = Inf, label = expression(Sneznik - BA), hjust = 1.2, vjust = 2, size = 7) +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.65), axis.title = element_blank())
 
 pl9 <- ggplot(data = Dprop_s) +
 geom_tile(aes(x=x, y=y, fill=value), alpha=0.8) +
 scale_fill_viridis() +
 coord_equal() +
 theme_bw() +
-theme(legend.title = element_blank(), legend.position = c(0.85, 0.8), axis.title = element_blank())
+annotate("text", x = Inf, y = Inf, label = expression(Sneznik - BA[b]), hjust = 1.2, vjust = 2, size = 7) +
+theme(legend.title = element_blank(), legend.position = c(0.85, 0.65), axis.title = element_blank())
 
 # arrange all maps
 pl10 <- grid.arrange(pl1, pl2, pl3, pl4, pl5, pl6, pl7, pl8, pl9, ncol = 3, nrow = 3)
