@@ -6,7 +6,7 @@
 rm(list = ls())
 
 # set work directory
-setwd('./Documents/code/Forest-Landscape/evalHeight')
+setwd('~/Documents/code/Forest-Landscape/evalHeight')
 
 # load library
 library(ggplot2)
