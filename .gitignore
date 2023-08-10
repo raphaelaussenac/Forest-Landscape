@@ -25,3 +25,5 @@
 .Rproj.user
 *.DS_Store
 *.history
+*.out
+*.zip
