@@ -6,6 +6,7 @@ heightPred <- function(landscape){
 
   # load packages
   require(nlme)
+  require(dtplyr)
   require(dplyr)
   require(ggplot2)
 
@@ -74,32 +75,43 @@ heightPred <- function(landscape){
   # predict
   ###############################################################
 
-  # at sneznik: split into 2 data sets
-  # main sp predicted from sneznik h model
-  # secondary sp predicted from bauges model
-  if(landscape == 'sneznik'){
-    # split data
-    main <- tree %>% filter(espar != 'OtherSp') %>% dplyr::select(-esparBauges)
-    second <- tree %>% filter(espar == 'OtherSp') %>%
+  # split tree data into X parts
+  # num_splits <- 6
+  # treeSub <- sort(rank(1:nrow(tree)) %% num_splits)
+
+  # function to predict height (parallel ready!)
+  predH <- function(landscape, tree, mod_nlme){
+    # at sneznik: split into 2 data sets
+    # main sp predicted from sneznik h model
+    # secondary sp predicted from bauges model
+    if(landscape == 'sneznik'){
+      # split data
+      main <- tree %>% filter(espar != 'OtherSp') %>% dplyr::select(-esparBauges)
+      second <- tree %>% filter(espar == 'OtherSp') %>%
                         dplyr::select(-espar) %>%
                         rename('espar' = 'esparBauges')
-    # predict
-    main$pred <- round(predict(mod_nlme, newdata = main, level = 0), 2)
-    second$pred <- round(predict(baugesMod, newdata = second, level = 0), 2)
-    # reassemble data
-    tree <- bind_rows(main, second)
+      # predict
+      main$pred <- round(predict(mod_nlme, newdata = main, level = 0), 2)
+      second$pred <- round(predict(baugesMod, newdata = second, level = 0), 2)
+      # reassemble data
+      tree <- bind_rows(main, second)
 
-  } else if(landscape != 'sneznik'){
-    # predict
-    tree$pred <- round(predict(mod_nlme, newdata = tree, level = 0), 2)
-
+    } else if(landscape != 'sneznik'){
+      # predict
+      tree$pred <- round(predict(mod_nlme, newdata = tree, level = 0), 2)
+    }
+    return(tree)
   }
 
+  tree <- predH(landscape, tree, mod_nlme)
+
   # save
+  tree <- lazy_dt(tree)
   tree <- tree %>% dplyr::select('cellID25', 'sp', 'n', 'dbh', 'pred') %>%
             rename(h = pred) %>% arrange(cellID25) %>% group_by(cellID25) %>%
             arrange(sp, dbh, .by_group = TRUE) %>%
-            mutate(across(c(dbh, h), round, 4)) %>% ungroup()
+            mutate(across(c(dbh, h), round, 4)) %>% ungroup() %>% as.data.frame()
+
   write.csv(tree, paste0(landPath, '/trees.csv'), row.names = F)
 
   # plot
