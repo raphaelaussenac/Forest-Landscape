@@ -9,6 +9,8 @@ dendro <- function(){
   require(raster)
   require(doParallel)
   require(tidyr)
+  require(doFuture)
+  plan(multicore)
 
   # load composition ID
   compo <- raster(paste0(tempPath, '/compoID.asc'))
@@ -177,9 +179,10 @@ dendro <- function(){
     # set cluster
     cl <- makeCluster(6)
     registerDoParallel(cl)
-    results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
+    # results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
+    results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .options.future = list(packages = c('raster', 'rgdal'))) %dofuture% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
     stopCluster(cl)
-    plot(rast$Dprop)
+    # plot(rast$Dprop)
     return(results)
   }
 

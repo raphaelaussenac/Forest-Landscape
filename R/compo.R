@@ -11,6 +11,8 @@ compo <- function(landscape){
   require(ggplot2)
   require(plotly)
   require(doParallel)
+  require(doFuture)
+  plan(multisession)
 
   # load LIDAR rasters
   Dg <- raster(paste0(tempPath, '/dg.grd'))
@@ -165,14 +167,15 @@ compo <- function(landscape){
     # set cluster
     cl <- makeCluster(6)
     registerDoParallel(cl)
-    results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignCompo(cell = rast[i], i = i, NFI)}
+    # results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignCompo(cell = rast[i], i = i, NFI)}
+    results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .options.future = list(packages = c('raster', 'rgdal'))) %dofuture% {assignCompo(cell = rast[i], i = i, NFI)}
     stopCluster(cl)
     # transfer results into raster stack
     results <- data.frame(results)
     colnames(results) <- c('i', 'id')
     results <- results %>% arrange(i)
     rast$compo <- results[,2]
-    plot(rast$compo)
+    # plot(rast$compo)
     return(rast)
   }
 
