@@ -149,7 +149,8 @@ saveLandscape <- function(landscape){
   }
   # format
   envdf <- envdf %>% dplyr::select(all_of(colOrd)) %>% arrange(cellID25, cellID100) %>%
-                     mutate(across(c('elev','slope','aspect'), round, 4))
+                     mutate(across(c('elev','slope','aspect'), \(x) round(x, 4)))
+
   # save
   write.csv(envdf, file = paste0(landPath, '/cell25.csv'), row.names = FALSE)
 

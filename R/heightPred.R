@@ -104,13 +104,16 @@ heightPred <- function(landscape){
   }
 
   tree <- predH(landscape, tree, mod_nlme)
+  # TODO: parallelise height models for the Bauges?
 
   # save
   tree <- lazy_dt(tree)
   tree <- tree %>% dplyr::select('cellID25', 'sp', 'n', 'dbh', 'pred') %>%
             rename(h = pred) %>% arrange(cellID25) %>% group_by(cellID25) %>%
             arrange(sp, dbh, .by_group = TRUE) %>%
-            mutate(across(c(dbh, h), round, 4)) %>% ungroup() %>% as.data.frame()
+            mutate(across(c(dbh, h), \(x) round(x, 4))) %>%
+            ungroup() %>%
+            as.data.frame()
 
   write.csv(tree, paste0(landPath, '/trees.csv'), row.names = F)
 
