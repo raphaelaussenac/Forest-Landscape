@@ -10,7 +10,7 @@ dendroNew <- function(){
   # require(doParallel)
   require(tidyr)
   require(doFuture)
-  plan(multicore, workers = 6)
+  plan(multicore, workers = cores)
 
   # load composition ID
   compo <- raster(paste0(tempPath, '/compoID.asc'))

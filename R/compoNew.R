@@ -1,4 +1,4 @@
-compoNew <- function(landscape){
+compoNew <- function(landscape, cores){
 
   ###############################################################
   # initialisation
@@ -12,7 +12,7 @@ compoNew <- function(landscape){
   require(plotly)
   # require(doParallel)
   require(doFuture)
-  plan(multicore, workers = 6)
+  plan(multicore, workers = cores)
 
   # load LIDAR rasters
   Dg <- raster(paste0(tempPath, '/dg.grd'))
