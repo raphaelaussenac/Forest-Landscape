@@ -25,37 +25,23 @@ saveLandscape <- function(landscape){
   }
 
   ################################################################################
-  # after splitting landscapes into strips (in dendro.R)
-  # check whether all cells are present only once
-  # check whether there is no missing cell
+  # make sure there are exactly the right number of cells in the tree df
   ################################################################################
 
-  # ensure cells are only present once (only in one raster strip)
-  # get cellID25 of all strips
-  getCellID <- function(df){
-    cells <- unique(df$cellID25)
-    return(cells)
-  }
-  cells <- lapply(results, getCellID)
-  # are there duplicated cells
-  cellList <- do.call(c, cells)
-  dup <- sum(duplicated(cellList))
+  # number of cells in the tree data
+  nc_tree <- length(unique(results$cellID25))
+
+  # number of cells in the raster data
+  nc_raster <- nrow(cellID25) * ncol(cellID25)
 
   # print error message if cells are duplicated
-  if(dup > 0){
-    stop("When splitting rasters into strips (in dendro.R) some cells are duplicated. Try to split ratser in a different number of strips")
+  if(nc_tree > nc_raster){
+    stop("More cells in the tree data than in the raster data. Error could come from the splitting of rasters into strips (in dendro.R), some cells might have been duplicated. Try to split rasters in a different number of strips")
   }
   # print error message if cells are missing
-  if(length(cellList) != (nrow(cellID25) * ncol(cellID25))){
-    stop("When splitting rasters into strips (in dendro.R) some cells are lost. Try to split ratser in a different number of strips")
+  if(nc_tree < nc_raster){
+    stop("Less cells in the tree data than in the raster data. Error could come from the splitting of rasters into strips (in dendro.R), some cells might have been lost. Try to split rasters in a different number of strips")
   }
-
-  ################################################################################
-  # format tree data
-  ################################################################################
-
-  # gather all strips into one data frame
-  results <- do.call(rbind.data.frame, results)
 
   ################################################################################
   # remove trees with dbh < min dbh of tree-level inventory data
