@@ -9,9 +9,13 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
-# open tree data
-new <- read.csv('./sneznik/trees.csv')
-old <- read.csv('./sneznik/treesDataPaper.csv')
+# select landscape (bauges, milicz, sneznik)
+landscape <- 'sneznik'
+
+# open new tree data and published tree data
+new <- read.csv(paste0('./', landscape, '/trees.csv'))
+old <- read.csv(paste0('./I-MAESTRO_data/', landscape, '/trees.csv'))
+# TODO 1: compare with published data
 
 # stack data
 new$dataset <- 'new'
