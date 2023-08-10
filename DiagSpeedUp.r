@@ -15,7 +15,6 @@ landscape <- 'sneznik'
 # open new tree data and published tree data
 new <- read.csv(paste0('./', landscape, '/trees.csv'))
 old <- read.csv(paste0('./I-MAESTRO_data/', landscape, '/trees.csv'))
-# TODO 1: compare with published data
 
 # stack data
 new$dataset <- 'new'
@@ -68,18 +67,21 @@ genDiag
 # Species-level Diagnostics
 spDiag <- diagnostics('sp', df) %>% arrange(-abs(diff_pct))
 spDiag
+
+# number of individuals per species
+spDiag_ntot <- spDiag %>% filter(name == 'ntot')
+
 # plot
-ggplot(data = spDiag) +
+ggplot(data = spDiag_ntot) +
 geom_histogram(aes(x = diff_pct)) +
 theme_bw()
-# list of species with variables deviation >= X%
+# list of species with ntot deviation >= X%
 X = 1
-strongDeviat <- spDiag %>% filter(abs(diff_pct) >= X )
+strongDeviat <- spDiag_ntot %>% filter(abs(diff_pct) >= X )
 strongDeviat
 spList <- unique(strongDeviat$sp)
 spList
 
-########################################################################
 # Plot species frequency and show deviating sp
 freq <- df %>% group_by(dataset, sp) %>%
                summarise(n = sum(n)) %>%
@@ -94,7 +96,14 @@ theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
 ggtitle('sp deviating in red')
 
 ########################################################################
-# Plot species dbh and h deviations
+# Plot dbh distribution of deviating species 
+# list of species with diameter quantile deviation >= X%
+X = 1
+strongDeviat <- spDiag %>% filter(substr(spDiag$name,1,2) == 'Qd', abs(diff_pct) >= X )
+strongDeviat
+spList <- unique(strongDeviat$sp)
+spList
+
 # define new df
 dfDeviat <- df %>% filter(sp %in% spList)
 
@@ -104,6 +113,17 @@ geom_density(aes(x = dbh, fill = dataset), alpha = 0.5) +
 facet_grid(sp ~ ., scales = 'free') +
 theme_bw()
 
+########################################################################
+# Plot h distribution of deviating species 
+# list of species with diameter quantile deviation >= X%
+X = 1
+strongDeviat <- spDiag %>% filter(substr(spDiag$name,1,2) == 'Qh', abs(diff_pct) >= X )
+strongDeviat
+spList <- unique(strongDeviat$sp)
+spList
+
+# define new df
+dfDeviat <- df %>% filter(sp %in% spList)
 # h distribution
 ggplot(data = dfDeviat) +
 geom_density(aes(x = h, fill = dataset), alpha = 0.5) +
