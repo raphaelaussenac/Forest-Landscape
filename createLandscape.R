@@ -1,7 +1,7 @@
 ###############################################################
 # initialisation
 ###############################################################
-
+# Rprof()
 # clean up environment
 rm(list = ls())
 
@@ -13,17 +13,19 @@ file.sources = list.files('./R', pattern = '*.R', full.names = TRUE)
 sapply(file.sources, source, .GlobalEnv)
 
 ###############################################################
-# select landscape (bauges, milicz)
+# select landscape (bauges, milicz, sneznik)
+# set number of cores
 ###############################################################
 
 landscape <- 'bauges'
+cores <- 6
 
 ###############################################################
 # create virtual landscape
 ###############################################################
 
 # running time
-start_time <- Sys.time()
+start_time_gen <- Sys.time()
 
 # define folder structure
 tempPath <- paste0('./temp/', landscape)
@@ -47,35 +49,50 @@ if(landscape == 'bauges'){
 }
 
 # assign composition to all 25*25m cells
-compo(landscape)
+start_time_compo <- Sys.time()
+compoNew(landscape, cores)
+end_time_compo <- Sys.time()
+print(end_time_compo - start_time_compo)
 
 # evaluate composition
-evalCompo()
+# evalCompo()
 
 # assign individual trees to all 25*25m cells
-dendro()
+start_time_dendro <- Sys.time()
+dendroNew(cores)
+end_time_dendro <- Sys.time()
+print(end_time_dendro - start_time_dendro)
+# summaryRprof()$by.total
+# summaryRprof()$by.self
+# Rprof(NULL)
 
 # produce landscape tree and environmental data
+start_time_save <- Sys.time()
 saveLandscape(landscape)
+end_time_save <- Sys.time()
+print(end_time_save - start_time_save)
 
 # evaluate dendro variables
-evalDendro()
+# evalDendro()
 
 # model tree height
+start_time_height <- Sys.time()
 heightPred(landscape)
+end_time_height <- Sys.time()
+print(end_time_height - start_time_height)
 
 # compare tree heights against LiDAR heights
-evalHeight(landscape)
+# evalHeight(landscape)
 
-# create all alternative management table
-altManagTable(landscape)
+# # create all alternative management table
+# altManagTable(landscape)
 
-# synthesise management of all alternative scenarios
-altManagSynth(landscape)
+# # synthesise management of all alternative scenarios
+# altManagSynth(landscape)
 
-# evaluate scenarios
-evalSce(landscape)
+# # evaluate scenarios
+# evalSce(landscape)
 
 # running time
-end_time <- Sys.time()
-end_time - start_time
+end_time_gen <- Sys.time()
+print(end_time_gen - start_time_gen)
