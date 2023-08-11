@@ -75,10 +75,6 @@ heightPred <- function(landscape){
   # predict
   ###############################################################
 
-  # split tree data into X parts
-  # num_splits <- 6
-  # treeSub <- sort(rank(1:nrow(tree)) %% num_splits)
-
   # function to predict height (parallel ready!)
   predH <- function(landscape, tree, mod_nlme){
     # at sneznik: split into 2 data sets
@@ -104,7 +100,6 @@ heightPred <- function(landscape){
   }
 
   tree <- predH(landscape, tree, mod_nlme)
-  # TODO: parallelise height models for the Bauges?
 
   # save
   tree <- lazy_dt(tree)

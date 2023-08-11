@@ -10,7 +10,7 @@ library(dplyr)
 library(tidyr)
 
 # select landscape (bauges, milicz, sneznik)
-landscape <- 'sneznik'
+landscape <- 'bauges'
 
 # open new tree data and published tree data
 new <- read.csv(paste0('./', landscape, '/trees.csv'))
@@ -83,17 +83,20 @@ spList <- unique(strongDeviat$sp)
 spList
 
 # Plot species frequency and show deviating sp
-freq <- df %>% group_by(dataset, sp) %>%
+if(length(spList) > 0){
+
+        freq <- df %>% group_by(dataset, sp) %>%
                summarise(n = sum(n)) %>%
                mutate(deviatSp = as.factor(case_when(sp %in% spList ~ 'deviation', TRUE ~ 'ok')))
 
-#
-ggplot(data = freq) +
-geom_bar(aes(x = reorder(sp, -n), y = n, fill = dataset, col = deviatSp), alpha = 0.1, width = 0.5, stat = 'identity', position = position_dodge()) +
-theme_bw() +
-theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        plot.title = element_text(hjust = 0.5)) +
-ggtitle('sp deviating in red')
+        #
+        ggplot(data = freq) +
+        geom_bar(aes(x = reorder(sp, -n), y = n, fill = dataset, col = deviatSp), alpha = 0.1, width = 0.5, stat = 'identity', position = position_dodge()) +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+                plot.title = element_text(hjust = 0.5)) +
+        ggtitle('sp deviating in red')
+}
 
 ########################################################################
 # Plot dbh distribution of deviating species 
@@ -129,9 +132,6 @@ ggplot(data = dfDeviat) +
 geom_density(aes(x = h, fill = dataset), alpha = 0.5) +
 facet_grid(sp ~ ., scales = 'free') +
 theme_bw()
-
-
-
 
 
 # TODO: diff old vs new of all output rasters

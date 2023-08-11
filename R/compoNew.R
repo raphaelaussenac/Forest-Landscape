@@ -7,9 +7,10 @@ compoNew <- function(landscape, cores){
   # load packages
   require(rgdal)
   require(raster)
+  require(dtplyr)
   require(dplyr)
   require(ggplot2)
-  require(plotly)
+  # require(plotly)
   # require(doParallel)
   require(doFuture)
   plan(multicore, workers = cores)
@@ -60,16 +61,16 @@ compoNew <- function(landscape, cores){
 
   # NFI[NFI$idp == '469390', 'CODE_TFV'] <- 'CASTA'
 
-  # plot 3d
-  fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01,
-                 text = NFI$idp, textposition = 'middle right', # text
-                 textfont = list(color = '#000000', size = 16), # text
-                 type='scatter3d', mode = 'markers+text', color = NFI$CODE_TFV)
-  axx <- list(title = 'quadratic diameter (cm)')
-  axy <- list(title = 'proportion of Deciduous basal area')
-  axz <- list(title = 'basal area (m^2/ha)')
-  fig <- fig %>% layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz))
-  fig
+  # # plot 3d
+  # fig <- plot_ly(x = NFI$Dg01, y = NFI$Dprop, z = NFI$BA01,
+  #                text = NFI$idp, textposition = 'middle right', # text
+  #                textfont = list(color = '#000000', size = 16), # text
+  #                type='scatter3d', mode = 'markers+text', color = NFI$CODE_TFV)
+  # axx <- list(title = 'quadratic diameter (cm)')
+  # axy <- list(title = 'proportion of Deciduous basal area')
+  # axz <- list(title = 'basal area (m^2/ha)')
+  # fig <- fig %>% layout(scene = list(xaxis=axx,yaxis=axy,zaxis=axz))
+  # fig
 
   # convert NFI TFV CODE in numeric values
   if (landscape == 'bauges'){
@@ -169,15 +170,14 @@ compoNew <- function(landscape, cores){
     # gather all pixels into one data frame
     results <- do.call(rbind.data.frame, results)
     colnames(results) <- c('i', 'id')
-    results <- results %>% arrange(i)
+    results <- lazy_dt(results)
+    results <- results %>% arrange(i) %>%
+                           as.data.frame()
     return(results)
   }
-  
+
   # run in parallel each strip
-  # cl <- makeCluster(6)
-  # registerDoParallel(cl)
   results <- foreach(j = length(strips):1, .combine = 'rbind', .options.future = list(packages = c('raster', 'rgdal', 'dplyr'))) %dofuture% {pix(rast = strips[[j]], ff = ff, NFI = NFI)}
-  # stopCluster(cl)
 
   # transfer results into raster
   compoRaster$compo <- results[,2]

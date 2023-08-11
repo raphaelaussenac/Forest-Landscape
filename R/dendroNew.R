@@ -1,10 +1,11 @@
-dendroNew <- function(){
+dendroNew <- function(cores){
 
   ###############################################################
   # initialisation
   ###############################################################
 
   # load packages
+  require(dtplyr)
   require(dplyr)
   require(raster)
   # require(doParallel)
@@ -74,16 +75,6 @@ dendroNew <- function(){
   ###############################################################
   # calculation
   ###############################################################
-
-  # i <- 37150 # milicz
-  # i <- 10000 # bauges
-  # cell <- rast3[i]
-  # cell
-
-
-
-  rast <- strips[[10]]
-  cell <- rast[100]
 
   # function to assign n trees and their dbh to each cell
   ffdendro <- function(i, rast, tree, NFIsp){
@@ -180,45 +171,20 @@ dendroNew <- function(){
 
   }
 
-  # # parallel calculation on raster cells (one raster after the other)
-  # clustCalc <- function(rast, assignDendro, tree, NFIsp){
-  #   # set cluster
-  #   cl <- makeCluster(6)
-  #   registerDoParallel(cl)
-  #   # results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
-  #   results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .options.future = list(packages = c('raster', 'rgdal'))) %dofuture% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
-  #   stopCluster(cl)
-  #   # plot(rast$Dprop)
-  #   return(results)
-  # }
-
-  # # run calculation
-  # start <- Sys.time()
-  # results <- lapply(strips, clustCalc, assignDendro, tree, NFIsp)
-  # end <- Sys.time()
-  # end - start
-
-  # apply ff function to all pixels of a strip
+  # apply ffdendro function to all pixels of a strip
   # and format result into a dataframe
   pix <- function(rast, ffdendro, tree, NFIsp){
     results <- lapply(1:ncell(rast), ffdendro, rast, tree, NFIsp)
     # gather all pixels into one data frame
     results <- do.call(rbind.data.frame, results)
-    # colnames(results) <- c('i', 'id') # ------------------------------------------------------------------------------------ ???????????
-    results <- results %>% arrange(i)
+    results <- lazy_dt(results)
+    results <- results %>% arrange(i) %>%
+                           as.data.frame()
     return(results)
   }
 
   # run in parallel each strip
-  # start_time <- Sys.time()
-  # cl <- makeCluster(6)
-  # registerDoParallel(cl)
-  # results <- foreach(i = 1:nrow(rast[]), .combine = 'rbind', .packages = c('raster', 'rgdal')) %dopar% {assignDendro(cell = rast[i], i = i, tree, NFIsp)}
   results <- foreach(j = length(strips):1, .combine = 'rbind', .options.future = list(seed = TRUE, packages = c('raster', 'rgdal', 'dplyr'))) %dofuture% {pix(rast = strips[[j]], ffdendro = ffdendro, tree = tree, NFIsp = NFIsp)}
-  # stopCluster(cl)
-  # running time
-  # end_time <- Sys.time()
-  # end_time - start_time
 
   #  save
   saveRDS(results, file = paste0(tempPath, '/trees.rds'))
