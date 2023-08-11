@@ -6,8 +6,10 @@ setwd('~/Documents/code/Forest-Landscape')
 
 # load packages
 library(ggplot2)
+library(dtplyr)
 library(dplyr)
 library(tidyr)
+library(terra)
 
 # select landscape (bauges, milicz, sneznik)
 landscape <- 'bauges'
@@ -133,6 +135,54 @@ geom_density(aes(x = h, fill = dataset), alpha = 0.5) +
 facet_grid(sp ~ ., scales = 'free') +
 theme_bw()
 
+########################################################################
+# spatial diag
+########################################################################
 
-# TODO: diff old vs new of all output rasters
-# ou comparaison cellID?
+# open cellID raster
+cellID25 <- rast(paste0('./', landscape, '/cellID25.asc'))
+celldf <- as.data.frame(cellID25)
+
+# summarise values by cell
+df <- lazy_dt(df)
+syn <- df %>% group_by(dataset, cellID25) %>%
+               summarise(BA = sum((pi * (dbh/200)^2) * n),
+                         meanD = mean(dbh),
+                         meanH = mean(h),
+                         n = sum(n),
+                         nsp = length(unique(sp))) %>%
+                         as.data.frame()
+# merge data
+synNew <- left_join(celldf, syn %>% filter(dataset == 'new'), by = 'cellID25')
+synOld <- left_join(celldf, syn %>% filter(dataset == 'old'), by = 'cellID25')
+
+# BA
+cellID25$BAnew <- synNew$BA
+cellID25$BAold <- synOld$BA
+
+# meanD
+cellID25$meanDnew <- synNew$meanD
+cellID25$meanDold <- synOld$meanD
+
+# meanH
+cellID25$meanHnew <- synNew$meanH
+cellID25$meanHold <- synOld$meanH
+
+# n
+cellID25$nnew <- synNew$n
+cellID25$nold <- synOld$n
+
+# nsp
+cellID25$nspnew <- synNew$nsp
+cellID25$nspold <- synOld$nsp
+
+# diff
+cellID25$BAdiff <- cellID25$BAnew - cellID25$BAold
+cellID25$meanDdiff <- cellID25$meanDnew - cellID25$meanDold
+cellID25$meanHdiff <- cellID25$meanHnew - cellID25$meanHold
+cellID25$ndiff <- cellID25$nnew - cellID25$nold
+cellID25$nspdiff <- cellID25$nspnew - cellID25$nspold
+
+# plot
+diff <- cellID25[[12:16]]
+plot(diff)
