@@ -59,7 +59,7 @@ print(end_time_compo - start_time_compo)
 
 # assign individual trees to all 25*25m cells
 start_time_dendro <- Sys.time()
-dendroNew(cores)
+dendroNew(landscape, cores)
 end_time_dendro <- Sys.time()
 print(end_time_dendro - start_time_dendro)
 # summaryRprof()$by.total

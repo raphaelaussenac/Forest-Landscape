@@ -1,4 +1,4 @@
-dendroNew <- function(cores){
+dendroNew <- function(landscape, cores){
 
   ###############################################################
   # initialisation
@@ -8,7 +8,6 @@ dendroNew <- function(cores){
   require(dtplyr)
   require(dplyr)
   require(raster)
-  # require(doParallel)
   require(tidyr)
   require(doFuture)
   plan(multicore, workers = cores)
@@ -77,7 +76,7 @@ dendroNew <- function(cores){
   ###############################################################
 
   # function to assign n trees and their dbh to each cell
-  ffdendro <- function(i, rast, tree, NFIsp){
+  ffdendro <- function(i, rast, tree, NFIsp, landscape){
     cell <- rast[i]
 
     # retrieve id composition dg and ba (LIDAR)
@@ -93,20 +92,23 @@ dendroNew <- function(cores){
       bad <- batot * dprop
       bac <- batot * (1 - dprop)
 
+      # create dbh df
+      dbh <- tree[tree$idp == id,]
+
       # if there is only deciduous or coniferous species in the NFI plot
       # set bad and bac to 0 and 100 accordingly
-      if(nrow(tree[tree$idp == id & tree$spType == 'D',]) == 0){
+      if(nrow(dbh[dbh$spType == 'D',]) == 0){
         bad <- batot * 0
         bac <- batot * (1 - 0)
       }
-      if(nrow(tree[tree$idp == id & tree$spType == 'C',]) == 0){
+      if(nrow(dbh[dbh$spType == 'C',]) == 0){
         bad <- batot * 1
         bac <- batot * (1 - 1)
       }
 
       # retrieve dg deciduous and coniferous (NFI)
-      dgd <- as.numeric(unique(tree[tree$idp == id & tree$spType == 'D', 'Dgdc']))
-      dgc <- as.numeric(unique(tree[tree$idp == id & tree$spType == 'C', 'Dgdc']))
+      dgd <- as.numeric(unique(dbh[dbh$spType == 'D', 'Dgdc']))
+      dgc <- as.numeric(unique(dbh[dbh$spType == 'C', 'Dgdc']))
 
       # calculate alpha correction coef for deciduous and coniferous
       alpha <- dgtot * sqrt( sum(bad/dgd^2, bac/dgc^2, na.rm = TRUE) / batot)
@@ -114,15 +116,20 @@ dendroNew <- function(cores){
       # sp level ---------------------------------------------------------------------
 
       # calculate species ba (LIDAR) from NFI sp proportion
-      NFIplot <- NFIsp[NFIsp$idp == id,]
-      NFIplot[NFIplot$spType == 'D', 'BAdclid'] <- bad
-      NFIplot[NFIplot$spType == 'C', 'BAdclid'] <- bac
-      NFIplot$BAsplid <- NFIplot$BAdclid * NFIplot$spPropdc
+      if(landscape == 'bauges'){ # much faster on bauges landscape
+        NFIplot <- NFIsp %>% filter(idp == id) %>% ungroup %>%
+                           mutate(BAdclid = ifelse(spType == 'D', bad, bac),
+                                  BAsplid = BAdclid * spPropdc)
+      } else{
+        NFIplot <- NFIsp[NFIsp$idp == id,]
+        NFIplot[NFIplot$spType == 'D', 'BAdclid'] <- bad
+        NFIplot[NFIplot$spType == 'C', 'BAdclid'] <- bac
+        NFIplot$BAsplid <- NFIplot$BAdclid * NFIplot$spPropdc
+      }
 
       # tree level -------------------------------------------------------------------
 
       # calculate tree ba (LIDAR) from NFI tree ba proportion
-      dbh <- tree[tree$idp == id,]
       dbh <- merge(dbh, NFIplot[, c('species_name', 'BAsplid')], by = 'species_name')
       dbh$BAtreelid <- dbh$BAsplid * dbh$treePropsp
 
@@ -138,7 +145,7 @@ dendroNew <- function(cores){
       # ---------------------------
 
       # calculate weight for a 25*25m pixel depending on decimal of wlid
-      # could be simplified by using a Bernoulli draw
+      # could be simplified by using a Bernoulli draw (but not faster...)
       dbh$w25m <- dbh$wlid / 16
       dbh$decimal <- dbh$w25m - floor(dbh$w25m)
       dbh$random <- runif(nrow(dbh), min = 0, max = 1)
@@ -173,8 +180,8 @@ dendroNew <- function(cores){
 
   # apply ffdendro function to all pixels of a strip
   # and format result into a dataframe
-  pix <- function(rast, ffdendro, tree, NFIsp){
-    results <- lapply(1:ncell(rast), ffdendro, rast, tree, NFIsp)
+  pix <- function(rast, ffdendro, tree, NFIsp, landscape){
+    results <- lapply(1:ncell(rast), ffdendro, rast, tree, NFIsp, landscape)
     # gather all pixels into one data frame
     results <- do.call(rbind.data.frame, results)
     results <- lazy_dt(results)
@@ -184,7 +191,7 @@ dendroNew <- function(cores){
   }
 
   # run in parallel each strip
-  results <- foreach(j = length(strips):1, .combine = 'rbind', .options.future = list(seed = TRUE, packages = c('raster', 'rgdal', 'dplyr'))) %dofuture% {pix(rast = strips[[j]], ffdendro = ffdendro, tree = tree, NFIsp = NFIsp)}
+  results <- foreach(j = length(strips):1, .combine = 'rbind', .options.future = list(seed = TRUE, packages = c('raster', 'rgdal', 'dplyr'))) %dofuture% {pix(rast = strips[[j]], ffdendro = ffdendro, tree = tree, NFIsp = NFIsp, landscape = landscape)}
 
   #  save
   saveRDS(results, file = paste0(tempPath, '/trees.rds'))
