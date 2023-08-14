@@ -150,9 +150,11 @@ compoNew <- function(landscape, cores){
       # retrieve cell values = coordinates
       plotlist$DpropCell <- cell[, 'Dprop']
       plotlist$Dg01Cell <- cell[, 'Dg01']
-      plotlist$BA01Cell <- cell[, 'BA01']
+      plotlist$BA01Cell <- cell[, 'BA01'] 
       # calculate distance
-      plotlist$distance <- apply(plotlist, 1, function(x) dist(matrix(x, nrow = 2, byrow = TRUE)))
+      plotlist$distance <- sqrt( (plotlist$Dprop - plotlist$DpropCell)^2 + (plotlist$Dg01 - plotlist$Dg01Cell)^2 + (plotlist$BA01 - plotlist$BA01Cell)^2)
+      # plotlist$distance <- apply(plotlist, 1, function(x) dist(matrix(x, nrow = 2, byrow = TRUE)))
+      
       # determine nearest NFI plot
       NearestPlot <- as.numeric(rownames(plotlist[plotlist$distance == min(plotlist$distance),]))
       NearestPlot <- NearestPlot[1]
