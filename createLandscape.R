@@ -6,7 +6,9 @@
 rm(list = ls())
 
 # set work directory
-setwd('~/Documents/code/Forest-Landscape')
+switch(Sys.info()[['sysname']],
+Darwin = {setwd('~/Documents/code/Forest-Landscape')},
+Linux  = {setwd('~/Forest-Landscape')})
 
 # load source (all R files in R folder)
 file.sources = list.files('./R', pattern = '*.R', full.names = TRUE)
@@ -17,8 +19,18 @@ sapply(file.sources, source, .GlobalEnv)
 # set number of cores
 ###############################################################
 
+# select landscape
 landscape <- 'bauges'
-cores <- 6
+
+# set number of cores
+switch(Sys.info()[['sysname']],
+Darwin = {cores <- 6},
+Linux  = {cores <- 30})
+
+# set number of strips
+switch(Sys.info()[['sysname']],
+Darwin = {st <- 20},
+Linux  = {st <- 30})
 
 ###############################################################
 # create virtual landscape
@@ -50,7 +62,7 @@ if(landscape == 'bauges'){
 
 # assign composition to all 25*25m cells
 start_time_compo <- Sys.time()
-compoNew(landscape, cores)
+compoNew(landscape, cores, st)
 end_time_compo <- Sys.time()
 print(end_time_compo - start_time_compo)
 
@@ -59,7 +71,7 @@ print(end_time_compo - start_time_compo)
 
 # assign individual trees to all 25*25m cells
 start_time_dendro <- Sys.time()
-dendroNew(landscape, cores)
+dendroNew(landscape, cores, st)
 end_time_dendro <- Sys.time()
 print(end_time_dendro - start_time_dendro)
 # summaryRprof()$by.total

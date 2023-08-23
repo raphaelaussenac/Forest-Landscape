@@ -1,4 +1,4 @@
-compoNew <- function(landscape, cores){
+compoNew <- function(landscape, cores, st){
 
   ###############################################################
   # initialisation
@@ -11,7 +11,6 @@ compoNew <- function(landscape, cores){
   require(dplyr)
   require(ggplot2)
   # require(plotly)
-  # require(doParallel)
   require(doFuture)
   plan(multicore, workers = cores)
 
@@ -119,7 +118,7 @@ compoNew <- function(landscape, cores){
   ymax <- ymax(compoRaster)
 
   # nb of horizontal strips
-  nbS <- 20
+  nbS <- st
 
   # define ymin and ymax of horizontal strips
   ystep <- seq(from = ymin, to = ymax, by = (ymax - ymin) / nbS)
