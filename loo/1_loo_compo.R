@@ -2,58 +2,81 @@
 require(stringr)
 require(dplyr)
 
-# load tree data and vegetation type data
-tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
-tree$idp <- as.character(tree$idp)
+
 
 # load loo data
-load(paste0('./loo/LOO_values.RDA'))
+load('./loo/LOO_values.RDA')
 if(landscape == 'bauges'){
     loodf <- Bauges
-    load(paste0('./loo/bauges_tfv.RDA'))
+    load('./loo/bauges_tfv.RDA')
     tfv <- Bauges %>% select(plotMerge, CODE_TFV)
     loodf <- left_join(loodf, tfv, join_by('plot' == 'plotMerge'))
+    # load tree data and vegetation type data
+    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
+    tree$idp <- as.character(tree$idp)
 } else if (landscape == 'milicz'){
     loodf <- Milicz %>% mutate(CODE_TFV = 1)
+    # load tree data and vegetation type data
+    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
+    tree$idp <- as.character(tree$idp)
+    if(sum(unique(tree$idp) %in% unique(loodf$plot)) != length(unique(tree$idp))){
+        stop("field and predicted data plot names do not match")
+    }
 } else if (landscape == 'sneznik'){
     loodf <- Sneznik %>% mutate(CODE_TFV = 1)
+    loodf$plot <- as.character(as.numeric(as.factor(loodf$plot)))
+    # load tree data and vegetation type data
+    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
+    tree$idp <- as.character(tree$idp)
+    if(sum(unique(tree$idp) %in% unique(loodf$plot)) != length(unique(tree$idp))){
+        stop("field and predicted data plot names do not match")
+    }
 }
 loodf <- loodf %>% select(plot, names(loodf)[str_detect(names(loodf), 'predicted')], CODE_TFV) %>%
                    rename(BA = BA_predicted, Dg = Dg_predicted, Dprop = DP_predicted)
+
+
+
 
 
 ###############################################################
 # group TFV types together
 ###############################################################
 
-# main types
-A <- 'FF1-00-00' #: Forêt fermée à mélange de feuillus
-B <- 'FF2G61-61' #: Forêt fermée de sapin ou épicéa
-C <- 'FF31' #: Forêt fermée à mélange de feuillus prépondérants et conifères
-D <- 'FF32' #: Forêt fermée à mélange de conifères prépondérants et feuillus
-E <- 'FF1-09-09' #: Forêt fermée de hêtre pur
+if(landscape == 'bauges'){
+    # main types
+    A <- 'FF1-00-00' #: Forêt fermée à mélange de feuillus
+    B <- 'FF2G61-61' #: Forêt fermée de sapin ou épicéa
+    C <- 'FF31' #: Forêt fermée à mélange de feuillus prépondérants et conifères
+    D <- 'FF32' #: Forêt fermée à mélange de conifères prépondérants et feuillus
+    E <- 'FF1-09-09' #: Forêt fermée de hêtre pur
 
-groupTfv <- function(df){
-    df <- df[!(df$CODE_TFV %in% c('FO0', 'FF0', 'LA4', 'LA6')) & !is.na(df$CODE_TFV),]
-    df[df$CODE_TFV == 'FO1', 'CODE_TFV'] <- A
-    df[df$CODE_TFV == 'FF1-00', 'CODE_TFV'] <- A
-    df[df$CODE_TFV == 'FO2', 'CODE_TFV'] <- B
-    df[df$CODE_TFV == 'FO3', 'CODE_TFV'] <- C
-    df[df$CODE_TFV == 'FF1-49-49', 'CODE_TFV'] <- A
-    df[df$CODE_TFV == 'FF2-00-00', 'CODE_TFV'] <- B
-    df[df$CODE_TFV == 'FF1G01-01', 'CODE_TFV'] <- A
-    df[df$CODE_TFV == 'FF2G53-53', 'CODE_TFV'] <- B
-    df[df$CODE_TFV == 'FF2-90-90', 'CODE_TFV'] <- B
-    df[df$CODE_TFV == 'FF2-64-64', 'CODE_TFV'] <- B
-    df[df$CODE_TFV == 'FF2-00', 'CODE_TFV'] <- B
-    df[df$CODE_TFV == 'FF1-10-10', 'CODE_TFV'] <- A
-    df[df$CODE_TFV == 'FF2-52-52', 'CODE_TFV'] <- B
-    df[df$CODE_TFV == '', 'CODE_TFV'] <- A
-    return(df)
-}
+    groupTfv <- function(df){
+        df <- df[!(df$CODE_TFV %in% c('FO0', 'FF0', 'LA4', 'LA6')) & !is.na(df$CODE_TFV),]
+        df[df$CODE_TFV == 'FO1', 'CODE_TFV'] <- A
+        df[df$CODE_TFV == 'FF1-00', 'CODE_TFV'] <- A
+        df[df$CODE_TFV == 'FO2', 'CODE_TFV'] <- B
+        df[df$CODE_TFV == 'FO3', 'CODE_TFV'] <- C
+        df[df$CODE_TFV == 'FF1-49-49', 'CODE_TFV'] <- A
+        df[df$CODE_TFV == 'FF2-00-00', 'CODE_TFV'] <- B
+        df[df$CODE_TFV == 'FF1G01-01', 'CODE_TFV'] <- A
+        df[df$CODE_TFV == 'FF2G53-53', 'CODE_TFV'] <- B
+        df[df$CODE_TFV == 'FF2-90-90', 'CODE_TFV'] <- B
+        df[df$CODE_TFV == 'FF2-64-64', 'CODE_TFV'] <- B
+        df[df$CODE_TFV == 'FF2-00', 'CODE_TFV'] <- B
+        df[df$CODE_TFV == 'FF1-10-10', 'CODE_TFV'] <- A
+        df[df$CODE_TFV == 'FF2-52-52', 'CODE_TFV'] <- B
+        df[df$CODE_TFV == '', 'CODE_TFV'] <- A
+        return(df)
+    }
 
 # assign new TFV to spatial polygons
 loodf <- groupTfv(loodf)
+tree <- groupTfv(tree)
+
+}
+
+
 
 
 ###############################################################
@@ -96,7 +119,7 @@ for (i in 1:nrow(loodf)){
 
     # normalise Dg and BA values to 0-1 range
     minDg <- min(min(NFI2$Dg), min(cell$Dg))
-    maxDg <- max(max(NFI2$Dg), max(cell$Dg))   #TODO: il faudrait peut-être prendre toutes les valeurs des raster Dg et BA?
+    maxDg <- max(max(NFI2$Dg), max(cell$Dg))
     NFI2$Dg01 <- ( NFI2$Dg - minDg ) / ( maxDg - minDg )
     cell$Dg01 <- ( cell$Dg - minDg ) / ( maxDg - minDg )
     minBA <- min(min(NFI2$BA), min(cell$BA))

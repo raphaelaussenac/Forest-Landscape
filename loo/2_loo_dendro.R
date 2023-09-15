@@ -5,8 +5,25 @@ library(tidyr)
 loodf <- readRDS(paste0(tempPath, '/loodf_compo.rds'))
 
 # load tree data and vegetation type data
-tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
-tree$idp <- as.character(tree$idp)
+if(landscape == 'bauges'){
+    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
+    tree$idp <- as.character(tree$idp)
+} else if (landscape == 'milicz'){
+    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
+    tree$idp <- as.character(tree$idp)
+    if(sum(unique(tree$idp) %in% unique(loodf$plot)) != length(unique(tree$idp))){
+        stop("field and predicted data plot names do not match")
+    }
+} else if (landscape == 'sneznik'){
+    tree <- readRDS(paste0(tempPath, '/treeTemp.rds'))
+    tree$idp <- as.numeric(as.factor(tree$idp))
+    tree$idp <- as.character(tree$idp)
+    if(sum(unique(tree$idp) %in% unique(loodf$plot)) != length(unique(tree$idp))){
+        stop("field and predicted data plot names do not match")
+    }
+}
+
+
 
 
 ###############################################################

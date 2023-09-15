@@ -64,7 +64,7 @@ evalHeight <- function(landscape){
   labs(x = expression(Hdom[T])) +
   coord_fixed() +
   annotate(geom = 'text', x = 15, y = 40, label = paste('R² = ', round(summary(mod)$r.squared,2)), col = 'red', size = 5) +
-  ggtitle(str_to_title(landscape)) +
+  # ggtitle(str_to_title(landscape)) +
   geom_boxplot(aes(x = class, y = hlid, group = class), alpha = 0.5, outlier.shape = NA) +
   geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
   geom_abline(intercept = mod$coef[1], slope = mod$coef[2], color = "red", linetype = 1, size = 1) +
