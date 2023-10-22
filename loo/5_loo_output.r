@@ -35,3 +35,12 @@ ggsave(file = paste0('./loo/', landscape, '_eval.jpg'), plot = pl, width = 20, h
 
 
 # # distribution
+
+
+mil <- readRDS("./loo/milicz_sp_compo.RDS")
+bau <- readRDS("./loo/bauges_sp_compo.RDS")
+sne <- readRDS("./loo/sneznik_sp_compo.RDS")
+
+pl <- arrangeGrob(bau, mil, sne, ncol = 1, nrow = 3)
+plot(pl)
+ggsave(file = paste0('./loo/compolandscapes.jpg'), plot = pl, width = 6, height = 16)

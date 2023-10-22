@@ -12,10 +12,10 @@ library(tidyr)
 library(terra)
 
 # select landscape (bauges, milicz, sneznik)
-landscape <- 'bauges'
+landscape <- 'milicz'
 
 # open new tree data and published tree data
-new <- read.csv(paste0('./', landscape, '/trees.csv'))
+new <- read.csv(paste0('./', landscape, '/treesMilicz.csv'))
 old <- read.csv(paste0('./I-MAESTRO_data/', landscape, '/trees.csv'))
 
 # stack data

@@ -26,7 +26,7 @@ sneznik <- readRDS('heights_sneznik.rds')
 
 # arrange plots together
 pl2 <- arrangeGrob(bauges, milicz, sneznik, ncol = 1, nrow = 3)
-ggsave(file = 'Hdom.pdf', plot = pl2, width = 6, height = 16)
+ggsave(file = 'Hdom.jpg', plot = pl2, width = 6, height = 16)
 
 ###############################################################
 # plot msd

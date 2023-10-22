@@ -69,6 +69,8 @@ q <- inner_join(qtree, qresults, join_by(idp == i))
 # plot
 mod1 <- lm(obsq95 ~ predq95, data = q)
 rmse <- sqrt( sum( (q$predq95 - q$obsq95)^2 ) / nrow(q) )
+rmsre <- sqrt( sum( (100 - ( (q$predq95 * 100) / q$obsq95 ))^2 ) / nrow(df) )
+
 
 dbhQ <- ggplot(data = q) +
 geom_point(aes(x = predq95, y = obsq95), pch = 16) +
@@ -82,6 +84,7 @@ geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
 # annotate(geom = 'text', x = 75, y = 40, label = paste('R² = ', round(summary(mod1)$r.squared,2)), col = 'red', size = 5) +
 # annotate(geom = 'text', x = 75, y = 35, label = paste('RMSE = ', round(rmse1,2)), col = 'red', size = 5) +
 annotate(geom = 'text', x = 75, y = 30, label = paste('RMSE = ', round(rmse,2)), col = 'red', size = 5) +
+annotate(geom = 'text', x = 75, y = 20, label = paste('RMSRE = ', round(rmsre,2)), col = 'red', size = 5) +
 theme_classic()
 
 saveRDS(dbhQ, paste0('./loo/', landscape, '_dbhQ.RDS'))
@@ -238,6 +241,7 @@ h <- inner_join(h, fieldH, by = 'i')
 # plot
 modh <- lm(obsq95 ~ predq95, data = h)
 rmse <- sqrt( sum( (h$predq95 - h$obsq95)^2 ) / nrow(h) )
+rmsre <- sqrt( sum( (100 - ( (h$predq95 * 100) / h$obsq95 ))^2 ) / nrow(df) )
 
 HQ <- ggplot(data = h) +
 geom_point(aes(x = predq95, y = obsq95), pch = 16) +
@@ -251,6 +255,7 @@ geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
 # annotate(geom = 'text', x = 35, y = 20, label = paste('R² = ', round(summary(modh)$r.squared,2)), col = 'red', size = 5) +
 # annotate(geom = 'text', x = 75, y = 35, label = paste('RMSE = ', round(rmse1,2)), col = 'red', size = 5) +
 annotate(geom = 'text', x = 20, y = 25, label = paste('RMSE = ', round(rmse,2)), col = 'red', size = 5) +
+annotate(geom = 'text', x = 20, y = 15, label = paste('RMSRE = ', round(rmsre,2)), col = 'red', size = 5) +
 theme_classic()
 
 
@@ -296,11 +301,26 @@ rank <- full_join(treeBA, resuBA, by = 'sp') %>%
 
 
 # plot sp abundance
-pl1 <- ggplot(data = abun1 %>% filter(sp %in% spList)) +
-geom_bar(aes(x = reorder(sp, -BAsp), y = BAsp, fill  = src), stat = 'identity', position = position_dodge()) +
-theme_bw() +
+diff <- abun2 %>% mutate(reldiff = round((BApred * 100 /BAfield)-100, 2),
+                         diff = round(BApred - BAfield, 2))
+abun1 <- left_join(abun1, diff %>% select(sp, diff, reldiff), join_by(sp)) %>%
+         filter(sp %in% spList) %>%
+         mutate(src = case_when(src == 'field' ~ 'observation',
+                                src == 'pred' ~ 'prediction'))
+abun12 <- abun1 %>% filter(src == 'prediction')
+head(abun12)
+
+pl1 <- ggplot() +
+geom_bar(data = abun1, aes(x = reorder(sp, -BAsp), y = BAsp, fill  = src), stat = 'identity', position = position_dodge()) +
+theme_classic() +
 theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        legend.position = 'bottom', legend.title = element_blank(), axis.title.x = element_blank())
+        legend.position = 'none', legend.title = element_blank(), axis.title.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)) +
+# geom_text(data = abun12, aes(x = sp, y = BAsp, label = reldiff), vjust = -0.3, size = 3.5, col = 'black') +
+labs(y = 'BA') +
+ggtitle(str_to_title(landscape))
+pl1
+saveRDS(pl1, paste0('./loo/', landscape, '_sp_compo.RDS'))
 
 pl2 <- ggplot() +
 geom_point(data = abun2, aes(x = BAfield, y = BApred)) +

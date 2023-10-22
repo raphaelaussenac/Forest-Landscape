@@ -74,7 +74,7 @@ df <- dfBackup %>% filter(!is.na(BA_field), !is.na(BAtot))
 mod1 <- lm(df$BA_field ~ df$BAtot)
 rmse1 <- sqrt(mean(mod1$residuals^2))
 rmse11 <- sqrt( sum( (df$BAtot - df$BA_field)^2 ) / nrow(df) )
-
+rmsre1 <- sqrt( sum( (100 - ( (df$BAtot * 100) / df$BA_field ))^2 ) / nrow(df) )
 
 pl1 <- ggplot(data = df) +
 geom_point(aes(x = BAtot, y = BA_field), pch = 16) +
@@ -88,6 +88,7 @@ geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
 # annotate(geom = 'text', x = 75, y = 40, label = paste('R² = ', round(summary(mod1)$r.squared,2)), col = 'red', size = 5) +
 # annotate(geom = 'text', x = 75, y = 35, label = paste('RMSE = ', round(rmse1,2)), col = 'red', size = 5) +
 annotate(geom = 'text', x = 75, y = 30, label = paste('RMSE = ', round(rmse11,2)), col = 'red', size = 5) +
+annotate(geom = 'text', x = 75, y = 20, label = paste('RMSRE = ', round(rmsre1,2)), col = 'red', size = 5) +
 theme_classic() 
 
 
@@ -97,6 +98,7 @@ df <- dfBackup %>% filter(!is.na(Dg_field), !is.na(Dgtot))
 mod2 <- lm(df$Dg_field ~ df$Dgtot)
 rmse2 <- sqrt(mean(mod2$residuals^2))
 rmse22 <- sqrt( sum( (df$Dgtot - df$Dg_field)^2 ) / nrow(df) )
+rmsre2 <- sqrt( sum( (100 - ( (df$Dgtot * 100) / df$Dg_field ))^2 ) / nrow(df) )
 
 pl2 <- ggplot(data = df) +
 geom_point(aes(x = Dgtot, y = Dg_field), pch = 16) +
@@ -110,6 +112,7 @@ geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
 # annotate(geom = 'text', x = 70, y = 40, label = paste('R² = ', round(summary(mod2)$r.squared,2)), col = 'red', size = 5) +
 # annotate(geom = 'text', x = 70, y = 35, label = paste('RMSE = ', round(rmse2,2)), col = 'red', size = 5) +
 annotate(geom = 'text', x = 70, y = 30, label = paste('RMSE = ', round(rmse22,2)), col = 'red', size = 5) +
+annotate(geom = 'text', x = 70, y = 20, label = paste('RMSRE = ', round(rmsre2,2)), col = 'red', size = 5) +
 theme_classic() 
 
 
@@ -119,6 +122,7 @@ df <- dfBackup %>% filter(!is.na(DP_field), !is.na(Dprop))
 mod3 <- lm(df$DP_field ~ df$Dprop)
 rmse3 <- sqrt(mean(mod3$residuals^2))
 rmse33 <- sqrt( sum( (df$Dprop - df$DP_field)^2 ) / nrow(df) )
+rmsre3 <- sqrt( sum( (100 - ( (df$Dprop * 100) / df$DP_field ))^2 ) / nrow(df) )
 
 
 pl3 <- ggplot(data = df) +
@@ -133,6 +137,7 @@ geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
 # annotate(geom = 'text', x = 80, y = 55, label = paste('R² = ', round(summary(mod3)$r.squared,2)), col = 'red', size = 5) +
 # annotate(geom = 'text', x = 80, y = 50, label = paste('RMSE = ', round(rmse3,2)), col = 'red', size = 5) +
 annotate(geom = 'text', x = 80, y = 45, label = paste('RMSE = ', round(rmse33,2)), col = 'red', size = 5) +
+annotate(geom = 'text', x = 80, y = 35, label = paste('RMSRE = ', round(rmsre3,2)), col = 'red', size = 5) +
 theme_classic() 
 
 pl <- arrangeGrob(pl1, pl2, pl3, ncol = 3, nrow = 1)

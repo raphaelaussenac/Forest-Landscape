@@ -43,13 +43,16 @@ evalHeight <- function(landscape){
                       mutate(n2 = abs(n - NN)) %>%
                       mutate(cumN2 = cumsum(n2)) %>%
                       filter(cumN2 <= nbTrees) %>%
-                      select(-n, cumN, -NN, -cumN2) %>%
+                      dplyr::select(-n, cumN, -NN, -cumN2) %>%
                       summarise(h = weighted.mean(h, n2), hlid = unique(get(paste0('Hm', nbTrees))))
     return(compH)
   }
   heights <- compareH(6, tree)
   mod <- lm(hlid~h, data = heights)
   summary(mod)
+
+  df22 <- heights %>% filter(!is.na(hlid), !is.na(h))
+  rmse11 <- sqrt( sum( (df22$hlid - df22$h)^2, na.rm = T) / nrow(df22) )
 
   # create classes for h --> boxplot
   heights <- heights %>% mutate(bin=cut_width(h, width = 1, center = 0)) %>%
@@ -60,11 +63,12 @@ evalHeight <- function(landscape){
   geom_point(alpha = 0.2, size = 0.5, col = 'grey', pch = 16) +
   xlim(5, 45) +
   ylim(5, 45) +
-  labs(y = expression(Hdom[L])) +
+  labs(y = expression(Hdom[ALS])) +
   labs(x = expression(Hdom[T])) +
   coord_fixed() +
   annotate(geom = 'text', x = 15, y = 40, label = paste('R² = ', round(summary(mod)$r.squared,2)), col = 'red', size = 5) +
-  # ggtitle(str_to_title(landscape)) +
+  annotate(geom = 'text', x = 15, y = 35, label = paste('RMSE = ', round(rmse11,2)), col = 'red', size = 5) +
+  ggtitle(str_to_title(landscape)) +
   geom_boxplot(aes(x = class, y = hlid, group = class), alpha = 0.5, outlier.shape = NA) +
   geom_abline(intercept = 0, slope = 1, color = "black", linetype = 2, size = 1) +
   geom_abline(intercept = mod$coef[1], slope = mod$coef[2], color = "red", linetype = 1, size = 1) +
